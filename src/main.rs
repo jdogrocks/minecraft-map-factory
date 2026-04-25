@@ -28,6 +28,8 @@ mod retrieve_data;
 #[cfg(feature = "gui")]
 mod telemetry;
 #[cfg(test)]
+mod integration_tests;
+#[cfg(test)]
 mod test_utilities;
 mod version_check;
 mod world_editor;
