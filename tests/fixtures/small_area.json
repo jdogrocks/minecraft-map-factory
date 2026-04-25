@@ -1,0 +1,31 @@
+{
+  "version": 0.6,
+  "generator": "test-fixture",
+  "elements": [
+    {"type": "node", "id": 1001, "lat": 54.6300, "lon": 9.9300},
+    {"type": "node", "id": 1002, "lat": 54.6300, "lon": 9.9310},
+    {"type": "node", "id": 1003, "lat": 54.6305, "lon": 9.9310},
+    {"type": "node", "id": 1004, "lat": 54.6305, "lon": 9.9300},
+
+    {"type": "node", "id": 2001, "lat": 54.6295, "lon": 9.9290},
+    {"type": "node", "id": 2002, "lat": 54.6295, "lon": 9.9320},
+    {"type": "node", "id": 2003, "lat": 54.6310, "lon": 9.9320},
+    {"type": "node", "id": 2004, "lat": 54.6310, "lon": 9.9290},
+
+    {"type": "node", "id": 3001, "lat": 54.6302, "lon": 9.9295, "tags": {"natural": "tree"}},
+
+    {
+      "type": "way",
+      "id": 5001,
+      "nodes": [1001, 1002, 1003, 1004, 1001],
+      "tags": {"building": "yes", "building:levels": "2"}
+    },
+
+    {
+      "type": "way",
+      "id": 5002,
+      "nodes": [2001, 2002, 2003, 2004],
+      "tags": {"highway": "residential", "name": "Test Street"}
+    }
+  ]
+}
