@@ -539,14 +539,8 @@ mod tests {
 
     #[test]
     fn element_kind_returns_correct_string() {
-        assert_eq!(
-            ProcessedElement::Node(node(1, 0, 0, &[])).kind(),
-            "node"
-        );
-        assert_eq!(
-            ProcessedElement::Way(way(1, vec![], &[])).kind(),
-            "way"
-        );
+        assert_eq!(ProcessedElement::Node(node(1, 0, 0, &[])).kind(), "node");
+        assert_eq!(ProcessedElement::Way(way(1, vec![], &[])).kind(), "way");
         assert_eq!(
             ProcessedElement::Relation(relation(1, vec![], &[])).kind(),
             "relation"
@@ -564,11 +558,7 @@ mod tests {
 
     #[test]
     fn element_nodes_iterator_for_way() {
-        let w = way(
-            1,
-            vec![node(1, 0, 0, &[]), node(2, 5, 5, &[])],
-            &[],
-        );
+        let w = way(1, vec![node(1, 0, 0, &[]), node(2, 5, 5, &[])], &[]);
         let elem = ProcessedElement::Way(w);
         let nodes: Vec<_> = elem.nodes().collect();
         assert_eq!(nodes.len(), 2);
@@ -597,11 +587,7 @@ mod tests {
 
     #[test]
     fn priority_highway() {
-        let elem = ProcessedElement::Way(way(
-            1,
-            vec![],
-            &[("highway", "residential")],
-        ));
+        let elem = ProcessedElement::Way(way(1, vec![], &[("highway", "residential")]));
         assert_eq!(get_priority(&elem), 2);
     }
 
@@ -638,12 +624,8 @@ mod tests {
     #[test]
     fn priority_multiple_tags_uses_first_match() {
         // "building" (idx 1) should win over "barrier" (idx 5)
-        let elem = ProcessedElement::Node(node(
-            1,
-            0,
-            0,
-            &[("building", "yes"), ("barrier", "wall")],
-        ));
+        let elem =
+            ProcessedElement::Node(node(1, 0, 0, &[("building", "yes"), ("barrier", "wall")]));
         let p = get_priority(&elem);
         assert!(p <= 1); // building or entrance
     }
@@ -728,8 +710,7 @@ mod tests {
     #[test]
     fn parse_osm_data_nodes_without_lat_lon_are_skipped() {
         // Node missing lat/lon should not panic or be included
-        let json =
-            r#"{"elements":[{"type":"node","id":1,"tags":{"amenity":"bench"}}]}"#;
+        let json = r#"{"elements":[{"type":"node","id":1,"tags":{"amenity":"bench"}}]}"#;
         let osm_data: OsmData = serde_json::from_str(json).unwrap();
         let bbox = LLBBox::new(54.627, 9.927, 54.635, 9.938).unwrap();
         let (elements, _) = parse_osm_data(osm_data, bbox, 1.0, false);
@@ -748,9 +729,7 @@ mod tests {
         let bbox = LLBBox::new(54.627, 9.927, 54.635, 9.938).unwrap();
         let (elements, _) = parse_osm_data(osm_data, bbox, 1.0, false);
         // No relations should be in the output (route relations are ignored)
-        assert!(elements
-            .iter()
-            .all(|e| e.kind() != "relation"));
+        assert!(elements.iter().all(|e| e.kind() != "relation"));
     }
 
     // ── ProcessedMemberRole ─────────────────────────────────────────

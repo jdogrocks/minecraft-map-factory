@@ -783,12 +783,7 @@ mod tests {
     #[test]
     fn world_set_and_get_block() {
         let mut world = WorldToModify::default();
-        world.set_block_with_properties(
-            100,
-            64,
-            200,
-            BlockWithProperties::simple(STONE),
-        );
+        world.set_block_with_properties(100, 64, 200, BlockWithProperties::simple(STONE));
         assert_eq!(world.get_block(100, 64, 200), Some(STONE));
     }
 

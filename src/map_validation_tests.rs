@@ -13,14 +13,14 @@ mod tests {
     use crate::args::Args;
     use crate::coordinate_system::cartesian::XZBBox;
     use crate::coordinate_system::geographic::LLBBox;
-    use crate::data_processing::{GenerationOptions, generate_world_with_options};
+    use crate::data_processing::{generate_world_with_options, GenerationOptions};
     use crate::ground::Ground;
     use crate::osm_parser::{self, ProcessedElement};
     use crate::retrieve_data;
     use crate::world_editor::WorldFormat;
     use std::collections::HashMap;
-    use std::path::PathBuf;
     use std::fs;
+    use std::path::PathBuf;
     use tempfile::TempDir;
 
     // ── Helpers ─────────────────────────────────────────────────────
@@ -57,8 +57,10 @@ mod tests {
     }
 
     fn load_and_parse_fixture() -> (Vec<ProcessedElement>, XZBBox, LLBBox) {
-        let fixture_path =
-            concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/small_area.json");
+        let fixture_path = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/fixtures/small_area.json"
+        );
         let osm_data = retrieve_data::fetch_data_from_file(fixture_path)
             .expect("Failed to load small_area.json fixture");
 
@@ -109,9 +111,8 @@ mod tests {
                 let mut chunks = Vec::new();
                 for chunk_result in region.iter() {
                     if let Ok(chunk) = chunk_result {
-                        let nbt: fastnbt::Value =
-                            fastnbt::from_bytes(chunk.data.as_slice())
-                                .expect("Chunk NBT should be parseable");
+                        let nbt: fastnbt::Value = fastnbt::from_bytes(chunk.data.as_slice())
+                            .expect("Chunk NBT should be parseable");
                         chunks.push(nbt);
                     }
                 }
@@ -163,10 +164,27 @@ mod tests {
             if filename.ends_with(".mca") {
                 // Format: r.<x>.<z>.mca
                 let parts: Vec<&str> = filename.split('.').collect();
-                assert_eq!(parts.len(), 4, "Region filename should be r.<x>.<z>.mca, got: {}", filename);
-                assert_eq!(parts[0], "r", "Region filename should start with 'r': {}", filename);
-                assert!(parts[1].parse::<i32>().is_ok(), "Region X should be integer: {}", filename);
-                assert!(parts[2].parse::<i32>().is_ok(), "Region Z should be integer: {}", filename);
+                assert_eq!(
+                    parts.len(),
+                    4,
+                    "Region filename should be r.<x>.<z>.mca, got: {}",
+                    filename
+                );
+                assert_eq!(
+                    parts[0], "r",
+                    "Region filename should start with 'r': {}",
+                    filename
+                );
+                assert!(
+                    parts[1].parse::<i32>().is_ok(),
+                    "Region X should be integer: {}",
+                    filename
+                );
+                assert!(
+                    parts[2].parse::<i32>().is_ok(),
+                    "Region Z should be integer: {}",
+                    filename
+                );
                 assert_eq!(parts[3], "mca", "Extension should be 'mca': {}", filename);
             }
         }
@@ -177,9 +195,7 @@ mod tests {
         let (world_path, _tmp) = generate_test_world();
         let all_chunks = read_all_chunks(&world_path);
 
-        let required_fields = [
-            "DataVersion", "xPos", "yPos", "zPos", "Status", "sections",
-        ];
+        let required_fields = ["DataVersion", "xPos", "yPos", "zPos", "Status", "sections"];
 
         let mut total_chunks = 0u32;
         for (region_name, chunks) in &all_chunks {
@@ -318,7 +334,10 @@ mod tests {
             }
         }
 
-        assert!(sections_checked > 0, "Should have checked at least one section");
+        assert!(
+            sections_checked > 0,
+            "Should have checked at least one section"
+        );
     }
 
     #[test]
@@ -344,8 +363,7 @@ mod tests {
                                 "Heightmaps should contain '{}'",
                                 hm_type
                             );
-                            if let Some(fastnbt::Value::LongArray(data)) =
-                                heightmaps.get(*hm_type)
+                            if let Some(fastnbt::Value::LongArray(data)) = heightmaps.get(*hm_type)
                             {
                                 assert!(
                                     !data.is_empty(),
@@ -360,7 +378,10 @@ mod tests {
             }
         }
 
-        assert!(checked > 0, "Should have checked at least one chunk's heightmaps");
+        assert!(
+            checked > 0,
+            "Should have checked at least one chunk's heightmaps"
+        );
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -483,8 +504,7 @@ mod tests {
             let path = entry.path();
             if path.extension().map_or(false, |ext| ext == "mca") {
                 let file = fs::File::open(&path).expect("open region file");
-                let mut region =
-                    fastanvil::Region::from_stream(file).expect("valid region");
+                let mut region = fastanvil::Region::from_stream(file).expect("valid region");
 
                 let mut chunk_count = 0u32;
                 for chunk_result in region.iter() {
@@ -496,7 +516,8 @@ mod tests {
                 // Every region should have all 1024 chunks (32x32) because
                 // the save pass fills empty chunks with base layer
                 assert_eq!(
-                    chunk_count, 1024,
+                    chunk_count,
+                    1024,
                     "Region {} should have 1024 chunks (all filled), got {}",
                     path.display(),
                     chunk_count
@@ -514,7 +535,14 @@ mod tests {
         use crate::entity_placement::theme::{default_theme, fantasy_theme};
 
         let themes = [default_theme(), fantasy_theme()];
-        let contexts = ["residential", "commercial", "public", "farm", "religious", "industrial"];
+        let contexts = [
+            "residential",
+            "commercial",
+            "public",
+            "farm",
+            "religious",
+            "industrial",
+        ];
 
         for theme in &themes {
             for context in &contexts {
@@ -584,7 +612,10 @@ mod tests {
 
         // Residential has: cat(40), wolf(20), villager(30), parrot(10)
         // With 10k samples, each should appear proportionally
-        assert!(counts.len() >= 3, "Should select at least 3 different entity types");
+        assert!(
+            counts.len() >= 3,
+            "Should select at least 3 different entity types"
+        );
 
         // Cat (weight 40/100 = 40%) should be the most common
         let cat_count = counts.get("minecraft:cat").copied().unwrap_or(0);
@@ -625,7 +656,14 @@ mod tests {
             BuildingCategory::Default,
         ];
 
-        let valid_contexts = ["residential", "farm", "commercial", "public", "religious", "industrial"];
+        let valid_contexts = [
+            "residential",
+            "farm",
+            "commercial",
+            "public",
+            "religious",
+            "industrial",
+        ];
 
         for category in &categories {
             let context = category_to_context(*category);
@@ -640,9 +678,9 @@ mod tests {
 
     #[test]
     fn entity_placement_skips_small_buildings() {
+        use crate::element_processing::buildings::BuildingCategory;
         use crate::entity_placement::place_building_entities;
         use crate::entity_placement::theme::default_theme;
-        use crate::element_processing::buildings::BuildingCategory;
 
         // Create a minimal world editor to test entity placement
         let xzbbox = XZBBox::rect_from_xz_lengths(100.0, 100.0).unwrap();
@@ -747,8 +785,18 @@ mod tests {
         let max_z = metadata["maxMcZ"].as_i64().expect("maxMcZ");
 
         // Bounding box should have positive dimensions
-        assert!(max_x > min_x, "maxMcX ({}) should be > minMcX ({})", max_x, min_x);
-        assert!(max_z > min_z, "maxMcZ ({}) should be > minMcZ ({})", max_z, min_z);
+        assert!(
+            max_x > min_x,
+            "maxMcX ({}) should be > minMcX ({})",
+            max_x,
+            min_x
+        );
+        assert!(
+            max_z > min_z,
+            "maxMcZ ({}) should be > minMcZ ({})",
+            max_z,
+            min_z
+        );
 
         // Geographic coordinates should be within input bbox
         let min_lat = metadata["minGeoLat"].as_f64().expect("minGeoLat");
@@ -760,8 +808,14 @@ mod tests {
         assert!(max_lon > min_lon, "maxGeoLon should be > minGeoLon");
 
         // Coordinates should be within roughly the input bbox
-        assert!(min_lat >= 54.0 && min_lat <= 55.0, "minGeoLat should be near 54.6");
-        assert!(min_lon >= 9.0 && min_lon <= 10.0, "minGeoLon should be near 9.93");
+        assert!(
+            min_lat >= 54.0 && min_lat <= 55.0,
+            "minGeoLat should be near 54.6"
+        );
+        assert!(
+            min_lon >= 9.0 && min_lon <= 10.0,
+            "minGeoLon should be near 9.93"
+        );
     }
 
     #[test]
@@ -779,8 +833,7 @@ mod tests {
                 let region_z: i32 = parts[2].parse().unwrap();
 
                 let file = fs::File::open(&path).expect("open region file");
-                let mut region =
-                    fastanvil::Region::from_stream(file).expect("valid region");
+                let mut region = fastanvil::Region::from_stream(file).expect("valid region");
 
                 for chunk_result in region.iter() {
                     if let Ok(chunk) = chunk_result {
@@ -801,12 +854,18 @@ mod tests {
                                 assert!(
                                     *x_pos >= expected_min_x && *x_pos <= expected_max_x,
                                     "Chunk xPos {} should be in range [{}, {}] for region {}",
-                                    x_pos, expected_min_x, expected_max_x, filename
+                                    x_pos,
+                                    expected_min_x,
+                                    expected_max_x,
+                                    filename
                                 );
                                 assert!(
                                     *z_pos >= expected_min_z && *z_pos <= expected_max_z,
                                     "Chunk zPos {} should be in range [{}, {}] for region {}",
-                                    z_pos, expected_min_z, expected_max_z, filename
+                                    z_pos,
+                                    expected_min_z,
+                                    expected_max_z,
+                                    filename
                                 );
                             }
                         }
@@ -832,8 +891,7 @@ mod tests {
             let path = entry.path();
             if path.extension().map_or(false, |ext| ext == "mca") {
                 let file = fs::File::open(&path).expect("open region file");
-                let mut region =
-                    fastanvil::Region::from_stream(file).expect("valid region");
+                let mut region = fastanvil::Region::from_stream(file).expect("valid region");
 
                 for chunk_result in region.iter() {
                     match chunk_result {
@@ -1002,7 +1060,12 @@ mod tests {
                 name
             );
             let parts: Vec<&str> = name.splitn(2, ':').collect();
-            assert_eq!(parts.len(), 2, "Block name '{}' should have namespace:id format", name);
+            assert_eq!(
+                parts.len(),
+                2,
+                "Block name '{}' should have namespace:id format",
+                name
+            );
             assert!(
                 !parts[0].is_empty() && !parts[1].is_empty(),
                 "Block name '{}' should have non-empty namespace and id",
@@ -1060,8 +1123,7 @@ mod tests {
         let (world_path, _tmp) = generate_test_world();
         let all_chunks = read_all_chunks(&world_path);
 
-        let mut biome_ids: std::collections::HashSet<String> =
-            std::collections::HashSet::new();
+        let mut biome_ids: std::collections::HashSet<String> = std::collections::HashSet::new();
 
         for (_region_name, chunks) in &all_chunks {
             for chunk_nbt in chunks {
@@ -1160,8 +1222,14 @@ mod tests {
             serde_json::from_str(&metadata_str).expect("parse metadata");
 
         let required = [
-            "minMcX", "maxMcX", "minMcZ", "maxMcZ",
-            "minGeoLat", "maxGeoLat", "minGeoLon", "maxGeoLon",
+            "minMcX",
+            "maxMcX",
+            "minMcZ",
+            "maxMcZ",
+            "minGeoLat",
+            "maxGeoLat",
+            "minGeoLon",
+            "maxGeoLon",
         ];
 
         for field in &required {
