@@ -1,0 +1,96 @@
+rules:
+  - id: command-injection-format-string
+    patterns:
+      - pattern: |
+          Command::new($CMD)
+            .$METH(format!($FMT, ...))
+      - metavariable-regex:
+          metavariable: $FMT
+          regex: ".*\\{.*\\}.*"
+    message: >
+      Potential command injection: user-controlled data interpolated into
+      a shell command argument via format!(). Use separate .arg() calls
+      or validate/sanitize the input first.
+    languages: [rust]
+    severity: WARNING
+
+  - id: unwrap-on-user-input
+    patterns:
+      - pattern: |
+          $X.parse().$UNWRAP()
+      - metavariable-regex:
+          metavariable: $UNWRAP
+          regex: "^(unwrap|expect)$"
+    message: >
+      Calling .unwrap()/.expect() on parsed user input can panic.
+      Use proper error handling with match or ? operator.
+    languages: [rust]
+    severity: WARNING
+
+  - id: path-traversal-no-canonicalize
+    patterns:
+      - pattern: |
+          PathBuf::from($USER_INPUT)
+      - pattern-not-inside: |
+          let $P = PathBuf::from($USER_INPUT);
+          ...
+          $P.canonicalize()
+    message: >
+      User-controlled path without canonicalization may allow path
+      traversal. Consider canonicalizing and validating against an
+      allowed base directory.
+    languages: [rust]
+    severity: WARNING
+
+  - id: unsafe-block-usage
+    pattern: |
+      unsafe { ... }
+    message: >
+      Unsafe block detected. Review for memory safety, undefined
+      behavior, and ensure safety invariants are documented.
+    languages: [rust]
+    severity: INFO
+
+  - id: hardcoded-credentials
+    pattern-either:
+      - pattern: |
+          $X = "...$SECRET..."
+      - pattern: |
+          const $X: &str = "...$SECRET..."
+    metavariable-regex:
+      metavariable: $X
+      regex: "(?i)(password|secret|token|api_key|apikey|auth)"
+    message: >
+      Potential hardcoded credential detected. Use environment
+      variables or a secrets manager instead.
+    languages: [rust]
+    severity: ERROR
+
+  - id: tiff-parsing-unchecked-length
+    patterns:
+      - pattern: |
+          $BUF[$IDX..$END]
+      - pattern-inside: |
+          fn $FUNC(...) {
+            ...
+            $BUF[$IDX..$END]
+            ...
+          }
+      - metavariable-regex:
+          metavariable: $FUNC
+          regex: "(?i).*(tiff|ifd|cog|geotiff|elevation).*"
+    message: >
+      Unchecked slice indexing in TIFF/COG parsing function.
+      Malformed files could cause panics. Validate indices first.
+    languages: [rust]
+    severity: WARNING
+
+  - id: deserialization-without-size-limit
+    pattern: |
+      serde_json::from_reader($READER)
+    message: >
+      Deserializing from reader without size limits. A malicious
+      or corrupted file could cause OOM. Consider wrapping the
+      reader with a size-limiting adapter.
+    languages: [rust]
+    severity: INFO
