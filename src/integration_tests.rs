@@ -10,7 +10,7 @@ mod tests {
     use crate::coordinate_system::geographic::LLBBox;
     use crate::data_processing::{generate_world_with_options, GenerationOptions};
     use crate::ground::Ground;
-    use crate::osm_parser::{self, OsmData, ProcessedElement};
+    use crate::osm_parser::{self, ProcessedElement};
     use crate::retrieve_data;
     use crate::world_editor::WorldFormat;
     use std::fs;
@@ -105,7 +105,7 @@ mod tests {
         let mca_files: Vec<_> = std::fs::read_dir(&region_dir)
             .expect("Failed to read region dir")
             .filter_map(|e| e.ok())
-            .filter(|e| e.path().extension().map_or(false, |ext| ext == "mca"))
+            .filter(|e| e.path().extension().is_some_and(|ext| ext == "mca"))
             .collect();
 
         assert!(
@@ -182,20 +182,18 @@ mod tests {
         for entry in std::fs::read_dir(&region_dir).expect("read region dir") {
             let entry = entry.expect("dir entry");
             let path = entry.path();
-            if path.extension().map_or(false, |ext| ext == "mca") {
+            if path.extension().is_some_and(|ext| ext == "mca") {
                 let file = std::fs::File::open(&path).expect("Failed to open region file");
                 let mut region = fastanvil::Region::from_stream(file)
                     .expect("Region file should be valid Anvil format");
 
                 // Iterate chunks to verify at least some are populated
                 let mut chunk_count = 0u32;
-                for chunk_result in region.iter() {
-                    if let Ok(chunk) = chunk_result {
-                        // Verify chunk data is valid NBT by parsing it
-                        let _nbt: fastnbt::Value = fastnbt::from_bytes(chunk.data.as_slice())
-                            .expect("Chunk NBT should be parseable");
-                        chunk_count += 1;
-                    }
+                for chunk_data in region.iter().flatten() {
+                    // Verify chunk data is valid NBT by parsing it
+                    let _nbt: fastnbt::Value = fastnbt::from_bytes(chunk_data.data.as_slice())
+                        .expect("Chunk NBT should be parseable");
+                    chunk_count += 1;
                 }
                 assert!(
                     chunk_count > 0,
@@ -233,20 +231,17 @@ mod tests {
         for entry in std::fs::read_dir(&region_dir).expect("read region dir") {
             let entry = entry.expect("dir entry");
             let path = entry.path();
-            if path.extension().map_or(false, |ext| ext == "mca") {
+            if path.extension().is_some_and(|ext| ext == "mca") {
                 let file = std::fs::File::open(&path).expect("open region file");
                 let mut region = fastanvil::Region::from_stream(file).expect("valid region");
 
-                for chunk_result in region.iter() {
-                    if let Ok(chunk) = chunk_result {
-                        let nbt: fastnbt::Value =
-                            fastnbt::from_bytes(chunk.data.as_slice()).unwrap();
-                        if let fastnbt::Value::Compound(map) = &nbt {
-                            // Chunks should have a "sections" array
-                            if let Some(fastnbt::Value::List(sections)) = map.get("sections") {
-                                if !sections.is_empty() {
-                                    found_sections = true;
-                                }
+                for chunk in region.iter().flatten() {
+                    let nbt: fastnbt::Value = fastnbt::from_bytes(chunk.data.as_slice()).unwrap();
+                    if let fastnbt::Value::Compound(map) = &nbt {
+                        // Chunks should have a "sections" array
+                        if let Some(fastnbt::Value::List(sections)) = map.get("sections") {
+                            if !sections.is_empty() {
+                                found_sections = true;
                             }
                         }
                     }
@@ -307,10 +302,7 @@ mod tests {
         let (elements, _, _) = load_and_parse_fixture();
 
         // Verify elements are sorted by priority (lower index = higher priority)
-        let priorities: Vec<usize> = elements
-            .iter()
-            .map(|el| osm_parser::get_priority(el))
-            .collect();
+        let priorities: Vec<usize> = elements.iter().map(osm_parser::get_priority).collect();
 
         for window in priorities.windows(2) {
             assert!(
@@ -438,7 +430,7 @@ mod tests {
 
     #[test]
     fn generation_with_custom_scale() {
-        let (elements, _, llbbox) = load_and_parse_fixture();
+        let (_, _, llbbox) = load_and_parse_fixture();
 
         // Re-parse at scale 2.0 — should produce larger XZ coordinates
         let fixture_path = concat!(
@@ -503,7 +495,7 @@ mod tests {
         // Run 1
         let osm_data_1 = retrieve_data::fetch_data_from_file(fixture_path).unwrap();
         let (mut elements_1, xzbbox_1) = osm_parser::parse_osm_data(osm_data_1, llbbox, 1.0, false);
-        elements_1.sort_by_key(|el| osm_parser::get_priority(el));
+        elements_1.sort_by_key(osm_parser::get_priority);
 
         let tmp1 = TempDir::new().unwrap();
         let dir1 = tmp1.path().join("det_world_1");
@@ -523,7 +515,7 @@ mod tests {
         // Run 2
         let osm_data_2 = retrieve_data::fetch_data_from_file(fixture_path).unwrap();
         let (mut elements_2, xzbbox_2) = osm_parser::parse_osm_data(osm_data_2, llbbox, 1.0, false);
-        elements_2.sort_by_key(|el| osm_parser::get_priority(el));
+        elements_2.sort_by_key(osm_parser::get_priority);
 
         let tmp2 = TempDir::new().unwrap();
         let dir2 = tmp2.path().join("det_world_2");

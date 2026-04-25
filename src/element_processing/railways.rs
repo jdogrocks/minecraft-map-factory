@@ -496,6 +496,53 @@ fn generate_subway_shell(
     }
 }
 
+/// Phase 2 of subway generation: carve the 3x3 air interior and place
+/// ceiling lights.  Called AFTER ground generation so that the carved
+/// air blocks are not overwritten by the underground stone fill.
+pub fn carve_subway_interior(editor: &mut WorldEditor, subway_points: &[(i32, i32)]) {
+    for (idx, &(bx, bz)) in subway_points.iter().enumerate() {
+        let ground_y = editor.get_ground_level(bx, bz);
+        let ceil_y = ground_y - SUBWAY_DEPTH;
+        let floor_y = ceil_y - INTERIOR_HEIGHT - 1;
+
+        if floor_y <= crate::world_editor::MIN_Y {
+            continue;
+        }
+
+        // Whitelist: allow overwriting shell blocks and ground-fill STONE
+        // so the tunnel is actually hollow.
+        let carve_whitelist: &[Block] = &[
+            STONE_BRICKS,
+            CRACKED_STONE_BRICKS,
+            MOSSY_STONE_BRICKS,
+            STONE,
+        ];
+        for dx in -AIR_RADIUS..=AIR_RADIUS {
+            for dz in -AIR_RADIUS..=AIR_RADIUS {
+                for y in (floor_y + 1)..ceil_y {
+                    // Skip the center rail block.
+                    if dx == 0 && dz == 0 && y == floor_y + 1 {
+                        continue;
+                    }
+                    editor.set_block_absolute(
+                        AIR,
+                        bx + dx,
+                        y,
+                        bz + dz,
+                        Some(carve_whitelist),
+                        None,
+                    );
+                }
+            }
+        }
+
+        // Periodic ceiling lighting.
+        if idx % LIGHT_INTERVAL == 0 {
+            editor.set_block_absolute(SEA_LANTERN, bx, ceil_y - 1, bz, None, None);
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -681,63 +728,20 @@ mod tests {
 
     #[test]
     fn layer_height_step_positive() {
-        assert!(LAYER_HEIGHT_STEP > 0);
+        let step = LAYER_HEIGHT_STEP;
+        assert!(step > 0);
     }
 
     #[test]
     fn wall_radius_greater_than_air_radius() {
-        assert!(WALL_RADIUS > AIR_RADIUS);
+        let wall = WALL_RADIUS;
+        let air = AIR_RADIUS;
+        assert!(wall > air);
     }
 
     #[test]
     fn interior_height_provides_minecart_clearance() {
-        assert!(INTERIOR_HEIGHT >= 4);
-    }
-}
-
-/// Phase 2 of subway generation: carve the 3x3 air interior and place
-/// ceiling lights.  Called AFTER ground generation so that the carved
-/// air blocks are not overwritten by the underground stone fill.
-pub fn carve_subway_interior(editor: &mut WorldEditor, subway_points: &[(i32, i32)]) {
-    for (idx, &(bx, bz)) in subway_points.iter().enumerate() {
-        let ground_y = editor.get_ground_level(bx, bz);
-        let ceil_y = ground_y - SUBWAY_DEPTH;
-        let floor_y = ceil_y - INTERIOR_HEIGHT - 1;
-
-        if floor_y <= crate::world_editor::MIN_Y {
-            continue;
-        }
-
-        // Whitelist: allow overwriting shell blocks and ground-fill STONE
-        // so the tunnel is actually hollow.
-        let carve_whitelist: &[Block] = &[
-            STONE_BRICKS,
-            CRACKED_STONE_BRICKS,
-            MOSSY_STONE_BRICKS,
-            STONE,
-        ];
-        for dx in -AIR_RADIUS..=AIR_RADIUS {
-            for dz in -AIR_RADIUS..=AIR_RADIUS {
-                for y in (floor_y + 1)..ceil_y {
-                    // Skip the center rail block.
-                    if dx == 0 && dz == 0 && y == floor_y + 1 {
-                        continue;
-                    }
-                    editor.set_block_absolute(
-                        AIR,
-                        bx + dx,
-                        y,
-                        bz + dz,
-                        Some(carve_whitelist),
-                        None,
-                    );
-                }
-            }
-        }
-
-        // Periodic ceiling lighting.
-        if idx % LIGHT_INTERVAL == 0 {
-            editor.set_block_absolute(SEA_LANTERN, bx, ceil_y - 1, bz, None, None);
-        }
+        let height = INTERIOR_HEIGHT;
+        assert!(height >= 4);
     }
 }

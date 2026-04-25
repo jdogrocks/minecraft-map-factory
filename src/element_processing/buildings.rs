@@ -3445,6 +3445,7 @@ fn qualifies_for_auto_gabled_roof(building_type: &str) -> bool {
 // Main Building Generation Function
 // ============================================================================
 
+#[allow(clippy::too_many_arguments)]
 #[inline]
 pub fn generate_buildings(
     editor: &mut WorldEditor,

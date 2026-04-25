@@ -1455,14 +1455,14 @@ mod tests {
     #[test]
     fn disk_full_error_string_storage_full() {
         // Test the string-based fallback for "StorageFull"
-        let err = std::io::Error::new(std::io::ErrorKind::Other, "StorageFull");
+        let err = std::io::Error::other("StorageFull");
         assert!(is_disk_full_error(&err));
     }
 
     #[test]
     fn disk_full_error_string_match() {
         // Custom error with os error 112 in the message
-        let err = std::io::Error::new(std::io::ErrorKind::Other, "Write failed: os error 112");
+        let err = std::io::Error::other("Write failed: os error 112");
         assert!(is_disk_full_error(&err));
     }
 
