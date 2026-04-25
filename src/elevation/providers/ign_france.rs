@@ -152,3 +152,75 @@ impl ElevationProvider for IgnFrance {
         fetch_fixed_tile_grid(self, bbox, grid_width, grid_height)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn name_is_ign_france() {
+        let provider = IgnFrance;
+        assert_eq!(provider.name(), "ign_france");
+    }
+
+    #[test]
+    fn coverage_bboxes_includes_metropolitan_france() {
+        let provider = IgnFrance;
+        let bboxes = provider.coverage_bboxes().unwrap();
+        assert!(!bboxes.is_empty());
+        // Metropolitan France: Paris (48.8, 2.3) should be covered
+        let paris_covered = bboxes.iter().any(|b| {
+            b.min().lat() <= 48.8
+                && b.max().lat() >= 48.8
+                && b.min().lng() <= 2.3
+                && b.max().lng() >= 2.3
+        });
+        assert!(paris_covered, "Paris should be covered");
+    }
+
+    #[test]
+    fn coverage_includes_overseas_territories() {
+        let provider = IgnFrance;
+        let bboxes = provider.coverage_bboxes().unwrap();
+        // Should have at least 6 regions (metro + 5 overseas)
+        assert!(bboxes.len() >= 6, "Expected 6+ coverage regions, got {}", bboxes.len());
+    }
+
+    #[test]
+    fn native_resolution_is_1m() {
+        let provider = IgnFrance;
+        assert_eq!(provider.native_resolution_m(), 1.0);
+    }
+
+    #[test]
+    fn resolution_levels_ordered() {
+        let provider = IgnFrance;
+        let levels = provider.resolution_levels();
+        assert_eq!(levels.len(), 4);
+        // Should be finest to coarsest
+        for i in 1..levels.len() {
+            assert!(levels[i].meters_per_pixel() > levels[i - 1].meters_per_pixel());
+        }
+    }
+
+    #[test]
+    fn resolution_level_ids() {
+        assert_eq!(Resolution::M1.level_id(), "r1");
+        assert_eq!(Resolution::M3.level_id(), "r3");
+        assert_eq!(Resolution::M10.level_id(), "r10");
+        assert_eq!(Resolution::M30.level_id(), "r30");
+    }
+
+    #[test]
+    fn resolution_meters_per_pixel() {
+        assert_eq!(Resolution::M1.meters_per_pixel(), 1.0);
+        assert!(Resolution::M3.meters_per_pixel() > 3.0);
+        assert!(Resolution::M10.meters_per_pixel() > 10.0);
+        assert!(Resolution::M30.meters_per_pixel() > 30.0);
+    }
+
+    #[test]
+    fn cache_name_matches_provider_name() {
+        assert_eq!(IgnFrance::CACHE_NAME, "ign_france");
+    }
+}
