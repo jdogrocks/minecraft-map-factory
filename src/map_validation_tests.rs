@@ -102,19 +102,17 @@ mod tests {
         for entry in fs::read_dir(&region_dir).expect("read region dir") {
             let entry = entry.expect("dir entry");
             let path = entry.path();
-            if path.extension().map_or(false, |ext| ext == "mca") {
+            if path.extension().is_some_and(|ext| ext == "mca") {
                 let filename = path.file_name().unwrap().to_string_lossy().to_string();
                 let file = fs::File::open(&path).expect("open region file");
                 let mut region = fastanvil::Region::from_stream(file)
                     .expect("Region file should be valid Anvil format");
 
                 let mut chunks = Vec::new();
-                for chunk_result in region.iter() {
-                    if let Ok(chunk) = chunk_result {
-                        let nbt: fastnbt::Value = fastnbt::from_bytes(chunk.data.as_slice())
-                            .expect("Chunk NBT should be parseable");
-                        chunks.push(nbt);
-                    }
+                for chunk in region.iter().flatten() {
+                    let nbt: fastnbt::Value = fastnbt::from_bytes(chunk.data.as_slice())
+                        .expect("Chunk NBT should be parseable");
+                    chunks.push(nbt);
                 }
                 results.push((filename, chunks));
             }
@@ -135,7 +133,7 @@ mod tests {
         let mca_files: Vec<_> = fs::read_dir(&region_dir)
             .expect("read region dir")
             .filter_map(|e| e.ok())
-            .filter(|e| e.path().extension().map_or(false, |ext| ext == "mca"))
+            .filter(|e| e.path().extension().is_some_and(|ext| ext == "mca"))
             .collect();
 
         assert!(!mca_files.is_empty(), "At least one .mca file should exist");
@@ -502,7 +500,7 @@ mod tests {
         for entry in fs::read_dir(&region_dir).expect("read region dir") {
             let entry = entry.expect("dir entry");
             let path = entry.path();
-            if path.extension().map_or(false, |ext| ext == "mca") {
+            if path.extension().is_some_and(|ext| ext == "mca") {
                 let file = fs::File::open(&path).expect("open region file");
                 let mut region = fastanvil::Region::from_stream(file).expect("valid region");
 
@@ -809,11 +807,11 @@ mod tests {
 
         // Coordinates should be within roughly the input bbox
         assert!(
-            min_lat >= 54.0 && min_lat <= 55.0,
+            (54.0..=55.0).contains(&min_lat),
             "minGeoLat should be near 54.6"
         );
         assert!(
-            min_lon >= 9.0 && min_lon <= 10.0,
+            (9.0..=10.0).contains(&min_lon),
             "minGeoLon should be near 9.93"
         );
     }
@@ -826,7 +824,7 @@ mod tests {
         for entry in fs::read_dir(&region_dir).expect("read region dir") {
             let entry = entry.expect("dir entry");
             let path = entry.path();
-            if path.extension().map_or(false, |ext| ext == "mca") {
+            if path.extension().is_some_and(|ext| ext == "mca") {
                 let filename = path.file_name().unwrap().to_string_lossy().to_string();
                 let parts: Vec<&str> = filename.split('.').collect();
                 let region_x: i32 = parts[1].parse().unwrap();
@@ -835,39 +833,36 @@ mod tests {
                 let file = fs::File::open(&path).expect("open region file");
                 let mut region = fastanvil::Region::from_stream(file).expect("valid region");
 
-                for chunk_result in region.iter() {
-                    if let Ok(chunk) = chunk_result {
-                        let nbt: fastnbt::Value =
-                            fastnbt::from_bytes(chunk.data.as_slice()).unwrap();
-                        if let fastnbt::Value::Compound(map) = &nbt {
-                            if let (
-                                Some(fastnbt::Value::Int(x_pos)),
-                                Some(fastnbt::Value::Int(z_pos)),
-                            ) = (map.get("xPos"), map.get("zPos"))
-                            {
-                                // Chunk position should be within the region's range
-                                let expected_min_x = region_x * 32;
-                                let expected_max_x = expected_min_x + 31;
-                                let expected_min_z = region_z * 32;
-                                let expected_max_z = expected_min_z + 31;
+                for chunk in region.iter().flatten() {
+                    let nbt: fastnbt::Value = fastnbt::from_bytes(chunk.data.as_slice()).unwrap();
+                    if let fastnbt::Value::Compound(map) = &nbt {
+                        if let (
+                            Some(fastnbt::Value::Int(x_pos)),
+                            Some(fastnbt::Value::Int(z_pos)),
+                        ) = (map.get("xPos"), map.get("zPos"))
+                        {
+                            // Chunk position should be within the region's range
+                            let expected_min_x = region_x * 32;
+                            let expected_max_x = expected_min_x + 31;
+                            let expected_min_z = region_z * 32;
+                            let expected_max_z = expected_min_z + 31;
 
-                                assert!(
-                                    *x_pos >= expected_min_x && *x_pos <= expected_max_x,
-                                    "Chunk xPos {} should be in range [{}, {}] for region {}",
-                                    x_pos,
-                                    expected_min_x,
-                                    expected_max_x,
-                                    filename
-                                );
-                                assert!(
-                                    *z_pos >= expected_min_z && *z_pos <= expected_max_z,
-                                    "Chunk zPos {} should be in range [{}, {}] for region {}",
-                                    z_pos,
-                                    expected_min_z,
-                                    expected_max_z,
-                                    filename
-                                );
-                            }
+                            assert!(
+                                (expected_min_x..=expected_max_x).contains(x_pos),
+                                "Chunk xPos {} should be in range [{}, {}] for region {}",
+                                x_pos,
+                                expected_min_x,
+                                expected_max_x,
+                                filename
+                            );
+                            assert!(
+                                (expected_min_z..=expected_max_z).contains(z_pos),
+                                "Chunk zPos {} should be in range [{}, {}] for region {}",
+                                z_pos,
+                                expected_min_z,
+                                expected_max_z,
+                                filename
+                            );
                         }
                     }
                 }
@@ -889,7 +884,7 @@ mod tests {
         for entry in fs::read_dir(&region_dir).expect("read region dir") {
             let entry = entry.expect("dir entry");
             let path = entry.path();
-            if path.extension().map_or(false, |ext| ext == "mca") {
+            if path.extension().is_some_and(|ext| ext == "mca") {
                 let file = fs::File::open(&path).expect("open region file");
                 let mut region = fastanvil::Region::from_stream(file).expect("valid region");
 

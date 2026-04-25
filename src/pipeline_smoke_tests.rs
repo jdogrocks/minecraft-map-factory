@@ -132,31 +132,28 @@ mod tests {
             .flatten()
         {
             let path = entry.path();
-            if path.extension().map_or(false, |ext| ext == "mca") {
+            if path.extension().is_some_and(|ext| ext == "mca") {
                 let file = fs::File::open(&path).expect("open region file");
                 let mut region = fastanvil::Region::from_stream(file).expect("valid Anvil region");
 
-                for chunk_result in region.iter() {
-                    if let Ok(chunk) = chunk_result {
-                        let nbt: fastnbt::Value =
-                            fastnbt::from_bytes(chunk.data.as_slice()).unwrap();
-                        if let fastnbt::Value::Compound(map) = &nbt {
-                            if let Some(fastnbt::Value::List(sections)) = map.get("sections") {
-                                for section in sections {
-                                    if let fastnbt::Value::Compound(s_map) = section {
-                                        if let Some(fastnbt::Value::Compound(bs)) =
-                                            s_map.get("block_states")
+                for chunk in region.iter().flatten() {
+                    let nbt: fastnbt::Value = fastnbt::from_bytes(chunk.data.as_slice()).unwrap();
+                    if let fastnbt::Value::Compound(map) = &nbt {
+                        if let Some(fastnbt::Value::List(sections)) = map.get("sections") {
+                            for section in sections {
+                                if let fastnbt::Value::Compound(s_map) = section {
+                                    if let Some(fastnbt::Value::Compound(bs)) =
+                                        s_map.get("block_states")
+                                    {
+                                        if let Some(fastnbt::Value::List(palette)) =
+                                            bs.get("palette")
                                         {
-                                            if let Some(fastnbt::Value::List(palette)) =
-                                                bs.get("palette")
-                                            {
-                                                for item in palette {
-                                                    if let fastnbt::Value::Compound(p) = item {
-                                                        if let Some(fastnbt::Value::String(name)) =
-                                                            p.get("Name")
-                                                        {
-                                                            names.insert(name.clone());
-                                                        }
+                                            for item in palette {
+                                                if let fastnbt::Value::Compound(p) = item {
+                                                    if let Some(fastnbt::Value::String(name)) =
+                                                        p.get("Name")
+                                                    {
+                                                        names.insert(name.clone());
                                                     }
                                                 }
                                             }
@@ -183,7 +180,7 @@ mod tests {
             .flatten()
         {
             let path = entry.path();
-            if path.extension().map_or(false, |ext| ext == "mca") {
+            if path.extension().is_some_and(|ext| ext == "mca") {
                 let file = fs::File::open(&path).expect("open region file");
                 let mut region = fastanvil::Region::from_stream(file).expect("valid Anvil region");
 
@@ -223,7 +220,7 @@ mod tests {
         let mca_files: Vec<_> = fs::read_dir(&region_dir)
             .expect("read region dir")
             .filter_map(|e| e.ok())
-            .filter(|e| e.path().extension().map_or(false, |ext| ext == "mca"))
+            .filter(|e| e.path().extension().is_some_and(|ext| ext == "mca"))
             .collect();
 
         let region_count = mca_files.len();
@@ -426,7 +423,7 @@ mod tests {
             .flatten()
         {
             let path = entry.path();
-            if path.extension().map_or(false, |ext| ext == "mca") {
+            if path.extension().is_some_and(|ext| ext == "mca") {
                 let size = fs::metadata(&path).map(|m| m.len()).unwrap_or(0);
                 assert!(
                     size > 8192,
