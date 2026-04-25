@@ -11,27 +11,29 @@ mod coordinate_system;
 mod data_processing;
 mod deterministic_rng;
 mod element_processing;
-mod entity_placement;
 mod elevation;
 mod elevation_data;
+mod entity_placement;
 mod floodfill;
 mod floodfill_cache;
 mod ground;
 mod ground_generation;
+#[cfg(test)]
+mod integration_tests;
 mod land_cover;
 mod map_renderer;
 mod map_transformation;
+#[cfg(test)]
+mod map_validation_tests;
 mod osm_parser;
 mod overture;
+#[cfg(test)]
+mod pipeline_smoke_tests;
 #[cfg(feature = "gui")]
 mod progress;
 mod retrieve_data;
 #[cfg(feature = "gui")]
 mod telemetry;
-#[cfg(test)]
-mod integration_tests;
-#[cfg(test)]
-mod map_validation_tests;
 #[cfg(test)]
 mod test_utilities;
 mod version_check;
