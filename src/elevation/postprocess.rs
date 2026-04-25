@@ -1258,4 +1258,235 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn fill_nan_all_finite_is_noop() {
+        let original = vec![vec![1.0, 2.0], vec![3.0, 4.0]];
+        let mut grid = original.clone();
+        fill_nan_values(&mut grid);
+        assert_eq!(grid, original);
+    }
+
+    #[test]
+    fn fill_nan_all_nan_remains_nan() {
+        // When all values are NaN, there are no finite neighbors to interpolate from,
+        // so all values remain NaN (the algorithm only fills from finite neighbors).
+        let mut grid = vec![vec![f64::NAN; 3]; 3];
+        fill_nan_values(&mut grid);
+        for row in &grid {
+            for &h in row {
+                assert!(h.is_nan());
+            }
+        }
+    }
+
+    #[test]
+    fn fill_nan_empty_grid() {
+        let mut grid: Vec<Vec<f64>> = vec![];
+        fill_nan_values(&mut grid); // Should not panic
+    }
+
+    #[test]
+    fn fill_nan_single_element_remains_nan() {
+        // A single NaN with no finite neighbors stays NaN
+        let mut grid = vec![vec![f64::NAN]];
+        fill_nan_values(&mut grid);
+        assert!(grid[0][0].is_nan());
+    }
+
+    #[test]
+    fn fill_nan_surrounded_by_finite() {
+        // A NaN surrounded by finite values gets filled
+        let mut grid = vec![
+            vec![10.0, 10.0, 10.0],
+            vec![10.0, f64::NAN, 10.0],
+            vec![10.0, 10.0, 10.0],
+        ];
+        fill_nan_values(&mut grid);
+        assert!(grid[1][1].is_finite());
+        assert!((grid[1][1] - 10.0).abs() < 0.01);
+    }
+
+    // ── filter_elevation_outliers ───────────────────────────────────
+
+    #[test]
+    fn filter_outliers_preserves_normal_data() {
+        // Uniform elevation — nothing to filter
+        let mut grid = vec![vec![100.0; 10]; 10];
+        let original = grid.clone();
+        filter_elevation_outliers(&mut grid);
+        assert_eq!(grid, original);
+    }
+
+    #[test]
+    fn filter_outliers_handles_sparse_data() {
+        let mut grid = vec![vec![1.0, 2.0]]; // < 4 finite values → early return
+        let original = grid.clone();
+        filter_elevation_outliers(&mut grid);
+        assert_eq!(grid, original);
+    }
+
+    #[test]
+    fn filter_outliers_empty_grid() {
+        let mut grid: Vec<Vec<f64>> = vec![];
+        filter_elevation_outliers(&mut grid); // Should not panic
+    }
+
+    #[test]
+    fn filter_outliers_removes_extreme_spike() {
+        // Normal elevation around 100m, with a single extreme outlier
+        let mut grid = vec![vec![100.0; 20]; 20];
+        grid[10][10] = 10000.0; // extreme outlier
+        filter_elevation_outliers(&mut grid);
+        // The outlier should be replaced (filled by neighbor interpolation)
+        assert!(
+            grid[10][10] < 1000.0,
+            "Extreme outlier should be filtered: {}",
+            grid[10][10]
+        );
+    }
+
+    #[test]
+    fn filter_outliers_keeps_gradual_slopes() {
+        // Create a grid with gradual slope — no outliers
+        let mut grid: Vec<Vec<f64>> = (0..20)
+            .map(|z| (0..20).map(|x| (x + z) as f64 * 5.0).collect())
+            .collect();
+        let original = grid.clone();
+        filter_elevation_outliers(&mut grid);
+        // Nothing should change for gradual slopes
+        for (r1, r2) in grid.iter().zip(original.iter()) {
+            for (&a, &b) in r1.iter().zip(r2.iter()) {
+                assert!(
+                    (a - b).abs() < 0.01,
+                    "Gradual slope value changed: {a} vs {b}"
+                );
+            }
+        }
+    }
+
+    // ── repair_terrain_anomalies ────────────────────────────────────
+
+    #[test]
+    fn repair_anomalies_too_small_grid() {
+        let mut grid = vec![vec![1.0; 4]; 4]; // < 5 rows/cols → early return
+        let original = grid.clone();
+        repair_terrain_anomalies(&mut grid);
+        assert_eq!(grid, original);
+    }
+
+    #[test]
+    fn repair_anomalies_flat_terrain_unchanged() {
+        let mut grid = vec![vec![50.0; 10]; 10];
+        let original = grid.clone();
+        repair_terrain_anomalies(&mut grid);
+        assert_eq!(grid, original);
+    }
+
+    #[test]
+    fn repair_anomalies_fixes_spike() {
+        let mut grid = vec![vec![50.0; 10]; 10];
+        grid[5][5] = 200.0; // 150m spike — well above the threshold
+        repair_terrain_anomalies(&mut grid);
+        assert!(
+            (grid[5][5] - 50.0).abs() < 10.0,
+            "Spike should be repaired to near median: {}",
+            grid[5][5]
+        );
+    }
+
+    #[test]
+    fn repair_anomalies_preserves_nan() {
+        let mut grid = vec![vec![50.0; 10]; 10];
+        grid[5][5] = f64::NAN;
+        repair_terrain_anomalies(&mut grid);
+        // NaN should remain NaN (repair skips non-finite)
+        assert!(grid[5][5].is_nan());
+    }
+
+    // ── scale_to_minecraft ──────────────────────────────────────────
+
+    #[test]
+    fn scale_to_minecraft_flat_terrain() {
+        let heights = vec![vec![100.0; 5]; 5];
+        let result = scale_to_minecraft(&heights, 1.0, -62, false, 319);
+        // All same height → all should be ground_level
+        for row in &result {
+            for &h in row {
+                assert!(
+                    (h - (-62.0)).abs() < 1.0,
+                    "Flat terrain should be at ground level: {h}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn scale_to_minecraft_range() {
+        // Heights from 0 to 100m
+        let heights: Vec<Vec<f64>> = (0..10)
+            .map(|z| (0..10).map(|x| (x + z) as f64 * 5.0).collect())
+            .collect();
+        let result = scale_to_minecraft(&heights, 1.0, -62, false, 319);
+        // Check all values are within valid MC range
+        for row in &result {
+            for &h in row {
+                assert!(h >= -62.0, "Height below ground level: {h}");
+                assert!(h <= 319.0, "Height above max Y: {h}");
+            }
+        }
+    }
+
+    #[test]
+    fn scale_to_minecraft_with_height_limit_disabled() {
+        let heights = vec![vec![0.0, 500.0], vec![1000.0, 2000.0]];
+        let result = scale_to_minecraft(&heights, 1.0, -62, true, 2031);
+        // With extended max, heights can go above 319
+        let max_h = result
+            .iter()
+            .flat_map(|r| r.iter())
+            .cloned()
+            .fold(f64::NEG_INFINITY, f64::max);
+        // Should be clamped to at most extended_max_y - buffer
+        assert!(max_h <= 2031.0);
+    }
+
+    #[test]
+    fn scale_to_minecraft_empty_grid() {
+        let heights: Vec<Vec<f64>> = vec![];
+        let result = scale_to_minecraft(&heights, 1.0, -62, false, 319);
+        assert!(result.is_empty());
+    }
+
+    // ── apply_land_cover_repair ─────────────────────────────────────
+
+    #[test]
+    fn land_cover_repair_mismatched_grid_sizes() {
+        let mut heights = vec![vec![50.0; 10]; 10];
+        let mut lc = LandCoverData {
+            grid: vec![vec![0u8; 5]; 5], // wrong size
+            water_distance: vec![vec![0u8; 5]; 5],
+            water_blend_grid: vec![vec![0.0f32; 5]; 5],
+            width: 5,
+            height: 5,
+        };
+        let original = heights.clone();
+        // Should skip and not modify heights
+        apply_land_cover_repair(&mut heights, &mut lc, 3.0, 5);
+        assert_eq!(heights, original);
+    }
+
+    #[test]
+    fn land_cover_repair_empty_grid() {
+        let mut heights: Vec<Vec<f64>> = vec![];
+        let mut lc = LandCoverData {
+            grid: vec![],
+            water_distance: vec![],
+            water_blend_grid: vec![],
+            width: 0,
+            height: 0,
+        };
+        // Should not panic
+        apply_land_cover_repair(&mut heights, &mut lc, 3.0, 5);
+    }
 }

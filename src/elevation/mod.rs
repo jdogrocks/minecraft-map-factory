@@ -276,3 +276,131 @@ fn compute_nan_ratio(heights: &[Vec<f64>]) -> f64 {
     }
     nan_count as f64 / total as f64
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::coordinate_system::geographic::LLBBox;
+
+    // ── compute_grid_dims ───────────────────────────────────────────
+
+    #[test]
+    fn grid_dims_small_bbox() {
+        let bbox = LLBBox::new(54.627, 9.927, 54.635, 9.938).unwrap();
+        let (ww, wh, gw, gh) = compute_grid_dims(&bbox, 1.0);
+        assert!(ww > 0);
+        assert!(wh > 0);
+        assert!(gw >= 2);
+        assert!(gh >= 2);
+        // Grid should not exceed world dims for small bboxes
+        assert!(gw <= ww.max(2));
+        assert!(gh <= wh.max(2));
+    }
+
+    #[test]
+    fn grid_dims_scale_doubles_world_size() {
+        let bbox = LLBBox::new(54.627, 9.927, 54.635, 9.938).unwrap();
+        let (ww1, wh1, _, _) = compute_grid_dims(&bbox, 1.0);
+        let (ww2, wh2, _, _) = compute_grid_dims(&bbox, 2.0);
+        // At scale 2.0, world width should be roughly double
+        assert!(ww2 > ww1);
+        assert!(wh2 > wh1);
+        // Should be approximately 2x (within rounding)
+        let ratio_w = ww2 as f64 / ww1 as f64;
+        assert!(ratio_w > 1.8 && ratio_w < 2.2);
+    }
+
+    #[test]
+    fn grid_dims_clamped_to_minimum_2() {
+        // Very tiny bbox → world size might be < 2, grid should clamp to 2
+        let bbox = LLBBox::new(54.6270, 9.9270, 54.6271, 9.9271).unwrap();
+        let (_, _, gw, gh) = compute_grid_dims(&bbox, 0.001);
+        assert!(gw >= 2);
+        assert!(gh >= 2);
+    }
+
+    #[test]
+    fn grid_dims_capped_at_max() {
+        // Very large bbox with high scale → grid should cap at MAX_ELEVATION_GRID_DIM
+        let bbox = LLBBox::new(0.01, 0.01, 10.0, 10.0).unwrap();
+        let (_, _, gw, gh) = compute_grid_dims(&bbox, 100.0);
+        assert!(gw <= MAX_ELEVATION_GRID_DIM);
+        assert!(gh <= MAX_ELEVATION_GRID_DIM);
+    }
+
+    // ── compute_nan_ratio ───────────────────────────────────────────
+
+    #[test]
+    fn nan_ratio_all_finite() {
+        let grid = vec![vec![1.0, 2.0, 3.0], vec![4.0, 5.0, 6.0]];
+        assert_eq!(compute_nan_ratio(&grid), 0.0);
+    }
+
+    #[test]
+    fn nan_ratio_all_nan() {
+        let grid = vec![vec![f64::NAN, f64::NAN], vec![f64::NAN, f64::NAN]];
+        assert_eq!(compute_nan_ratio(&grid), 1.0);
+    }
+
+    #[test]
+    fn nan_ratio_half_nan() {
+        let grid = vec![vec![1.0, f64::NAN], vec![2.0, f64::NAN]];
+        assert!((compute_nan_ratio(&grid) - 0.5).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn nan_ratio_empty_grid() {
+        let grid: Vec<Vec<f64>> = vec![];
+        assert_eq!(compute_nan_ratio(&grid), 1.0);
+    }
+
+    #[test]
+    fn nan_ratio_includes_infinity() {
+        let grid = vec![vec![f64::INFINITY, f64::NEG_INFINITY, 1.0]];
+        let ratio = compute_nan_ratio(&grid);
+        // Two out of three are non-finite
+        assert!((ratio - 2.0 / 3.0).abs() < f64::EPSILON);
+    }
+
+    // ── ElevationData ───────────────────────────────────────────────
+
+    #[test]
+    fn elevation_data_struct_fields() {
+        let data = ElevationData {
+            heights: vec![vec![10.0_f32; 4]; 4],
+            width: 4,
+            height: 4,
+            world_width: 100,
+            world_height: 100,
+        };
+        assert_eq!(data.width, 4);
+        assert_eq!(data.height, 4);
+        assert_eq!(data.world_width, 100);
+        assert_eq!(data.world_height, 100);
+        assert_eq!(data.heights.len(), 4);
+        assert_eq!(data.heights[0].len(), 4);
+    }
+
+    #[test]
+    fn elevation_data_clone() {
+        let data = ElevationData {
+            heights: vec![vec![5.0_f32, 10.0_f32], vec![15.0_f32, 20.0_f32]],
+            width: 2,
+            height: 2,
+            world_width: 50,
+            world_height: 50,
+        };
+        let cloned = data.clone();
+        assert_eq!(cloned.heights, data.heights);
+        assert_eq!(cloned.width, data.width);
+    }
+
+    // ── MAX_ELEVATION_GRID_DIM ──────────────────────────────────────
+
+    #[test]
+    fn max_elevation_grid_dim_is_reasonable() {
+        assert_eq!(MAX_ELEVATION_GRID_DIM, 16384);
+        // Should be a power of 2
+        assert!(MAX_ELEVATION_GRID_DIM.is_power_of_two());
+    }
+}
