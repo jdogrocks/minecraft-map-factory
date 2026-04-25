@@ -1472,93 +1472,189 @@ mod tests {
     use crate::osm_parser::{ProcessedElement, ProcessedNode, ProcessedWay};
 
     fn tags(pairs: &[(&str, &str)]) -> HashMap<String, String> {
-        pairs.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect()
+        pairs
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect()
     }
 
     fn node(id: u64, x: i32, z: i32) -> ProcessedNode {
-        ProcessedNode { id, tags: HashMap::new(), x, z }
+        ProcessedNode {
+            id,
+            tags: HashMap::new(),
+            x,
+            z,
+        }
     }
 
     fn way_element(tag_pairs: &[(&str, &str)], nodes: Vec<ProcessedNode>) -> ProcessedElement {
-        ProcessedElement::Way(ProcessedWay { id: 1, nodes, tags: tags(tag_pairs) })
+        ProcessedElement::Way(ProcessedWay {
+            id: 1,
+            nodes,
+            tags: tags(tag_pairs),
+        })
     }
 
     #[test]
     fn pedestrian_footway() {
-        assert!(is_pedestrian_way(&way_element(&[("highway", "footway")], vec![])));
+        assert!(is_pedestrian_way(&way_element(
+            &[("highway", "footway")],
+            vec![]
+        )));
     }
 
     #[test]
     fn pedestrian_steps() {
-        assert!(is_pedestrian_way(&way_element(&[("highway", "steps")], vec![])));
+        assert!(is_pedestrian_way(&way_element(
+            &[("highway", "steps")],
+            vec![]
+        )));
     }
 
     #[test]
     fn not_pedestrian_residential() {
-        assert!(!is_pedestrian_way(&way_element(&[("highway", "residential")], vec![])));
+        assert!(!is_pedestrian_way(&way_element(
+            &[("highway", "residential")],
+            vec![]
+        )));
     }
 
     #[test]
     fn pedestrian_via_footway_subtag() {
-        assert!(is_pedestrian_way(&way_element(&[("highway", "residential"), ("footway", "sidewalk")], vec![])));
+        assert!(is_pedestrian_way(&way_element(
+            &[("highway", "residential"), ("footway", "sidewalk")],
+            vec![]
+        )));
     }
 
     #[test]
     fn not_pedestrian_footway_no() {
-        assert!(!is_pedestrian_way(&way_element(&[("highway", "residential"), ("footway", "no")], vec![])));
+        assert!(!is_pedestrian_way(&way_element(
+            &[("highway", "residential"), ("footway", "no")],
+            vec![]
+        )));
     }
 
     #[test]
-    fn block_range_motorway() { assert_eq!(highway_block_range("motorway", &HashMap::new(), 1.0), 5); }
+    fn block_range_motorway() {
+        assert_eq!(highway_block_range("motorway", &HashMap::new(), 1.0), 5);
+    }
     #[test]
-    fn block_range_footway() { assert_eq!(highway_block_range("footway", &HashMap::new(), 1.0), 1); }
+    fn block_range_footway() {
+        assert_eq!(highway_block_range("footway", &HashMap::new(), 1.0), 1);
+    }
     #[test]
-    fn block_range_secondary() { assert_eq!(highway_block_range("secondary", &HashMap::new(), 1.0), 4); }
+    fn block_range_secondary() {
+        assert_eq!(highway_block_range("secondary", &HashMap::new(), 1.0), 4);
+    }
     #[test]
-    fn block_range_tertiary() { assert_eq!(highway_block_range("tertiary", &HashMap::new(), 1.0), 2); }
+    fn block_range_tertiary() {
+        assert_eq!(highway_block_range("tertiary", &HashMap::new(), 1.0), 2);
+    }
     #[test]
-    fn block_range_unknown_default() { assert_eq!(highway_block_range("unknown", &HashMap::new(), 1.0), 2); }
+    fn block_range_unknown_default() {
+        assert_eq!(highway_block_range("unknown", &HashMap::new(), 1.0), 2);
+    }
 
     #[test]
     fn block_range_with_lanes() {
-        assert_eq!(highway_block_range("residential", &tags(&[("lanes", "2")]), 1.0), 3);
-        assert_eq!(highway_block_range("residential", &tags(&[("lanes", "4")]), 1.0), 4);
-        assert_eq!(highway_block_range("residential", &tags(&[("lanes", "1")]), 1.0), 2);
+        assert_eq!(
+            highway_block_range("residential", &tags(&[("lanes", "2")]), 1.0),
+            3
+        );
+        assert_eq!(
+            highway_block_range("residential", &tags(&[("lanes", "4")]), 1.0),
+            4
+        );
+        assert_eq!(
+            highway_block_range("residential", &tags(&[("lanes", "1")]), 1.0),
+            2
+        );
     }
 
     #[test]
-    fn block_range_scaled_down() { assert_eq!(highway_block_range("motorway", &HashMap::new(), 0.5), 2); }
+    fn block_range_scaled_down() {
+        assert_eq!(highway_block_range("motorway", &HashMap::new(), 0.5), 2);
+    }
 
     #[test]
     fn way_length_empty() {
-        assert_eq!(calculate_way_length(&ProcessedWay { id: 1, nodes: vec![], tags: HashMap::new() }), 0);
+        assert_eq!(
+            calculate_way_length(&ProcessedWay {
+                id: 1,
+                nodes: vec![],
+                tags: HashMap::new()
+            }),
+            0
+        );
     }
     #[test]
     fn way_length_horizontal() {
-        let w = ProcessedWay { id: 1, nodes: vec![node(1, 0, 0), node(2, 10, 0)], tags: HashMap::new() };
+        let w = ProcessedWay {
+            id: 1,
+            nodes: vec![node(1, 0, 0), node(2, 10, 0)],
+            tags: HashMap::new(),
+        };
         assert_eq!(calculate_way_length(&w), 10);
     }
     #[test]
     fn way_length_diagonal() {
-        let w = ProcessedWay { id: 1, nodes: vec![node(1, 0, 0), node(2, 3, 4)], tags: HashMap::new() };
+        let w = ProcessedWay {
+            id: 1,
+            nodes: vec![node(1, 0, 0), node(2, 3, 4)],
+            tags: HashMap::new(),
+        };
         assert_eq!(calculate_way_length(&w), 5);
     }
 
     #[test]
-    fn elevation_no_slopes() { assert_eq!(calculate_point_elevation(0, 0, 100, 5, 12, false, false, 20), 12); }
+    fn elevation_no_slopes() {
+        assert_eq!(
+            calculate_point_elevation(0, 0, 100, 5, 12, false, false, 20),
+            12
+        );
+    }
     #[test]
-    fn elevation_start_slope_at_beginning() { assert_eq!(calculate_point_elevation(0, 0, 100, 5, 12, true, false, 20), 0); }
+    fn elevation_start_slope_at_beginning() {
+        assert_eq!(
+            calculate_point_elevation(0, 0, 100, 5, 12, true, false, 20),
+            0
+        );
+    }
     #[test]
-    fn elevation_start_slope_midway() { assert_eq!(calculate_point_elevation(0, 10, 100, 5, 12, true, false, 20), 6); }
+    fn elevation_start_slope_midway() {
+        assert_eq!(
+            calculate_point_elevation(0, 10, 100, 5, 12, true, false, 20),
+            6
+        );
+    }
     #[test]
-    fn elevation_past_start_slope() { assert_eq!(calculate_point_elevation(0, 25, 100, 5, 12, true, false, 20), 12); }
+    fn elevation_past_start_slope() {
+        assert_eq!(
+            calculate_point_elevation(0, 25, 100, 5, 12, true, false, 20),
+            12
+        );
+    }
     #[test]
-    fn elevation_zero_way_length() { assert_eq!(calculate_point_elevation(0, 0, 0, 0, 12, true, true, 20), 12); }
+    fn elevation_zero_way_length() {
+        assert_eq!(
+            calculate_point_elevation(0, 0, 0, 0, 12, true, true, 20),
+            12
+        );
+    }
 
     #[test]
-    fn slope_needed_nonzero_layer() { assert!(should_add_slope_at_node(&node(1, 0, 0), 1, &HashMap::new())); }
+    fn slope_needed_nonzero_layer() {
+        assert!(should_add_slope_at_node(&node(1, 0, 0), 1, &HashMap::new()));
+    }
     #[test]
-    fn no_slope_ground_level() { assert!(!should_add_slope_at_node(&node(1, 0, 0), 0, &HashMap::new())); }
+    fn no_slope_ground_level() {
+        assert!(!should_add_slope_at_node(
+            &node(1, 0, 0),
+            0,
+            &HashMap::new()
+        ));
+    }
 
     #[test]
     fn no_slope_multiple_same_layer() {
@@ -1568,11 +1664,16 @@ mod tests {
     }
 
     #[test]
-    fn connectivity_map_empty() { assert!(build_highway_connectivity_map(&[]).is_empty()); }
+    fn connectivity_map_empty() {
+        assert!(build_highway_connectivity_map(&[]).is_empty());
+    }
 
     #[test]
     fn connectivity_map_single_highway() {
-        let elems = vec![way_element(&[("highway", "residential")], vec![node(1, 0, 0), node(2, 10, 0)])];
+        let elems = vec![way_element(
+            &[("highway", "residential")],
+            vec![node(1, 0, 0), node(2, 10, 0)],
+        )];
         let map = build_highway_connectivity_map(&elems);
         assert!(map.contains_key(&(0, 0)));
         assert!(map.contains_key(&(10, 0)));
@@ -1580,12 +1681,22 @@ mod tests {
 
     #[test]
     fn connectivity_map_with_layer() {
-        let elems = vec![way_element(&[("highway", "primary"), ("layer", "2")], vec![node(1, 0, 0), node(2, 10, 0)])];
-        assert_eq!(build_highway_connectivity_map(&elems).get(&(0, 0)).unwrap(), &vec![2]);
+        let elems = vec![way_element(
+            &[("highway", "primary"), ("layer", "2")],
+            vec![node(1, 0, 0), node(2, 10, 0)],
+        )];
+        assert_eq!(
+            build_highway_connectivity_map(&elems).get(&(0, 0)).unwrap(),
+            &vec![2]
+        );
     }
 
     #[test]
     fn connectivity_map_skips_non_highway() {
-        assert!(build_highway_connectivity_map(&[way_element(&[("railway", "rail")], vec![node(1, 0, 0), node(2, 10, 0)])]).is_empty());
+        assert!(build_highway_connectivity_map(&[way_element(
+            &[("railway", "rail")],
+            vec![node(1, 0, 0), node(2, 10, 0)]
+        )])
+        .is_empty());
     }
 }

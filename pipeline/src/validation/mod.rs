@@ -24,7 +24,10 @@ impl Validator {
     }
 
     /// Validate a generated map at the given path.
-    pub fn validate(&self, map_path: &Path) -> Result<ValidationReport, Box<dyn std::error::Error + Send + Sync>> {
+    pub fn validate(
+        &self,
+        map_path: &Path,
+    ) -> Result<ValidationReport, Box<dyn std::error::Error + Send + Sync>> {
         let mut reasons = Vec::new();
 
         // Count region files
@@ -77,19 +80,19 @@ impl Validator {
         })
     }
 
-    fn count_region_files(region_dir: &Path) -> Result<usize, Box<dyn std::error::Error + Send + Sync>> {
+    fn count_region_files(
+        region_dir: &Path,
+    ) -> Result<usize, Box<dyn std::error::Error + Send + Sync>> {
         let count = std::fs::read_dir(region_dir)?
             .filter_map(|e| e.ok())
-            .filter(|e| {
-                e.path()
-                    .extension()
-                    .is_some_and(|ext| ext == "mca")
-            })
+            .filter(|e| e.path().extension().is_some_and(|ext| ext == "mca"))
             .count();
         Ok(count)
     }
 
-    fn find_region_count(map_path: &Path) -> Result<usize, Box<dyn std::error::Error + Send + Sync>> {
+    fn find_region_count(
+        map_path: &Path,
+    ) -> Result<usize, Box<dyn std::error::Error + Send + Sync>> {
         if let Some(region_dir) = Self::find_region_dir(map_path) {
             Self::count_region_files(&region_dir)
         } else {
@@ -134,7 +137,9 @@ impl Validator {
         Ok(total)
     }
 
-    fn validate_region_structure(region_dir: &Path) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    fn validate_region_structure(
+        region_dir: &Path,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // Validate Anvil region file format:
         // Each .mca file must be at least 8192 bytes (two 4096-byte tables)
         for entry in std::fs::read_dir(region_dir)? {
@@ -211,7 +216,9 @@ mod tests {
         let validator = Validator::new(&config);
         let report = validator.validate(tmp.path()).unwrap();
         assert!(!report.is_valid);
-        assert!(report.failure_reasons.iter().any(|r| r.contains("too small")));
+        assert!(report
+            .failure_reasons
+            .iter()
+            .any(|r| r.contains("too small")));
     }
-
 }

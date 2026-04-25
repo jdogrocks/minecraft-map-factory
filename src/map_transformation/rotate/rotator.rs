@@ -348,8 +348,10 @@ fn rotate_ground_data(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::osm_parser::{
+        ProcessedMember, ProcessedMemberRole, ProcessedNode, ProcessedRelation, ProcessedWay,
+    };
     use std::collections::HashMap;
-    use crate::osm_parser::{ProcessedNode, ProcessedWay, ProcessedRelation, ProcessedMember, ProcessedMemberRole};
     use std::sync::Arc;
 
     fn make_node(id: u64, x: i32, z: i32) -> ProcessedElement {
@@ -543,7 +545,10 @@ mod tests {
 
         // 90° rotation of a square should give approximately same area
         let ratio = new_area as f64 / orig_area as f64;
-        assert!((ratio - 1.0).abs() < 0.05, "Area ratio {ratio} too far from 1.0");
+        assert!(
+            (ratio - 1.0).abs() < 0.05,
+            "Area ratio {ratio} too far from 1.0"
+        );
     }
 
     #[test]
@@ -572,8 +577,7 @@ mod tests {
 
     #[test]
     fn test_rotator_from_json_valid() {
-        let json: serde_json::Value =
-            serde_json::from_str(r#"{"angle_degrees": 45.0}"#).unwrap();
+        let json: serde_json::Value = serde_json::from_str(r#"{"angle_degrees": 45.0}"#).unwrap();
         let result = rotator_from_json(&json);
         assert!(result.is_ok());
         assert!(result.unwrap().repr().contains("45"));
@@ -581,8 +585,7 @@ mod tests {
 
     #[test]
     fn test_rotator_from_json_invalid() {
-        let json: serde_json::Value =
-            serde_json::from_str(r#"{"wrong_field": 45.0}"#).unwrap();
+        let json: serde_json::Value = serde_json::from_str(r#"{"wrong_field": 45.0}"#).unwrap();
         let result = rotator_from_json(&json);
         assert!(result.is_err());
         let err = result.err().unwrap();
@@ -591,13 +594,17 @@ mod tests {
 
     #[test]
     fn test_rotator_repr() {
-        let r = Rotator { angle_degrees: 90.0 };
+        let r = Rotator {
+            angle_degrees: 90.0,
+        };
         assert_eq!(r.repr(), "rotate 90°");
     }
 
     #[test]
     fn test_rotator_operate_delegates_to_rotate_world() {
-        let r = Rotator { angle_degrees: 45.0 };
+        let r = Rotator {
+            angle_degrees: 45.0,
+        };
         let mut elements = Vec::new();
         let mut xzbbox = XZBBox::rect_from_xz_lengths(100.0, 100.0).unwrap();
         let mut ground = Ground::new_flat(-62);
@@ -680,8 +687,7 @@ mod tests {
 
     #[test]
     fn test_rotator_from_json_negative_angle() {
-        let json: serde_json::Value =
-            serde_json::from_str(r#"{"angle_degrees": -90.0}"#).unwrap();
+        let json: serde_json::Value = serde_json::from_str(r#"{"angle_degrees": -90.0}"#).unwrap();
         let result = rotator_from_json(&json);
         assert!(result.is_ok());
         assert!(result.unwrap().repr().contains("-90"));
@@ -689,8 +695,7 @@ mod tests {
 
     #[test]
     fn test_rotator_from_json_zero_angle() {
-        let json: serde_json::Value =
-            serde_json::from_str(r#"{"angle_degrees": 0.0}"#).unwrap();
+        let json: serde_json::Value = serde_json::from_str(r#"{"angle_degrees": 0.0}"#).unwrap();
         let result = rotator_from_json(&json);
         assert!(result.is_ok());
     }

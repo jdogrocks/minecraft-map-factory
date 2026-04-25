@@ -1674,7 +1674,10 @@ mod tests {
         let bbox = test_bbox();
         let mut editor = test_editor(&bbox);
         let mut extra = HashMap::new();
-        extra.insert("CustomName".to_string(), Value::String("TestPig".to_string()));
+        extra.insert(
+            "CustomName".to_string(),
+            Value::String("TestPig".to_string()),
+        );
         editor.add_entity("minecraft:pig", 50, 10, 50, Some(extra));
     }
 

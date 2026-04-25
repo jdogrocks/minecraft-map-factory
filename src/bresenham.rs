@@ -157,7 +157,13 @@ mod tests {
             let (x1, y1, z1) = points[i - 1];
             let (x2, y2, z2) = points[i];
             let max_step = (x2 - x1).abs().max((y2 - y1).abs()).max((z2 - z1).abs());
-            assert!(max_step <= 1, "Gap between points {} and {}: step={}", i-1, i, max_step);
+            assert!(
+                max_step <= 1,
+                "Gap between points {} and {}: step={}",
+                i - 1,
+                i,
+                max_step
+            );
         }
     }
 

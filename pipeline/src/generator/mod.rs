@@ -142,7 +142,13 @@ impl Generator {
         let sanitized_name: String = location
             .name
             .chars()
-            .map(|c| if c.is_alphanumeric() || c == '-' { c } else { '_' })
+            .map(|c| {
+                if c.is_alphanumeric() || c == '-' {
+                    c
+                } else {
+                    '_'
+                }
+            })
             .collect();
 
         self.output_base

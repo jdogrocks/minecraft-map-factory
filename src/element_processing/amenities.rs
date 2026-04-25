@@ -956,17 +956,26 @@ mod tests {
     use std::collections::HashMap;
 
     fn tags(pairs: &[(&str, &str)]) -> HashMap<String, String> {
-        pairs.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect()
+        pairs
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect()
     }
 
     #[test]
     fn tag_enabled_yes() {
-        assert!(tag_enabled(&tags(&[("recycling:glass", "yes")]), "recycling:glass"));
+        assert!(tag_enabled(
+            &tags(&[("recycling:glass", "yes")]),
+            "recycling:glass"
+        ));
     }
 
     #[test]
     fn tag_enabled_no() {
-        assert!(!tag_enabled(&tags(&[("recycling:glass", "no")]), "recycling:glass"));
+        assert!(!tag_enabled(
+            &tags(&[("recycling:glass", "no")]),
+            "recycling:glass"
+        ));
     }
 
     #[test]
@@ -977,7 +986,10 @@ mod tests {
     #[test]
     fn make_basic_item_structure() {
         let item = make_basic_item("minecraft:diamond", 3, 16);
-        assert_eq!(item.get("id"), Some(&Value::String("minecraft:diamond".to_string())));
+        assert_eq!(
+            item.get("id"),
+            Some(&Value::String("minecraft:diamond".to_string()))
+        );
         assert_eq!(item.get("Slot"), Some(&Value::Byte(3)));
         assert_eq!(item.get("Count"), Some(&Value::Byte(16)));
     }
@@ -1003,17 +1015,26 @@ mod tests {
 
     #[test]
     fn kind_to_category_glass_bottle() {
-        assert!(matches!(kind_to_category(RecyclingLootKind::GlassBottle), LootCategory::GlassBottle));
+        assert!(matches!(
+            kind_to_category(RecyclingLootKind::GlassBottle),
+            LootCategory::GlassBottle
+        ));
     }
 
     #[test]
     fn kind_to_category_glass_block() {
-        assert!(matches!(kind_to_category(RecyclingLootKind::GlassBlock), LootCategory::Glass));
+        assert!(matches!(
+            kind_to_category(RecyclingLootKind::GlassBlock),
+            LootCategory::Glass
+        ));
     }
 
     #[test]
     fn kind_to_category_paper() {
-        assert!(matches!(kind_to_category(RecyclingLootKind::Paper), LootCategory::Paper));
+        assert!(matches!(
+            kind_to_category(RecyclingLootKind::Paper),
+            LootCategory::Paper
+        ));
     }
 
     #[test]

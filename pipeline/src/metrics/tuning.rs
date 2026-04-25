@@ -42,10 +42,7 @@ impl SelfTuner {
         // Reduce concurrency if memory pressure is high
         if resource_monitor.is_over_limit() {
             recommended = std::cmp::max(1, recommended / 2);
-            info!(
-                recommended,
-                "Reducing concurrency due to resource pressure"
-            );
+            info!(recommended, "Reducing concurrency due to resource pressure");
         }
 
         recommended
@@ -98,5 +95,4 @@ mod tests {
         let recommended = tuner.recommend_concurrency(4, &metrics, &rm);
         assert!(recommended < 4);
     }
-
 }

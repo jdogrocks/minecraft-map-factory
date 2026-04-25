@@ -1,6 +1,5 @@
 mod tuning;
 
-
 use crate::config::MetricsConfig;
 use crate::locations::Location;
 use serde::Serialize;
@@ -106,7 +105,8 @@ impl MetricsCollector {
 
         // Log failure breakdown
         if !self.failures.is_empty() {
-            let mut reasons: std::collections::HashMap<&str, usize> = std::collections::HashMap::new();
+            let mut reasons: std::collections::HashMap<&str, usize> =
+                std::collections::HashMap::new();
             for f in &self.failures {
                 *reasons.entry(&f.reason).or_insert(0) += 1;
             }
