@@ -3454,6 +3454,7 @@ pub fn generate_buildings(
     hole_polygons: Option<&[HolePolygon]>,
     flood_fill_cache: &FloodFillCache,
     building_passages: &CoordinateBitmap,
+    entity_theme: Option<&crate::entity_placement::theme::ThemePack>,
 ) {
     // Early return for underground buildings
     if should_skip_underground_building(element) {
@@ -3777,30 +3778,45 @@ pub fn generate_buildings(
         }
 
         // Generate interior features
-        if args.interior {
-            let skip_interior = matches!(
-                building_type,
-                "garage" | "shed" | "parking" | "roof" | "bridge"
-            );
+        let skip_interior = matches!(
+            building_type,
+            "garage" | "shed" | "parking" | "roof" | "bridge"
+        );
+        let has_interior = !skip_interior && cached_floor_area.len() > 100;
 
-            if !skip_interior && cached_floor_area.len() > 100 {
+        if args.interior && has_interior {
+            let floor_levels = calculate_floor_levels(start_y_offset, building_height);
+            generate_building_interior(
+                editor,
+                &cached_floor_area,
+                bounds.min_x,
+                bounds.min_z,
+                bounds.max_x,
+                bounds.max_z,
+                start_y_offset,
+                building_height,
+                style.wall_block,
+                &floor_levels,
+                args,
+                element,
+                abs_terrain_offset,
+                is_abandoned_building,
+                effective_passages,
+                category,
+            );
+        }
+
+        // Place entities inside buildings
+        if args.entities && has_interior && !is_abandoned_building {
+            if let Some(theme) = entity_theme {
                 let floor_levels = calculate_floor_levels(start_y_offset, building_height);
-                generate_building_interior(
+                crate::entity_placement::place_building_entities(
                     editor,
+                    theme,
+                    category,
                     &cached_floor_area,
-                    bounds.min_x,
-                    bounds.min_z,
-                    bounds.max_x,
-                    bounds.max_z,
-                    start_y_offset,
-                    building_height,
-                    style.wall_block,
                     &floor_levels,
-                    args,
-                    element,
-                    abs_terrain_offset,
-                    is_abandoned_building,
-                    effective_passages,
+                    element.id,
                 );
             }
         }
@@ -5506,6 +5522,7 @@ pub fn generate_building_from_relation(
     flood_fill_cache: &FloodFillCache,
     xzbbox: &crate::coordinate_system::cartesian::XZBBox,
     building_passages: &CoordinateBitmap,
+    entity_theme: Option<&crate::entity_placement::theme::ThemePack>,
 ) {
     // Skip underground buildings/building parts
     // Check layer tag
@@ -5689,6 +5706,7 @@ pub fn generate_building_from_relation(
                 hole_polygons.as_deref(),
                 flood_fill_cache,
                 building_passages,
+                entity_theme,
             );
         }
     }

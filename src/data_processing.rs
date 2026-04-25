@@ -125,6 +125,13 @@ pub fn generate_world_with_options(
         outlines
     };
 
+    // Load entity theme pack if entities are enabled
+    let entity_theme = if args.entities {
+        crate::entity_placement::theme::load_theme(&args.entity_theme)
+    } else {
+        None
+    };
+
     // Process all elements
     for element in elements.into_iter() {
         element_counter += 1;
@@ -166,6 +173,7 @@ pub fn generate_world_with_options(
                             None,
                             &flood_fill_cache,
                             &building_passages,
+                            entity_theme.as_ref(),
                         );
                     }
                 } else if way.tags.contains_key("highway") {
@@ -299,6 +307,7 @@ pub fn generate_world_with_options(
                         &flood_fill_cache,
                         &xzbbox,
                         &building_passages,
+                        entity_theme.as_ref(),
                     );
                 } else if rel.tags.contains_key("water")
                     || rel

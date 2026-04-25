@@ -573,7 +573,6 @@ impl<'a> WorldEditor<'a> {
     }
 
     /// Adds an entity at the given coordinates (Y is ground-relative).
-    #[allow(dead_code)]
     pub fn add_entity(
         &mut self,
         id: &str,
