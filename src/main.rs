@@ -11,6 +11,7 @@ mod coordinate_system;
 mod data_processing;
 mod deterministic_rng;
 mod element_processing;
+mod entity_placement;
 mod elevation;
 mod elevation_data;
 mod floodfill;
@@ -29,6 +30,8 @@ mod retrieve_data;
 mod telemetry;
 #[cfg(test)]
 mod integration_tests;
+#[cfg(test)]
+mod map_validation_tests;
 #[cfg(test)]
 mod test_utilities;
 mod version_check;
