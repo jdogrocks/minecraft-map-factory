@@ -1,0 +1,135 @@
+# Curated US City & Landmark Location Database
+# Each location defines a bounding box for arnis map generation.
+# Tiers: small (< 0.01 deg), medium (0.01-0.05 deg), large (> 0.05 deg)
+
+# === Small Tier (Quick Generation) ===
+
+[[location]]
+name = "Times Square, NYC"
+state = "NY"
+bbox = [40.7565, -73.9882, 40.7600, -73.9842]
+tier = "small"
+tags = ["landmark", "urban"]
+
+[[location]]
+name = "National Mall, Washington DC"
+state = "DC"
+bbox = [38.8870, -77.0460, 38.8920, -77.0360]
+tier = "small"
+tags = ["landmark", "government"]
+
+[[location]]
+name = "Fisherman's Wharf, San Francisco"
+state = "CA"
+bbox = [37.8060, -122.4210, 37.8100, -122.4140]
+tier = "small"
+tags = ["landmark", "waterfront"]
+
+[[location]]
+name = "French Quarter, New Orleans"
+state = "LA"
+bbox = [29.9540, -90.0700, 29.9600, -90.0620]
+tier = "small"
+tags = ["historic", "urban"]
+
+[[location]]
+name = "Alamo, San Antonio"
+state = "TX"
+bbox = [29.4240, -98.4880, 29.4280, -98.4840]
+tier = "small"
+tags = ["landmark", "historic"]
+
+# === Medium Tier (Standard Generation) ===
+
+[[location]]
+name = "Downtown Chicago"
+state = "IL"
+bbox = [41.8750, -87.6400, 41.8900, -87.6200]
+tier = "medium"
+tags = ["urban", "downtown"]
+
+[[location]]
+name = "Capitol Hill, Seattle"
+state = "WA"
+bbox = [47.6120, -122.3260, 47.6250, -122.3100]
+tier = "medium"
+tags = ["neighborhood", "urban"]
+
+[[location]]
+name = "South Beach, Miami"
+state = "FL"
+bbox = [25.7700, -80.1400, 25.7900, -80.1250]
+tier = "medium"
+tags = ["beach", "urban"]
+
+[[location]]
+name = "Downtown Denver"
+state = "CO"
+bbox = [39.7400, -104.9980, 39.7550, -104.9800]
+tier = "medium"
+tags = ["urban", "downtown"]
+
+[[location]]
+name = "Fenway Park Area, Boston"
+state = "MA"
+bbox = [42.3430, -71.1020, 42.3520, -71.0900]
+tier = "medium"
+tags = ["sports", "urban"]
+
+[[location]]
+name = "Downtown Portland"
+state = "OR"
+bbox = [45.5100, -122.6850, 45.5250, -122.6650]
+tier = "medium"
+tags = ["urban", "downtown"]
+
+[[location]]
+name = "Waikiki, Honolulu"
+state = "HI"
+bbox = [21.2720, -157.8300, 21.2830, -157.8150]
+tier = "medium"
+tags = ["beach", "resort"]
+
+[[location]]
+name = "Las Vegas Strip"
+state = "NV"
+bbox = [36.0900, -115.1850, 36.1200, -115.1650]
+tier = "medium"
+tags = ["entertainment", "landmark"]
+
+# === Large Tier (Extended Generation) ===
+
+[[location]]
+name = "Downtown San Francisco"
+state = "CA"
+bbox = [37.7700, -122.4200, 37.8000, -122.3900]
+tier = "large"
+tags = ["urban", "downtown"]
+
+[[location]]
+name = "Midtown Manhattan"
+state = "NY"
+bbox = [40.7480, -73.9950, 40.7650, -73.9650]
+tier = "large"
+tags = ["urban", "landmark"]
+
+[[location]]
+name = "Downtown Austin"
+state = "TX"
+bbox = [30.2600, -97.7550, 30.2800, -97.7300]
+tier = "large"
+tags = ["urban", "downtown"]
+
+[[location]]
+name = "Hollywood, Los Angeles"
+state = "CA"
+bbox = [34.0900, -118.3500, 34.1100, -118.3200]
+tier = "large"
+tags = ["entertainment", "urban"]
+
+[[location]]
+name = "Downtown Nashville"
+state = "TN"
+bbox = [36.1500, -86.7950, 36.1750, -86.7650]
+tier = "large"
+tags = ["entertainment", "urban"]
