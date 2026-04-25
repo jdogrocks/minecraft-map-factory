@@ -65,8 +65,37 @@ pub fn translate_by_vector(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::coordinate_system::cartesian::XZVector;
+    use crate::coordinate_system::cartesian::{XZPoint, XZVector};
+    use crate::ground::Ground;
+    use crate::osm_parser::{ProcessedNode, ProcessedWay};
     use crate::test_utilities::generate_default_example;
+    use std::collections::HashMap;
+
+    fn make_node(id: u64, x: i32, z: i32) -> ProcessedElement {
+        ProcessedElement::Node(ProcessedNode {
+            id,
+            tags: HashMap::new(),
+            x,
+            z,
+        })
+    }
+
+    fn make_way(id: u64, nodes: Vec<(i32, i32)>) -> ProcessedElement {
+        ProcessedElement::Way(ProcessedWay {
+            id,
+            tags: HashMap::new(),
+            nodes: nodes
+                .into_iter()
+                .enumerate()
+                .map(|(i, (x, z))| ProcessedNode {
+                    id: i as u64,
+                    tags: HashMap::new(),
+                    x,
+                    z,
+                })
+                .collect(),
+        })
+    }
 
     // this ensures translate_by_vector function is correct
     #[test]
@@ -82,14 +111,6 @@ mod tests {
 
         translate_by_vector(vector, &mut elements2, &mut xzbbox2);
 
-        // 1. Elem type should not change
-        // 2. For node,
-        //      2.1 id and tags should not change
-        //      2.2 x, z should be displaced as required
-        // 3. For way,
-        //      3.1 id and tags should not change
-        //      3.2 For every node included, satisfies (2)
-        // 4. For relation, everything is unchanged
         for (original, translated) in elements1.iter().zip(elements2.iter()) {
             match (original, translated) {
                 (ProcessedElement::Node(a), ProcessedElement::Node(b)) => {
@@ -120,5 +141,166 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn test_translate_by_zero_vector() {
+        let vector = XZVector { dx: 0, dz: 0 };
+        let mut elements = vec![make_node(1, 10, 20)];
+        let mut xzbbox = XZBBox::rect_from_xz_lengths(50.0, 50.0).unwrap();
+        let orig_min_x = xzbbox.min_x();
+
+        translate_by_vector(vector, &mut elements, &mut xzbbox);
+
+        if let ProcessedElement::Node(n) = &elements[0] {
+            assert_eq!((n.x, n.z), (10, 20));
+        }
+        assert_eq!(xzbbox.min_x(), orig_min_x);
+    }
+
+    #[test]
+    fn test_translate_by_negative_vector() {
+        let vector = XZVector { dx: -5, dz: -10 };
+        let mut elements = vec![make_node(1, 10, 20)];
+        let mut xzbbox = XZBBox::rect_from_xz_lengths(50.0, 50.0).unwrap();
+
+        translate_by_vector(vector, &mut elements, &mut xzbbox);
+
+        if let ProcessedElement::Node(n) = &elements[0] {
+            assert_eq!((n.x, n.z), (5, 10));
+        }
+    }
+
+    #[test]
+    fn test_translate_way_nodes() {
+        let vector = XZVector { dx: 100, dz: 200 };
+        let mut elements = vec![make_way(1, vec![(0, 0), (10, 10)])];
+        let mut xzbbox = XZBBox::rect_from_xz_lengths(50.0, 50.0).unwrap();
+
+        translate_by_vector(vector, &mut elements, &mut xzbbox);
+
+        if let ProcessedElement::Way(w) = &elements[0] {
+            assert_eq!((w.nodes[0].x, w.nodes[0].z), (100, 200));
+            assert_eq!((w.nodes[1].x, w.nodes[1].z), (110, 210));
+        }
+    }
+
+    #[test]
+    fn test_translate_empty_elements() {
+        let vector = XZVector { dx: 10, dz: 20 };
+        let mut elements: Vec<ProcessedElement> = Vec::new();
+        let mut xzbbox = XZBBox::rect_from_xz_lengths(50.0, 50.0).unwrap();
+        let orig_min_x = xzbbox.min_x();
+
+        translate_by_vector(vector, &mut elements, &mut xzbbox);
+
+        assert!(elements.is_empty());
+        assert_eq!(xzbbox.min_x(), orig_min_x + 10);
+    }
+
+    #[test]
+    fn test_translator_from_json_vector() {
+        let json: serde_json::Value =
+            serde_json::from_str(r#"{"type":"vector","config":{"vector":{"dx":100,"dz":200}}}"#)
+                .unwrap();
+        let result = translator_from_json(&json);
+        assert!(result.is_ok());
+        assert!(result.unwrap().repr().contains("translate"));
+    }
+
+    #[test]
+    fn test_translator_from_json_startend() {
+        let json: serde_json::Value = serde_json::from_str(
+            r#"{"type":"startend","config":{"start":{"x":0,"z":0},"end":{"x":10,"z":20}}}"#,
+        )
+        .unwrap();
+        let result = translator_from_json(&json);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_translator_from_json_unknown_type() {
+        let json: serde_json::Value =
+            serde_json::from_str(r#"{"type":"polar","config":{}}"#).unwrap();
+        let result = translator_from_json(&json);
+        assert!(result.is_err());
+        let err = result.err().unwrap();
+        assert!(err.contains("Unrecognized"));
+    }
+
+    #[test]
+    fn test_translator_from_json_missing_type() {
+        let json: serde_json::Value = serde_json::from_str(r#"{"config":{}}"#).unwrap();
+        let result = translator_from_json(&json);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_translator_from_json_missing_config() {
+        let json: serde_json::Value = serde_json::from_str(r#"{"type":"vector"}"#).unwrap();
+        let result = translator_from_json(&json);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_translator_from_json_invalid_vector_config() {
+        let json: serde_json::Value =
+            serde_json::from_str(r#"{"type":"vector","config":{"wrong_field":42}}"#).unwrap();
+        let result = translator_from_json(&json);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_vector_translator_operate() {
+        let vt = VectorTranslator {
+            vector: XZVector { dx: 5, dz: 10 },
+        };
+        let mut elements = vec![make_node(1, 0, 0)];
+        let mut xzbbox = XZBBox::rect_from_xz_lengths(50.0, 50.0).unwrap();
+        let mut ground = Ground::new_flat(-62);
+
+        vt.operate(&mut elements, &mut xzbbox, &mut ground);
+
+        if let ProcessedElement::Node(n) = &elements[0] {
+            assert_eq!((n.x, n.z), (5, 10));
+        }
+    }
+
+    #[test]
+    fn test_vector_translator_repr() {
+        let vt = VectorTranslator {
+            vector: XZVector { dx: 100, dz: 200 },
+        };
+        let repr = vt.repr();
+        assert!(repr.contains("translate"));
+        assert!(repr.contains("diaplacement")); // preserves existing typo
+    }
+
+    #[test]
+    fn test_startend_translator_operate() {
+        let st = StartEndTranslator {
+            start: XZPoint { x: 10, z: 20 },
+            end: XZPoint { x: 30, z: 50 },
+        };
+        let mut elements = vec![make_node(1, 0, 0)];
+        let mut xzbbox = XZBBox::rect_from_xz_lengths(50.0, 50.0).unwrap();
+        let mut ground = Ground::new_flat(-62);
+
+        st.operate(&mut elements, &mut xzbbox, &mut ground);
+
+        // Displacement = end - start = (20, 30)
+        if let ProcessedElement::Node(n) = &elements[0] {
+            assert_eq!((n.x, n.z), (20, 30));
+        }
+    }
+
+    #[test]
+    fn test_startend_translator_repr() {
+        let st = StartEndTranslator {
+            start: XZPoint { x: 0, z: 0 },
+            end: XZPoint { x: 10, z: 20 },
+        };
+        let repr = st.repr();
+        assert!(repr.contains("translate"));
     }
 }

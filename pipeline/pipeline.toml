@@ -1,0 +1,31 @@
+# Pipeline configuration
+# See pipeline/src/config.rs for all options and defaults.
+
+locations_file = "data/locations.toml"
+output_dir = "./output"
+arnis_binary = "../target/release/arnis"
+
+[scheduler]
+max_concurrency = 2
+max_memory_mb = 4096
+max_cpu_percent = 0.8
+
+[retry]
+max_retries = 3
+initial_backoff_secs = 1
+max_backoff_secs = 300
+shrink_bbox_on_retry = true
+bbox_shrink_factor = 0.8
+
+[validation]
+min_region_files = 1
+min_map_size_bytes = 1024
+validate_structure = true
+
+[metrics]
+summary_interval = 10
+
+[tuning]
+enabled = true
+min_success_rate = 0.5
+memory_threshold = 0.8

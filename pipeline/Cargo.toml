@@ -1,0 +1,26 @@
+[package]
+name = "minecraft-map-factory-pipeline"
+version = "0.1.0"
+edition = "2021"
+description = "Autonomous map generation pipeline for Minecraft Map Factory"
+license = "Apache-2.0"
+
+[[bin]]
+name = "minecraft-map-factory-pipeline"
+path = "src/main.rs"
+
+[dev-dependencies]
+tempfile = "3.26"
+
+[dependencies]
+clap = { version = "4.6", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.48", features = ["full"] }
+toml = "0.8"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["json", "env-filter"] }
+sysinfo = "0.34"
+chrono = { version = "0.4", features = ["serde"] }
+fastanvil = "0.32.0"
+fastnbt = "2.6.0"

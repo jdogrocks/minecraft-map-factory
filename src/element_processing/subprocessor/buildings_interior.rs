@@ -1,8 +1,38 @@
 use crate::block_definitions::*;
-use crate::element_processing::buildings::BUILDING_PASSAGE_HEIGHT;
+use crate::element_processing::buildings::{BuildingCategory, BUILDING_PASSAGE_HEIGHT};
 use crate::floodfill_cache::CoordinateBitmap;
 use crate::world_editor::WorldEditor;
 use std::collections::HashSet;
+
+/// Interior style determines how shared layout characters are mapped to blocks.
+/// Different building types get contextually appropriate furniture.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum InteriorStyle {
+    Residential, // Default: beds, furnaces, bookshelves
+    Commercial,  // Display counters, barrels, chests
+    Public,      // Desks, lecterns (note blocks), bookshelves
+    Industrial,  // Barrels, furnaces, anvils
+    Farm,        // Hay bales, barrels, cauldrons
+}
+
+impl InteriorStyle {
+    pub fn from_category(category: BuildingCategory) -> Self {
+        match category {
+            BuildingCategory::House | BuildingCategory::Residential => InteriorStyle::Residential,
+            BuildingCategory::Commercial | BuildingCategory::Hotel | BuildingCategory::Office => {
+                InteriorStyle::Commercial
+            }
+            BuildingCategory::School
+            | BuildingCategory::Hospital
+            | BuildingCategory::Religious
+            | BuildingCategory::Historic
+            | BuildingCategory::Tower => InteriorStyle::Public,
+            BuildingCategory::Industrial | BuildingCategory::Warehouse => InteriorStyle::Industrial,
+            BuildingCategory::Farm => InteriorStyle::Farm,
+            _ => InteriorStyle::Residential,
+        }
+    }
+}
 
 /// Interior layout for building ground floors (1st layer above floor)
 #[rustfmt::skip]
@@ -229,50 +259,128 @@ const ABANDONED_INTERIOR2_LAYER2: [[char; 23]; 23] = [
     ['P', 'P', ' ', ' ', ' ', 'O', 'a', 'a', 'a', ' ', ' ', 'Q', 'b', 'a', 'a', 'a', 'a', 'a', 'a', ' ', 'd', ' ', 'D',],
 ];
 
-/// Maps interior layout characters to actual block types for different floor layers
+/// Maps interior layout characters with style-specific block substitutions.
+/// Different building types get contextually appropriate furniture while
+/// sharing the same spatial layouts.
 #[inline(always)]
-pub fn get_interior_block(c: char, is_layer2: bool, wall_block: Block) -> Option<Block> {
+pub fn get_interior_block_styled(
+    c: char,
+    is_layer2: bool,
+    wall_block: Block,
+    style: InteriorStyle,
+) -> Option<Block> {
     match c {
-        ' ' => None,                     // Nothing
-        'W' => Some(wall_block),         // Use the building's wall block for interior walls
-        'U' => Some(OAK_FENCE),          // Oak Fence
-        'S' => Some(OAK_STAIRS),         // Oak Stairs
-        'B' => Some(BOOKSHELF),          // Bookshelf
-        'C' => Some(CRAFTING_TABLE),     // Crafting Table
-        'F' => Some(FURNACE),            // Furnace
-        '1' => Some(RED_BED_NORTH_HEAD), // Bed North Head
-        '2' => Some(RED_BED_NORTH_FOOT), // Bed North Foot
-        '3' => Some(RED_BED_EAST_HEAD),  // Bed East Head
-        '4' => Some(RED_BED_EAST_FOOT),  // Bed East Foot
-        '5' => Some(RED_BED_SOUTH_HEAD), // Bed South Head
-        '6' => Some(RED_BED_SOUTH_FOOT), // Bed South Foot
-        '7' => Some(RED_BED_WEST_HEAD),  // Bed West Head
-        '8' => Some(RED_BED_WEST_FOOT),  // Bed West Foot
-        // 'H' => Some(CHEST),           // Chest
-        'L' => Some(CAULDRON),           // Cauldron
-        'A' => Some(ANVIL),              // Anvil
-        'P' => Some(OAK_PRESSURE_PLATE), // Pressure Plate
+        ' ' => None,
+        'W' => Some(wall_block),
+        'U' => Some(OAK_FENCE),
+        'S' => Some(OAK_STAIRS),
+        'B' => match style {
+            InteriorStyle::Commercial => Some(BARREL), // Display barrels
+            InteriorStyle::Industrial => Some(BARREL), // Storage barrels
+            InteriorStyle::Farm => Some(HAY_BALE),     // Hay storage
+            _ => Some(BOOKSHELF),                      // Bookshelves
+        },
+        'C' => match style {
+            InteriorStyle::Commercial => Some(CHEST), // Shop storage
+            InteriorStyle::Industrial => Some(ANVIL), // Workbench
+            InteriorStyle::Farm => Some(BARREL),      // Feed barrel
+            _ => Some(CRAFTING_TABLE),                // Crafting table
+        },
+        'F' => match style {
+            InteriorStyle::Commercial => Some(BARREL), // Display barrel
+            InteriorStyle::Public => Some(NOTE_BLOCK), // Lectern-like
+            InteriorStyle::Farm => Some(CAULDRON),     // Water trough
+            _ => Some(FURNACE),                        // Furnace
+        },
+        '1' => match style {
+            InteriorStyle::Commercial | InteriorStyle::Public | InteriorStyle::Industrial => {
+                Some(RED_CARPET) // Carpet instead of bed
+            }
+            _ => Some(RED_BED_NORTH_HEAD),
+        },
+        '2' => match style {
+            InteriorStyle::Commercial | InteriorStyle::Public | InteriorStyle::Industrial => {
+                Some(RED_CARPET)
+            }
+            _ => Some(RED_BED_NORTH_FOOT),
+        },
+        '3' => match style {
+            InteriorStyle::Commercial | InteriorStyle::Public | InteriorStyle::Industrial => {
+                Some(RED_CARPET)
+            }
+            _ => Some(RED_BED_EAST_HEAD),
+        },
+        '4' => match style {
+            InteriorStyle::Commercial | InteriorStyle::Public | InteriorStyle::Industrial => {
+                Some(RED_CARPET)
+            }
+            _ => Some(RED_BED_EAST_FOOT),
+        },
+        '5' => match style {
+            InteriorStyle::Commercial | InteriorStyle::Public | InteriorStyle::Industrial => {
+                Some(RED_CARPET)
+            }
+            _ => Some(RED_BED_SOUTH_HEAD),
+        },
+        '6' => match style {
+            InteriorStyle::Commercial | InteriorStyle::Public | InteriorStyle::Industrial => {
+                Some(RED_CARPET)
+            }
+            _ => Some(RED_BED_SOUTH_FOOT),
+        },
+        '7' => match style {
+            InteriorStyle::Commercial | InteriorStyle::Public | InteriorStyle::Industrial => {
+                Some(RED_CARPET)
+            }
+            _ => Some(RED_BED_WEST_HEAD),
+        },
+        '8' => match style {
+            InteriorStyle::Commercial | InteriorStyle::Public | InteriorStyle::Industrial => {
+                Some(RED_CARPET)
+            }
+            _ => Some(RED_BED_WEST_FOOT),
+        },
+        'L' => match style {
+            InteriorStyle::Farm => Some(WATER_CAULDRON), // Water trough
+            _ => Some(CAULDRON),
+        },
+        'A' => match style {
+            InteriorStyle::Commercial => Some(CHEST), // Shop chest
+            InteriorStyle::Farm => Some(BARREL),      // Feed barrel
+            _ => Some(ANVIL),
+        },
+        'P' => Some(OAK_PRESSURE_PLATE),
         'D' => {
-            // Use different door types for different layers
             if is_layer2 {
                 Some(DARK_OAK_DOOR_UPPER)
             } else {
                 Some(DARK_OAK_DOOR_LOWER)
             }
         }
-        'J' => Some(NOTE_BLOCK),                // Note block
-        'G' => Some(GLOWSTONE),                 // Glowstone
-        'N' => Some(BREWING_STAND),             // Brewing Stand
-        'T' => Some(WHITE_CARPET),              // White Carpet
-        'E' => Some(OAK_LEAVES),                // Oak Leaves
-        'O' => Some(COBWEB),                    // Cobweb
-        'a' => Some(CHISELLED_BOOKSHELF_NORTH), // Chiseled Bookshelf
-        'b' => Some(CHISELLED_BOOKSHELF_EAST),  // Chiseled Bookshelf East
-        'c' => Some(CHISELLED_BOOKSHELF_SOUTH), // Chiseled Bookshelf South
-        'd' => Some(CHISELLED_BOOKSHELF_WEST),  // Chiseled Bookshelf West
-        'M' => Some(DAMAGED_ANVIL),             // Damaged Anvil
-        'Q' => Some(SCAFFOLDING),               // Scaffolding
-        _ => None,                              // Default case for unknown characters
+        'J' => match style {
+            InteriorStyle::Industrial => Some(IRON_BLOCK), // Machine block
+            _ => Some(NOTE_BLOCK),
+        },
+        'G' => Some(GLOWSTONE),
+        'N' => Some(BREWING_STAND),
+        'T' => match style {
+            InteriorStyle::Commercial => Some(RED_CARPET), // Shop carpet
+            InteriorStyle::Public => Some(WHITE_CARPET),
+            InteriorStyle::Industrial => Some(IRON_BLOCK), // Floor plating
+            _ => Some(WHITE_CARPET),
+        },
+        'E' => match style {
+            InteriorStyle::Farm => Some(OAK_LEAVES), // Crop leaves
+            _ => Some(OAK_LEAVES),
+        },
+        'O' => Some(COBWEB),
+        'a' => Some(CHISELLED_BOOKSHELF_NORTH),
+        'b' => Some(CHISELLED_BOOKSHELF_EAST),
+        'c' => Some(CHISELLED_BOOKSHELF_SOUTH),
+        'd' => Some(CHISELLED_BOOKSHELF_WEST),
+        'M' => Some(DAMAGED_ANVIL),
+        'Q' => Some(SCAFFOLDING),
+        _ => None,
     }
 }
 
@@ -294,7 +402,11 @@ pub fn generate_building_interior(
     abs_terrain_offset: i32,
     is_abandoned_building: bool,
     building_passages: &CoordinateBitmap,
+    category: BuildingCategory,
 ) {
+    // Determine interior style from building category
+    let interior_style = InteriorStyle::from_category(category);
+
     // Skip interior generation for very small buildings
     let width = max_x - min_x + 1;
     let depth = max_z - min_z + 1;
@@ -390,7 +502,9 @@ pub fn generate_building_interior(
                 let cell2 = layer2[pattern_z as usize][pattern_x as usize];
 
                 // Place first layer blocks
-                if let Some(block) = get_interior_block(cell1, false, wall_block) {
+                if let Some(block) =
+                    get_interior_block_styled(cell1, false, wall_block, interior_style)
+                {
                     editor.set_block_absolute(
                         block,
                         x,
@@ -411,7 +525,9 @@ pub fn generate_building_interior(
                 }
 
                 // Place second layer blocks
-                if let Some(block) = get_interior_block(cell2, true, wall_block) {
+                if let Some(block) =
+                    get_interior_block_styled(cell2, true, wall_block, interior_style)
+                {
                     editor.set_block_absolute(
                         block,
                         x,

@@ -530,7 +530,7 @@ fn generate_fountain(
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 enum RecyclingLootKind {
     GlassBottle,
     Paper,
@@ -948,4 +948,112 @@ fn make_basic_item(id: &str, slot: i8, count: i8) -> HashMap<String, Value> {
 
 fn tag_enabled(tags: &HashMap<String, String>, key: &str) -> bool {
     tags.get(key).is_some_and(|value| value == "yes")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+
+    fn tags(pairs: &[(&str, &str)]) -> HashMap<String, String> {
+        pairs
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect()
+    }
+
+    #[test]
+    fn tag_enabled_yes() {
+        assert!(tag_enabled(
+            &tags(&[("recycling:glass", "yes")]),
+            "recycling:glass"
+        ));
+    }
+
+    #[test]
+    fn tag_enabled_no() {
+        assert!(!tag_enabled(
+            &tags(&[("recycling:glass", "no")]),
+            "recycling:glass"
+        ));
+    }
+
+    #[test]
+    fn tag_enabled_missing() {
+        assert!(!tag_enabled(&tags(&[]), "recycling:glass"));
+    }
+
+    #[test]
+    fn make_basic_item_structure() {
+        let item = make_basic_item("minecraft:diamond", 3, 16);
+        assert_eq!(
+            item.get("id"),
+            Some(&Value::String("minecraft:diamond".to_string()))
+        );
+        assert_eq!(item.get("Slot"), Some(&Value::Byte(3)));
+        assert_eq!(item.get("Count"), Some(&Value::Byte(16)));
+    }
+
+    #[test]
+    fn build_recycling_loot_empty_tags() {
+        let pool = build_recycling_loot_pool(&tags(&[]));
+        assert!(pool.is_empty());
+    }
+
+    #[test]
+    fn build_recycling_loot_glass() {
+        let pool = build_recycling_loot_pool(&tags(&[("recycling:glass", "yes")]));
+        assert!(pool.contains(&RecyclingLootKind::GlassBlock));
+        assert!(pool.contains(&RecyclingLootKind::GlassPane));
+    }
+
+    #[test]
+    fn build_recycling_loot_paper() {
+        let pool = build_recycling_loot_pool(&tags(&[("recycling:paper", "yes")]));
+        assert!(pool.contains(&RecyclingLootKind::Paper));
+    }
+
+    #[test]
+    fn kind_to_category_glass_bottle() {
+        assert!(matches!(
+            kind_to_category(RecyclingLootKind::GlassBottle),
+            LootCategory::GlassBottle
+        ));
+    }
+
+    #[test]
+    fn kind_to_category_glass_block() {
+        assert!(matches!(
+            kind_to_category(RecyclingLootKind::GlassBlock),
+            LootCategory::Glass
+        ));
+    }
+
+    #[test]
+    fn kind_to_category_paper() {
+        assert!(matches!(
+            kind_to_category(RecyclingLootKind::Paper),
+            LootCategory::Paper
+        ));
+    }
+
+    #[test]
+    fn single_loot_category_uniform() {
+        let pool = vec![RecyclingLootKind::Paper, RecyclingLootKind::Paper];
+        let cat = single_loot_category(&pool);
+        assert!(cat.is_some());
+    }
+
+    #[test]
+    fn single_loot_category_mixed() {
+        let pool = vec![RecyclingLootKind::Paper, RecyclingLootKind::GlassBottle];
+        let cat = single_loot_category(&pool);
+        assert!(cat.is_none());
+    }
+
+    #[test]
+    fn single_loot_category_empty() {
+        let cat = single_loot_category(&[]);
+        assert!(cat.is_none());
+    }
 }

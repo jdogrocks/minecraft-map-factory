@@ -573,7 +573,6 @@ impl<'a> WorldEditor<'a> {
     }
 
     /// Adds an entity at the given coordinates (Y is ground-relative).
-    #[allow(dead_code)]
     pub fn add_entity(
         &mut self,
         id: &str,
@@ -1189,4 +1188,639 @@ fn single_item(id: &str, slot: i8, count: i8) -> HashMap<String, Value> {
     item.insert("Slot".to_string(), Value::Byte(slot));
     item.insert("Count".to_string(), Value::Byte(count));
     item
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn test_bbox() -> XZBBox {
+        XZBBox::rect_from_xz_lengths(100.0, 100.0).unwrap()
+    }
+
+    fn test_llbbox() -> LLBBox {
+        LLBBox::new(54.627, 9.927, 54.635, 9.938).unwrap()
+    }
+
+    fn test_editor(xzbbox: &XZBBox) -> WorldEditor<'_> {
+        WorldEditor::new(
+            std::path::PathBuf::from("/tmp/test_world"),
+            xzbbox,
+            test_llbbox(),
+        )
+    }
+
+    // ── WorldFormat ─────────────────────────────────────────────────
+
+    #[test]
+    fn world_format_default_is_java() {
+        let bbox = test_bbox();
+        let editor = test_editor(&bbox);
+        assert_eq!(editor.format(), WorldFormat::JavaAnvil);
+    }
+
+    #[test]
+    fn world_format_eq() {
+        assert_eq!(WorldFormat::JavaAnvil, WorldFormat::JavaAnvil);
+        assert_ne!(WorldFormat::JavaAnvil, WorldFormat::BedrockMcWorld);
+    }
+
+    // ── Block placement ─────────────────────────────────────────────
+
+    #[test]
+    fn set_block_and_check() {
+        let bbox = test_bbox();
+        let mut editor = test_editor(&bbox);
+        editor.set_block(STONE, 50, 10, 50, None, None);
+        assert!(editor.block_exists_absolute(50, 10, 50));
+    }
+
+    #[test]
+    fn set_block_outside_bbox_is_noop() {
+        let bbox = test_bbox();
+        let mut editor = test_editor(&bbox);
+        // Place outside bbox
+        editor.set_block(STONE, 200, 10, 200, None, None);
+        assert!(!editor.block_exists_absolute(200, 10, 200));
+    }
+
+    #[test]
+    fn set_block_absolute() {
+        let bbox = test_bbox();
+        let mut editor = test_editor(&bbox);
+        editor.set_block_absolute(STONE, 50, 64, 50, None, None);
+        assert!(editor.block_exists_absolute(50, 64, 50));
+    }
+
+    #[test]
+    fn set_block_does_not_overwrite_by_default() {
+        let bbox = test_bbox();
+        let mut editor = test_editor(&bbox);
+        editor.set_block_absolute(STONE, 50, 64, 50, None, None);
+        // Try to overwrite without whitelist — should NOT overwrite
+        editor.set_block_absolute(DIRT, 50, 64, 50, None, None);
+        // STONE was first, DIRT should be ignored (existing block, no whitelist/blacklist)
+        assert!(editor.check_for_block_absolute(50, 64, 50, Some(&[STONE]), None));
+    }
+
+    #[test]
+    fn set_block_whitelist_allows_overwrite() {
+        let bbox = test_bbox();
+        let mut editor = test_editor(&bbox);
+        editor.set_block_absolute(STONE, 50, 64, 50, None, None);
+        // Overwrite with whitelist containing STONE
+        editor.set_block_absolute(DIRT, 50, 64, 50, Some(&[STONE]), None);
+        assert!(editor.check_for_block_absolute(50, 64, 50, Some(&[DIRT]), None));
+    }
+
+    #[test]
+    fn set_block_blacklist_prevents_overwrite() {
+        let bbox = test_bbox();
+        let mut editor = test_editor(&bbox);
+        editor.set_block_absolute(STONE, 50, 64, 50, None, None);
+        // Try overwrite with blacklist containing STONE — should NOT overwrite
+        editor.set_block_absolute(DIRT, 50, 64, 50, None, Some(&[STONE]));
+        assert!(editor.check_for_block_absolute(50, 64, 50, Some(&[STONE]), None));
+    }
+
+    #[test]
+    fn set_block_if_absent() {
+        let bbox = test_bbox();
+        let mut editor = test_editor(&bbox);
+        editor.set_block_if_absent_absolute(STONE, 50, 64, 50);
+        assert!(editor.block_exists_absolute(50, 64, 50));
+
+        // Should not overwrite
+        editor.set_block_if_absent_absolute(DIRT, 50, 64, 50);
+        assert!(editor.check_for_block_absolute(50, 64, 50, Some(&[STONE]), None));
+    }
+
+    // ── fill_blocks ─────────────────────────────────────────────────
+
+    #[test]
+    fn fill_blocks_absolute_fills_volume() {
+        let bbox = test_bbox();
+        let mut editor = test_editor(&bbox);
+        editor.fill_blocks_absolute(STONE, 10, 60, 10, 12, 62, 12, None, None);
+        for x in 10..=12 {
+            for y in 60..=62 {
+                for z in 10..=12 {
+                    assert!(
+                        editor.block_exists_absolute(x, y, z),
+                        "Block missing at ({x}, {y}, {z})"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn fill_blocks_absolute_reversed_coords() {
+        let bbox = test_bbox();
+        let mut editor = test_editor(&bbox);
+        // Pass coords in reverse order — should still fill the volume
+        editor.fill_blocks_absolute(STONE, 12, 62, 12, 10, 60, 10, None, None);
+        assert!(editor.block_exists_absolute(10, 60, 10));
+        assert!(editor.block_exists_absolute(12, 62, 12));
+    }
+
+    // ── fill_column_absolute ────────────────────────────────────────
+
+    #[test]
+    fn fill_column_absolute() {
+        let bbox = test_bbox();
+        let mut editor = test_editor(&bbox);
+        editor.fill_column_absolute(STONE, 50, 50, 0, 10, false);
+        for y in 0..=10 {
+            assert!(editor.block_exists_absolute(50, y, 50));
+        }
+        assert!(!editor.block_exists_absolute(50, 11, 50));
+    }
+
+    #[test]
+    fn fill_column_absolute_skip_existing() {
+        let bbox = test_bbox();
+        let mut editor = test_editor(&bbox);
+        editor.set_block_absolute(DIRT, 50, 5, 50, None, None);
+        editor.fill_column_absolute(STONE, 50, 50, 0, 10, true);
+        // The pre-existing DIRT at y=5 should remain
+        assert!(editor.check_for_block_absolute(50, 5, 50, Some(&[DIRT]), None));
+    }
+
+    // ── get_ground_level ────────────────────────────────────────────
+
+    #[test]
+    fn ground_level_default_is_zero() {
+        let bbox = test_bbox();
+        let editor = test_editor(&bbox);
+        assert_eq!(editor.get_ground_level(50, 50), 0);
+    }
+
+    #[test]
+    fn ground_level_with_road_override() {
+        let bbox = test_bbox();
+        let mut editor = test_editor(&bbox);
+        editor.register_road_surface_y(50, 50, 42);
+        assert_eq!(editor.get_ground_level(50, 50), 42);
+        // Non-overridden position stays default
+        assert_eq!(editor.get_ground_level(51, 51), 0);
+    }
+
+    #[test]
+    fn get_absolute_y_uses_ground_level() {
+        let bbox = test_bbox();
+        let mut editor = test_editor(&bbox);
+        editor.register_road_surface_y(10, 10, 30);
+        assert_eq!(editor.get_absolute_y(10, 5, 10), 35);
+    }
+
+    // ── get_min_coords / get_max_coords ─────────────────────────────
+
+    #[test]
+    fn min_max_coords() {
+        let bbox = test_bbox();
+        let editor = test_editor(&bbox);
+        let (min_x, min_z) = editor.get_min_coords();
+        let (max_x, max_z) = editor.get_max_coords();
+        assert_eq!(min_x, 0);
+        assert_eq!(min_z, 0);
+        assert_eq!(max_x, 100);
+        assert_eq!(max_z, 100);
+    }
+
+    // ── check_for_block ─────────────────────────────────────────────
+
+    #[test]
+    fn check_for_block_with_whitelist() {
+        let bbox = test_bbox();
+        let mut editor = test_editor(&bbox);
+        editor.set_block_absolute(STONE, 50, 64, 50, None, None);
+        assert!(editor.check_for_block_absolute(50, 64, 50, Some(&[STONE]), None));
+        assert!(!editor.check_for_block_absolute(50, 64, 50, Some(&[DIRT]), None));
+    }
+
+    #[test]
+    fn check_for_block_nonexistent() {
+        let bbox = test_bbox();
+        let editor = test_editor(&bbox);
+        assert!(!editor.check_for_block_absolute(50, 64, 50, Some(&[STONE]), None));
+    }
+
+    // ── build_deterministic_uuid ─────────────────────────────────────
+
+    #[test]
+    fn deterministic_uuid_is_deterministic() {
+        let uuid1 = build_deterministic_uuid("minecraft:pig", 10, 64, 20);
+        let uuid2 = build_deterministic_uuid("minecraft:pig", 10, 64, 20);
+        assert_eq!(uuid1, uuid2);
+    }
+
+    #[test]
+    fn deterministic_uuid_differs_for_different_inputs() {
+        let uuid1 = build_deterministic_uuid("minecraft:pig", 10, 64, 20);
+        let uuid2 = build_deterministic_uuid("minecraft:cow", 10, 64, 20);
+        assert_ne!(uuid1, uuid2);
+
+        let uuid3 = build_deterministic_uuid("minecraft:pig", 11, 64, 20);
+        assert_ne!(uuid1, uuid3);
+    }
+
+    #[test]
+    fn deterministic_uuid_has_four_ints() {
+        let uuid = build_deterministic_uuid("test", 0, 0, 0);
+        assert_eq!(uuid.len(), 4);
+    }
+
+    // ── single_item ─────────────────────────────────────────────────
+
+    #[test]
+    fn single_item_creates_correct_map() {
+        let item = single_item("minecraft:diamond", 0, 64);
+        assert_eq!(
+            item.get("id"),
+            Some(&Value::String("minecraft:diamond".to_string()))
+        );
+        assert_eq!(item.get("Slot"), Some(&Value::Byte(0)));
+        assert_eq!(item.get("Count"), Some(&Value::Byte(64)));
+    }
+
+    // ── is_disk_full_error ──────────────────────────────────────────
+
+    #[test]
+    fn disk_full_error_os_28() {
+        let err = std::io::Error::from_raw_os_error(28);
+        assert!(is_disk_full_error(&err));
+    }
+
+    #[test]
+    fn disk_full_error_string_storage_full() {
+        // Test the string-based fallback for "StorageFull"
+        let err = std::io::Error::other("StorageFull");
+        assert!(is_disk_full_error(&err));
+    }
+
+    #[test]
+    fn disk_full_error_string_match() {
+        // Custom error with os error 112 in the message
+        let err = std::io::Error::other("Write failed: os error 112");
+        assert!(is_disk_full_error(&err));
+    }
+
+    #[test]
+    fn not_disk_full_error() {
+        let err = std::io::Error::new(std::io::ErrorKind::PermissionDenied, "access denied");
+        assert!(!is_disk_full_error(&err));
+    }
+
+    // ── WorldMetadata serialization ─────────────────────────────────
+
+    #[test]
+    fn world_metadata_serializes() {
+        let metadata = WorldMetadata {
+            min_mc_x: -100,
+            max_mc_x: 100,
+            min_mc_z: -200,
+            max_mc_z: 200,
+            min_geo_lat: 54.627,
+            max_geo_lat: 54.635,
+            min_geo_lon: 9.927,
+            max_geo_lon: 9.938,
+        };
+        let json = serde_json::to_string(&metadata).unwrap();
+        assert!(json.contains("minMcX"));
+        assert!(json.contains("maxGeoLat"));
+    }
+
+    // ── set_ground / get_ground ──────────────────────────────────────
+
+    #[test]
+    fn ground_initially_none() {
+        let bbox = test_bbox();
+        let editor = test_editor(&bbox);
+        assert!(editor.get_ground().is_none());
+    }
+
+    #[test]
+    fn set_and_get_ground() {
+        let bbox = test_bbox();
+        let mut editor = test_editor(&bbox);
+        let ground = Arc::new(Ground::new_flat(64));
+        editor.set_ground(ground);
+        assert!(editor.get_ground().is_some());
+    }
+
+    // ── water_level ─────────────────────────────────────────────────
+
+    #[test]
+    fn water_level_defaults_to_zero_without_ground() {
+        let bbox = test_bbox();
+        let editor = test_editor(&bbox);
+        assert_eq!(editor.get_water_level(50, 50), 0);
+    }
+
+    // ── block_at ────────────────────────────────────────────────────
+
+    #[test]
+    fn block_at_returns_true_when_block_exists() {
+        let bbox = test_bbox();
+        let mut editor = test_editor(&bbox);
+        editor.set_block(STONE, 50, 10, 50, None, None);
+        assert!(editor.block_at(50, 10, 50));
+    }
+
+    #[test]
+    fn block_at_returns_false_when_no_block() {
+        let bbox = test_bbox();
+        let editor = test_editor(&bbox);
+        assert!(!editor.block_at(50, 10, 50));
+    }
+
+    // ── fill_blocks (ground-relative) ───────────────────────────────
+
+    #[test]
+    fn fill_blocks_relative_fills_volume() {
+        let bbox = test_bbox();
+        let mut editor = test_editor(&bbox);
+        editor.fill_blocks(STONE, 10, 0, 10, 12, 2, 12, None, None);
+        // ground_level is 0, so y=0..2 => absolute_y = 0..2
+        for x in 10..=12 {
+            for y in 0..=2 {
+                for z in 10..=12 {
+                    assert!(
+                        editor.block_exists_absolute(x, y, z),
+                        "Block missing at ({x}, {y}, {z})"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn fill_blocks_reversed_coords() {
+        let bbox = test_bbox();
+        let mut editor = test_editor(&bbox);
+        editor.fill_blocks(STONE, 12, 2, 12, 10, 0, 10, None, None);
+        assert!(editor.block_exists_absolute(10, 0, 10));
+        assert!(editor.block_exists_absolute(12, 2, 12));
+    }
+
+    // ── set_block (ground-relative) ─────────────────────────────────
+
+    #[test]
+    fn set_block_relative_outside_bbox() {
+        let bbox = test_bbox();
+        let mut editor = test_editor(&bbox);
+        // Outside bbox - should be noop
+        editor.set_block(STONE, -10, 5, -10, None, None);
+        assert!(!editor.block_exists_absolute(-10, 5, -10));
+    }
+
+    // ── check_for_block (ground-relative) ───────────────────────────
+
+    #[test]
+    fn check_for_block_relative_with_whitelist() {
+        let bbox = test_bbox();
+        let mut editor = test_editor(&bbox);
+        editor.set_block(STONE, 50, 10, 50, None, None);
+        assert!(editor.check_for_block(50, 10, 50, Some(&[STONE])));
+        assert!(!editor.check_for_block(50, 10, 50, Some(&[DIRT])));
+    }
+
+    #[test]
+    fn check_for_block_relative_nonexistent() {
+        let bbox = test_bbox();
+        let editor = test_editor(&bbox);
+        assert!(!editor.check_for_block(50, 10, 50, Some(&[STONE])));
+    }
+
+    #[test]
+    fn check_for_block_absolute_with_blacklist() {
+        let bbox = test_bbox();
+        let mut editor = test_editor(&bbox);
+        editor.set_block_absolute(STONE, 50, 64, 50, None, None);
+        // Blacklist returns true when block IS in the blacklist (match found)
+        assert!(editor.check_for_block_absolute(50, 64, 50, None, Some(&[STONE])));
+        // Block not in blacklist and no whitelist => false (only None/None returns true)
+        assert!(!editor.check_for_block_absolute(50, 64, 50, None, Some(&[DIRT])));
+    }
+
+    #[test]
+    fn check_for_block_absolute_no_whitelist_no_blacklist() {
+        let bbox = test_bbox();
+        let mut editor = test_editor(&bbox);
+        editor.set_block_absolute(STONE, 50, 64, 50, None, None);
+        // None for both whitelist and blacklist: check returns true if block exists
+        assert!(editor.check_for_block_absolute(50, 64, 50, None, None));
+    }
+
+    // ── place_wall_banner ───────────────────────────────────────────
+
+    #[test]
+    fn place_wall_banner_java_creates_block_entity() {
+        let bbox = test_bbox();
+        let mut editor = test_editor(&bbox);
+        editor.place_wall_banner(
+            STONE, // placeholder block
+            50,
+            64,
+            50,
+            "north",
+            "light_gray",
+            &[("red", "minecraft:triangle_top")],
+        );
+        // The banner sets a block at the position
+        assert!(editor.block_exists_absolute(50, 64, 50));
+    }
+
+    // ── set_sign ────────────────────────────────────────────────────
+
+    #[test]
+    fn set_sign_places_block_and_entity() {
+        let bbox = test_bbox();
+        let mut editor = test_editor(&bbox);
+        editor.set_sign(
+            "Line1".to_string(),
+            "Line2".to_string(),
+            "Line3".to_string(),
+            "Line4".to_string(),
+            50,
+            10,
+            50,
+            0,
+        );
+        assert!(editor.block_exists_absolute(50, 10, 50));
+    }
+
+    // ── add_entity ──────────────────────────────────────────────────
+
+    #[test]
+    fn add_entity_within_bbox() {
+        let bbox = test_bbox();
+        let mut editor = test_editor(&bbox);
+        editor.add_entity("minecraft:pig", 50, 10, 50, None);
+        // Entity is added without error (no direct query, but verifying no panic)
+    }
+
+    #[test]
+    fn add_entity_outside_bbox_is_noop() {
+        let bbox = test_bbox();
+        let mut editor = test_editor(&bbox);
+        editor.add_entity("minecraft:pig", 200, 10, 200, None);
+        // Should not panic
+    }
+
+    #[test]
+    fn add_entity_with_extra_data() {
+        let bbox = test_bbox();
+        let mut editor = test_editor(&bbox);
+        let mut extra = HashMap::new();
+        extra.insert(
+            "CustomName".to_string(),
+            Value::String("TestPig".to_string()),
+        );
+        editor.add_entity("minecraft:pig", 50, 10, 50, Some(extra));
+    }
+
+    // ── set_chest_with_items ────────────────────────────────────────
+
+    #[test]
+    fn set_chest_with_items_places_chest() {
+        let bbox = test_bbox();
+        let mut editor = test_editor(&bbox);
+        let items = vec![single_item("minecraft:diamond", 0, 64)];
+        editor.set_chest_with_items(50, 10, 50, items);
+        assert!(editor.block_exists_absolute(50, 10, 50));
+    }
+
+    #[test]
+    fn set_chest_with_items_absolute_places_chest() {
+        let bbox = test_bbox();
+        let mut editor = test_editor(&bbox);
+        let items = vec![
+            single_item("minecraft:diamond", 0, 64),
+            single_item("minecraft:iron_ingot", 1, 32),
+        ];
+        editor.set_chest_with_items_absolute(50, 64, 50, items);
+        assert!(editor.block_exists_absolute(50, 64, 50));
+    }
+
+    #[test]
+    fn set_chest_outside_bbox_is_noop() {
+        let bbox = test_bbox();
+        let mut editor = test_editor(&bbox);
+        let items = vec![single_item("minecraft:diamond", 0, 64)];
+        editor.set_chest_with_items_absolute(200, 64, 200, items);
+        assert!(!editor.block_exists_absolute(200, 64, 200));
+    }
+
+    // ── set_block_entity_with_items ─────────────────────────────────
+
+    #[test]
+    fn set_block_entity_with_items_places_block() {
+        let bbox = test_bbox();
+        let mut editor = test_editor(&bbox);
+        let items = vec![single_item("minecraft:arrow", 0, 16)];
+        editor.set_block_entity_with_items(
+            BlockWithProperties::new(STONE, None),
+            50,
+            10,
+            50,
+            "minecraft:dispenser",
+            items,
+        );
+        assert!(editor.block_exists_absolute(50, 10, 50));
+    }
+
+    #[test]
+    fn set_block_entity_with_items_absolute_places_block() {
+        let bbox = test_bbox();
+        let mut editor = test_editor(&bbox);
+        let items = vec![single_item("minecraft:arrow", 0, 16)];
+        editor.set_block_entity_with_items_absolute(
+            BlockWithProperties::new(STONE, None),
+            50,
+            64,
+            50,
+            "minecraft:dispenser",
+            items,
+        );
+        assert!(editor.block_exists_absolute(50, 64, 50));
+    }
+
+    #[test]
+    fn set_block_entity_outside_bbox_is_noop() {
+        let bbox = test_bbox();
+        let mut editor = test_editor(&bbox);
+        let items = vec![single_item("minecraft:arrow", 0, 16)];
+        editor.set_block_entity_with_items_absolute(
+            BlockWithProperties::new(STONE, None),
+            200,
+            64,
+            200,
+            "minecraft:dispenser",
+            items,
+        );
+        assert!(!editor.block_exists_absolute(200, 64, 200));
+    }
+
+    // ── insert_block_entity ─────────────────────────────────────────
+
+    #[test]
+    fn insert_block_entity_outside_bbox_is_noop() {
+        let bbox = test_bbox();
+        let mut editor = test_editor(&bbox);
+        let mut be = HashMap::new();
+        be.insert("id".to_string(), Value::String("test".to_string()));
+        // Should not panic for out-of-bounds
+        editor.insert_block_entity(200, 200, be);
+    }
+
+    #[test]
+    fn insert_block_entity_creates_list() {
+        let bbox = test_bbox();
+        let mut editor = test_editor(&bbox);
+        let mut be = HashMap::new();
+        be.insert("id".to_string(), Value::String("test".to_string()));
+        editor.insert_block_entity(50, 50, be.clone());
+        // Insert another to the same chunk (occupied path)
+        editor.insert_block_entity(50, 50, be);
+    }
+
+    // ── new_with_format_and_name ────────────────────────────────────
+
+    #[test]
+    fn new_with_format_java() {
+        let bbox = test_bbox();
+        let editor = WorldEditor::new_with_format_and_name(
+            std::path::PathBuf::from("/tmp/test_world"),
+            &bbox,
+            test_llbbox(),
+            WorldFormat::JavaAnvil,
+            None,
+            None,
+            false,
+        );
+        assert_eq!(editor.format(), WorldFormat::JavaAnvil);
+    }
+
+    // ── register_road_surface_y ─────────────────────────────────────
+
+    #[test]
+    fn register_road_surface_y_multiple() {
+        let bbox = test_bbox();
+        let mut editor = test_editor(&bbox);
+        editor.register_road_surface_y(10, 10, 42);
+        editor.register_road_surface_y(20, 20, 55);
+        assert_eq!(editor.get_ground_level(10, 10), 42);
+        assert_eq!(editor.get_ground_level(20, 20), 55);
+    }
+
+    // ── format accessor ─────────────────────────────────────────────
+
+    #[test]
+    fn format_returns_expected_format() {
+        let bbox = test_bbox();
+        let editor = test_editor(&bbox);
+        assert_eq!(editor.format(), WorldFormat::JavaAnvil);
+    }
 }
