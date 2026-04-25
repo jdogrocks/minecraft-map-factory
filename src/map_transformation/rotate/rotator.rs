@@ -348,6 +348,61 @@ fn rotate_ground_data(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::osm_parser::{
+        ProcessedMember, ProcessedMemberRole, ProcessedNode, ProcessedRelation, ProcessedWay,
+    };
+    use std::collections::HashMap;
+    use std::sync::Arc;
+
+    fn make_node(id: u64, x: i32, z: i32) -> ProcessedElement {
+        ProcessedElement::Node(ProcessedNode {
+            id,
+            tags: HashMap::new(),
+            x,
+            z,
+        })
+    }
+
+    fn make_way(id: u64, nodes: Vec<(i32, i32)>) -> ProcessedElement {
+        ProcessedElement::Way(ProcessedWay {
+            id,
+            tags: HashMap::new(),
+            nodes: nodes
+                .into_iter()
+                .enumerate()
+                .map(|(i, (x, z))| ProcessedNode {
+                    id: i as u64,
+                    tags: HashMap::new(),
+                    x,
+                    z,
+                })
+                .collect(),
+        })
+    }
+
+    fn make_relation(id: u64, way_nodes: Vec<(i32, i32)>) -> ProcessedElement {
+        ProcessedElement::Relation(ProcessedRelation {
+            id,
+            tags: HashMap::new(),
+            members: vec![ProcessedMember {
+                role: ProcessedMemberRole::Outer,
+                way: Arc::new(ProcessedWay {
+                    id: 100,
+                    tags: HashMap::new(),
+                    nodes: way_nodes
+                        .into_iter()
+                        .enumerate()
+                        .map(|(i, (x, z))| ProcessedNode {
+                            id: i as u64,
+                            tags: HashMap::new(),
+                            x,
+                            z,
+                        })
+                        .collect(),
+                }),
+            }],
+        })
+    }
 
     #[test]
     fn test_zero_rotation_is_noop() {
@@ -383,5 +438,265 @@ mod tests {
 
         // 45° rotation of a square produces a larger bounding rect
         assert!(new_area > orig_area);
+    }
+
+    #[test]
+    fn test_rotate_point_180_degrees() {
+        let rad = 180.0_f64.to_radians();
+        let (rx, rz) = rotate_point(10.0, 5.0, 0.0, 0.0, rad.sin(), rad.cos());
+        assert!((rx - (-10.0)).abs() < 1e-10);
+        assert!((rz - (-5.0)).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_rotate_point_360_is_identity() {
+        let rad = 360.0_f64.to_radians();
+        let (rx, rz) = rotate_point(7.0, 3.0, 0.0, 0.0, rad.sin(), rad.cos());
+        assert!((rx - 7.0).abs() < 1e-10);
+        assert!((rz - 3.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_rotate_point_around_nonzero_center() {
+        let rad = 90.0_f64.to_radians();
+        // Rotate (15, 10) around center (10, 10) by 90° CCW
+        let (rx, rz) = rotate_point(15.0, 10.0, 10.0, 10.0, rad.sin(), rad.cos());
+        // (5, 0) relative -> rotated CCW -> (0, 5) relative -> (10, 15) absolute... wait
+        // dx=5, dz=0. CCW: rx = dx*cos + dz*sin = 0, rz = -dx*sin + dz*cos = -5
+        // So result: (10+0, 10-5) = (10, 5)
+        assert!((rx - 10.0).abs() < 1e-10);
+        assert!((rz - 5.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_rotate_point_negative_angle() {
+        let rad = (-90.0_f64).to_radians();
+        let (rx, rz) = rotate_point(10.0, 0.0, 0.0, 0.0, rad.sin(), rad.cos());
+        // -90° CCW = 90° CW: (10, 0) -> (0, 10)
+        assert!((rx - 0.0).abs() < 1e-10);
+        assert!((rz - 10.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_rotate_world_90_rotates_node() {
+        let mut elements = vec![make_node(1, 50, 0)];
+        let mut xzbbox = XZBBox::rect_from_xz_lengths(100.0, 100.0).unwrap();
+        let mut ground = Ground::new_flat(-62);
+
+        // Negated angle: user 90° CW -> internal -90° CCW
+        rotate_world(90.0, &mut elements, &mut xzbbox, &mut ground).unwrap();
+
+        if let ProcessedElement::Node(n) = &elements[0] {
+            // Node should have been rotated
+            assert_ne!(n.x, 50);
+        } else {
+            panic!("Expected Node");
+        }
+    }
+
+    #[test]
+    fn test_rotate_world_rotates_way_nodes() {
+        let mut elements = vec![make_way(1, vec![(0, 0), (10, 0), (10, 10)])];
+        let mut xzbbox = XZBBox::rect_from_xz_lengths(20.0, 20.0).unwrap();
+        let mut ground = Ground::new_flat(-62);
+
+        let orig_coords: Vec<(i32, i32)> = if let ProcessedElement::Way(w) = &elements[0] {
+            w.nodes.iter().map(|n| (n.x, n.z)).collect()
+        } else {
+            panic!("Expected Way");
+        };
+
+        rotate_world(45.0, &mut elements, &mut xzbbox, &mut ground).unwrap();
+
+        if let ProcessedElement::Way(w) = &elements[0] {
+            let new_coords: Vec<(i32, i32)> = w.nodes.iter().map(|n| (n.x, n.z)).collect();
+            assert_ne!(orig_coords, new_coords);
+            assert_eq!(w.nodes.len(), 3);
+        } else {
+            panic!("Expected Way");
+        }
+    }
+
+    #[test]
+    fn test_rotate_world_rotates_relation_member_nodes() {
+        let mut elements = vec![make_relation(1, vec![(0, 0), (5, 5)])];
+        let mut xzbbox = XZBBox::rect_from_xz_lengths(20.0, 20.0).unwrap();
+        let mut ground = Ground::new_flat(-62);
+
+        rotate_world(90.0, &mut elements, &mut xzbbox, &mut ground).unwrap();
+
+        if let ProcessedElement::Relation(r) = &elements[0] {
+            assert_eq!(r.members.len(), 1);
+            assert_eq!(r.members[0].way.nodes.len(), 2);
+        } else {
+            panic!("Expected Relation");
+        }
+    }
+
+    #[test]
+    fn test_rotate_world_90_preserves_bbox_size_for_square() {
+        let mut elements = Vec::new();
+        let mut xzbbox = XZBBox::rect_from_xz_lengths(100.0, 100.0).unwrap();
+        let mut ground = Ground::new_flat(-62);
+
+        let orig_area = xzbbox.bounding_rect().total_blocks();
+        rotate_world(90.0, &mut elements, &mut xzbbox, &mut ground).unwrap();
+        let new_area = xzbbox.bounding_rect().total_blocks();
+
+        // 90° rotation of a square should give approximately same area
+        let ratio = new_area as f64 / orig_area as f64;
+        assert!(
+            (ratio - 1.0).abs() < 0.05,
+            "Area ratio {ratio} too far from 1.0"
+        );
+    }
+
+    #[test]
+    fn test_rotate_xz_point_zero_angle() {
+        let xzbbox = XZBBox::rect_from_xz_lengths(100.0, 100.0).unwrap();
+        let (rx, rz) = rotate_xz_point(25, 30, 0.0, &xzbbox);
+        assert_eq!((rx, rz), (25, 30));
+    }
+
+    #[test]
+    fn test_rotate_xz_point_very_small_angle() {
+        let xzbbox = XZBBox::rect_from_xz_lengths(100.0, 100.0).unwrap();
+        let (rx, rz) = rotate_xz_point(25, 30, 1e-20, &xzbbox);
+        assert_eq!((rx, rz), (25, 30));
+    }
+
+    #[test]
+    fn test_rotate_xz_point_90_degrees() {
+        let xzbbox = XZBBox::rect_from_xz_lengths(100.0, 100.0).unwrap();
+        let cx = (xzbbox.min_x() + xzbbox.max_x()) / 2;
+        let cz = (xzbbox.min_z() + xzbbox.max_z()) / 2;
+        // Rotate center point - should stay at center
+        let (rx, rz) = rotate_xz_point(cx, cz, 90.0, &xzbbox);
+        assert_eq!((rx, rz), (cx, cz));
+    }
+
+    #[test]
+    fn test_rotator_from_json_valid() {
+        let json: serde_json::Value = serde_json::from_str(r#"{"angle_degrees": 45.0}"#).unwrap();
+        let result = rotator_from_json(&json);
+        assert!(result.is_ok());
+        assert!(result.unwrap().repr().contains("45"));
+    }
+
+    #[test]
+    fn test_rotator_from_json_invalid() {
+        let json: serde_json::Value = serde_json::from_str(r#"{"wrong_field": 45.0}"#).unwrap();
+        let result = rotator_from_json(&json);
+        assert!(result.is_err());
+        let err = result.err().unwrap();
+        assert!(err.contains("Rotator config format error"));
+    }
+
+    #[test]
+    fn test_rotator_repr() {
+        let r = Rotator {
+            angle_degrees: 90.0,
+        };
+        assert_eq!(r.repr(), "rotate 90°");
+    }
+
+    #[test]
+    fn test_rotator_operate_delegates_to_rotate_world() {
+        let r = Rotator {
+            angle_degrees: 45.0,
+        };
+        let mut elements = Vec::new();
+        let mut xzbbox = XZBBox::rect_from_xz_lengths(100.0, 100.0).unwrap();
+        let mut ground = Ground::new_flat(-62);
+
+        let orig_area = xzbbox.bounding_rect().total_blocks();
+        r.operate(&mut elements, &mut xzbbox, &mut ground);
+        let new_area = xzbbox.bounding_rect().total_blocks();
+        assert!(new_area > orig_area);
+    }
+
+    #[test]
+    fn test_rotate_world_with_elevation_disabled() {
+        let mut elements = vec![make_node(1, 10, 10)];
+        let mut xzbbox = XZBBox::rect_from_xz_lengths(50.0, 50.0).unwrap();
+        let mut ground = Ground::new_flat(-62);
+        // elevation_enabled is false by default in new_flat
+        assert!(!ground.elevation_enabled);
+
+        rotate_world(45.0, &mut elements, &mut xzbbox, &mut ground).unwrap();
+        // Should succeed without error even with no elevation data
+        assert!(!ground.elevation_enabled);
+    }
+
+    #[test]
+    fn test_rotate_world_multiple_element_types() {
+        let mut elements = vec![
+            make_node(1, 10, 0),
+            make_way(2, vec![(0, 0), (20, 20)]),
+            make_relation(3, vec![(5, 5), (15, 15)]),
+        ];
+        let mut xzbbox = XZBBox::rect_from_xz_lengths(40.0, 40.0).unwrap();
+        let mut ground = Ground::new_flat(-62);
+
+        rotate_world(30.0, &mut elements, &mut xzbbox, &mut ground).unwrap();
+
+        assert_eq!(elements.len(), 3);
+        assert!(matches!(&elements[0], ProcessedElement::Node(_)));
+        assert!(matches!(&elements[1], ProcessedElement::Way(_)));
+        assert!(matches!(&elements[2], ProcessedElement::Relation(_)));
+    }
+
+    #[test]
+    fn test_rotate_world_negative_angle() {
+        let mut elements = vec![make_node(1, 10, 5)];
+        let mut xzbbox = XZBBox::rect_from_xz_lengths(30.0, 30.0).unwrap();
+        let mut ground = Ground::new_flat(-62);
+
+        // Should work with negative angles
+        rotate_world(-45.0, &mut elements, &mut xzbbox, &mut ground).unwrap();
+        if let ProcessedElement::Node(n) = &elements[0] {
+            assert_ne!((n.x, n.z), (10, 5));
+        }
+    }
+
+    #[test]
+    fn test_rotate_world_360_approximately_identity() {
+        let mut elements = vec![make_node(1, 10, 5)];
+        let mut xzbbox = XZBBox::rect_from_xz_lengths(30.0, 30.0).unwrap();
+        let mut ground = Ground::new_flat(-62);
+
+        rotate_world(360.0, &mut elements, &mut xzbbox, &mut ground).unwrap();
+
+        if let ProcessedElement::Node(n) = &elements[0] {
+            // After 360° rotation, node should be back approximately at original position
+            assert!((n.x - 10).abs() <= 1);
+            assert!((n.z - 5).abs() <= 1);
+        }
+    }
+
+    #[test]
+    fn test_rotate_world_empty_elements() {
+        let mut elements: Vec<ProcessedElement> = Vec::new();
+        let mut xzbbox = XZBBox::rect_from_xz_lengths(50.0, 50.0).unwrap();
+        let mut ground = Ground::new_flat(-62);
+
+        let result = rotate_world(45.0, &mut elements, &mut xzbbox, &mut ground);
+        assert!(result.is_ok());
+        assert!(elements.is_empty());
+    }
+
+    #[test]
+    fn test_rotator_from_json_negative_angle() {
+        let json: serde_json::Value = serde_json::from_str(r#"{"angle_degrees": -90.0}"#).unwrap();
+        let result = rotator_from_json(&json);
+        assert!(result.is_ok());
+        assert!(result.unwrap().repr().contains("-90"));
+    }
+
+    #[test]
+    fn test_rotator_from_json_zero_angle() {
+        let json: serde_json::Value = serde_json::from_str(r#"{"angle_degrees": 0.0}"#).unwrap();
+        let result = rotator_from_json(&json);
+        assert!(result.is_ok());
     }
 }

@@ -118,3 +118,54 @@ fn create_water_channel(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn waterway_width_river() {
+        assert_eq!(get_waterway_width("river"), 8);
+    }
+
+    #[test]
+    fn waterway_width_canal() {
+        assert_eq!(get_waterway_width("canal"), 6);
+    }
+
+    #[test]
+    fn waterway_width_stream() {
+        assert_eq!(get_waterway_width("stream"), 3);
+    }
+
+    #[test]
+    fn waterway_width_fairway() {
+        assert_eq!(get_waterway_width("fairway"), 12);
+    }
+
+    #[test]
+    fn waterway_width_flowline() {
+        assert_eq!(get_waterway_width("flowline"), 2);
+    }
+
+    #[test]
+    fn waterway_width_brook() {
+        assert_eq!(get_waterway_width("brook"), 2);
+    }
+
+    #[test]
+    fn waterway_width_ditch() {
+        assert_eq!(get_waterway_width("ditch"), 2);
+    }
+
+    #[test]
+    fn waterway_width_drain() {
+        assert_eq!(get_waterway_width("drain"), 1);
+    }
+
+    #[test]
+    fn waterway_width_default() {
+        assert_eq!(get_waterway_width("unknown"), 4);
+        assert_eq!(get_waterway_width(""), 4);
+    }
+}

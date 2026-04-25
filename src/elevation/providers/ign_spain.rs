@@ -147,3 +147,71 @@ impl ElevationProvider for IgnSpain {
         fetch_fixed_tile_grid(self, bbox, grid_width, grid_height)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn name_is_ign_spain() {
+        let provider = IgnSpain;
+        assert_eq!(provider.name(), "ign_spain");
+    }
+
+    #[test]
+    fn coverage_bboxes_includes_iberian_peninsula() {
+        let provider = IgnSpain;
+        let bboxes = provider.coverage_bboxes().unwrap();
+        // Madrid (40.4, -3.7) should be in Iberian Peninsula coverage
+        let madrid_covered = bboxes.iter().any(|b| {
+            b.min().lat() <= 40.4
+                && b.max().lat() >= 40.4
+                && b.min().lng() <= -3.7
+                && b.max().lng() >= -3.7
+        });
+        assert!(madrid_covered, "Madrid should be covered");
+    }
+
+    #[test]
+    fn coverage_includes_canary_islands() {
+        let provider = IgnSpain;
+        let bboxes = provider.coverage_bboxes().unwrap();
+        // Canary Islands: Tenerife (~28.3, -16.5)
+        let canary_covered = bboxes.iter().any(|b| {
+            b.min().lat() <= 28.3
+                && b.max().lat() >= 28.3
+                && b.min().lng() <= -16.5
+                && b.max().lng() >= -16.5
+        });
+        assert!(canary_covered, "Canary Islands should be covered");
+    }
+
+    #[test]
+    fn native_resolution_is_5m() {
+        let provider = IgnSpain;
+        assert_eq!(provider.native_resolution_m(), 5.0);
+    }
+
+    #[test]
+    fn resolution_levels_ordered() {
+        let provider = IgnSpain;
+        let levels = provider.resolution_levels();
+        assert_eq!(levels.len(), 4);
+        for i in 1..levels.len() {
+            assert!(levels[i].meters_per_pixel() > levels[i - 1].meters_per_pixel());
+        }
+    }
+
+    #[test]
+    fn resolution_level_ids() {
+        assert_eq!(Resolution::M1.level_id(), "r1");
+        assert_eq!(Resolution::M3.level_id(), "r3");
+        assert_eq!(Resolution::M10.level_id(), "r10");
+        assert_eq!(Resolution::M30.level_id(), "r30");
+    }
+
+    #[test]
+    fn cache_name_matches_provider_name() {
+        assert_eq!(IgnSpain::CACHE_NAME, "ign_spain");
+    }
+}

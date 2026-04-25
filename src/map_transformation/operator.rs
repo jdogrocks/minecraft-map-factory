@@ -104,4 +104,85 @@ mod tests {
 
         assert!(ops.is_err());
     }
+
+    #[test]
+    fn test_operator_from_json_unknown_operation() {
+        let json: serde_json::Value =
+            serde_json::from_str(r#"{"operation":"mirror","config":{}}"#).unwrap();
+        let result = operator_from_json(&json);
+        assert!(result.is_err());
+        let err = result.err().unwrap();
+        assert!(err.contains("Unrecognized"));
+    }
+
+    #[test]
+    fn test_operator_from_json_missing_operation_field() {
+        let json: serde_json::Value = serde_json::from_str(r#"{"config":{}}"#).unwrap();
+        let result = operator_from_json(&json);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_operator_from_json_missing_config_field() {
+        let json: serde_json::Value = serde_json::from_str(r#"{"operation":"translate"}"#).unwrap();
+        let result = operator_from_json(&json);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_operator_vec_from_json_not_array() {
+        let json: serde_json::Value = serde_json::from_str(r#"{"key":"value"}"#).unwrap();
+        let result = operator_vec_from_json(&json);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_operator_vec_from_json_empty_array() {
+        let json: serde_json::Value = serde_json::from_str(r#"[]"#).unwrap();
+        let result = operator_vec_from_json(&json);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().len(), 0);
+    }
+
+    #[test]
+    fn test_valid_rotate_from_json() {
+        let json: serde_json::Value =
+            serde_json::from_str(r#"{"operation":"rotate","config":{"angle_degrees":45.0}}"#)
+                .unwrap();
+        let result = operator_from_json(&json);
+        assert!(result.is_ok());
+        assert!(result.unwrap().repr().contains("45"));
+    }
+
+    #[test]
+    fn test_valid_translate_vector_from_json() {
+        let json: serde_json::Value = serde_json::from_str(
+            r#"{"operation":"translate","config":{"type":"vector","config":{"vector":{"dx":100,"dz":200}}}}"#,
+        )
+        .unwrap();
+        let result = operator_from_json(&json);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_valid_translate_startend_from_json() {
+        let json: serde_json::Value = serde_json::from_str(
+            r#"{"operation":"translate","config":{"type":"startend","config":{"start":{"x":0,"z":0},"end":{"x":10,"z":20}}}}"#,
+        )
+        .unwrap();
+        let result = operator_from_json(&json);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_translate_unknown_type() {
+        let json: serde_json::Value = serde_json::from_str(
+            r#"{"operation":"translate","config":{"type":"polar","config":{}}}"#,
+        )
+        .unwrap();
+        let result = operator_from_json(&json);
+        assert!(result.is_err());
+        let err = result.err().unwrap();
+        assert!(err.contains("Unrecognized"));
+    }
 }

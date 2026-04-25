@@ -1,3 +1,6 @@
+[workspace]
+members = [".", "pipeline"]
+
 [package]
 name = "arnis"
 version = "2.7.0"
