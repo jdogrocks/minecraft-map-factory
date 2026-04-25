@@ -41,11 +41,20 @@ impl Publisher {
 
     fn sanitize_name(name: &str) -> String {
         name.chars()
-            .map(|c| if c.is_alphanumeric() || c == '-' { c } else { '_' })
+            .map(|c| {
+                if c.is_alphanumeric() || c == '-' {
+                    c
+                } else {
+                    '_'
+                }
+            })
             .collect()
     }
 
-    fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    fn copy_dir_recursive(
+        src: &Path,
+        dst: &Path,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         std::fs::create_dir_all(dst)?;
         for entry in std::fs::read_dir(src)? {
             let entry = entry?;

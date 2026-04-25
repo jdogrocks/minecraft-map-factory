@@ -200,10 +200,9 @@ mod tests {
 
     #[test]
     fn test_translator_from_json_vector() {
-        let json: serde_json::Value = serde_json::from_str(
-            r#"{"type":"vector","config":{"vector":{"dx":100,"dz":200}}}"#,
-        )
-        .unwrap();
+        let json: serde_json::Value =
+            serde_json::from_str(r#"{"type":"vector","config":{"vector":{"dx":100,"dz":200}}}"#)
+                .unwrap();
         let result = translator_from_json(&json);
         assert!(result.is_ok());
         assert!(result.unwrap().repr().contains("translate"));
@@ -221,10 +220,8 @@ mod tests {
 
     #[test]
     fn test_translator_from_json_unknown_type() {
-        let json: serde_json::Value = serde_json::from_str(
-            r#"{"type":"polar","config":{}}"#,
-        )
-        .unwrap();
+        let json: serde_json::Value =
+            serde_json::from_str(r#"{"type":"polar","config":{}}"#).unwrap();
         let result = translator_from_json(&json);
         assert!(result.is_err());
         let err = result.err().unwrap();
@@ -240,18 +237,15 @@ mod tests {
 
     #[test]
     fn test_translator_from_json_missing_config() {
-        let json: serde_json::Value =
-            serde_json::from_str(r#"{"type":"vector"}"#).unwrap();
+        let json: serde_json::Value = serde_json::from_str(r#"{"type":"vector"}"#).unwrap();
         let result = translator_from_json(&json);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_translator_from_json_invalid_vector_config() {
-        let json: serde_json::Value = serde_json::from_str(
-            r#"{"type":"vector","config":{"wrong_field":42}}"#,
-        )
-        .unwrap();
+        let json: serde_json::Value =
+            serde_json::from_str(r#"{"type":"vector","config":{"wrong_field":42}}"#).unwrap();
         let result = translator_from_json(&json);
         assert!(result.is_err());
     }

@@ -446,7 +446,12 @@ mod tests {
     use std::collections::HashMap;
 
     fn node(id: u64, x: i32, z: i32) -> ProcessedNode {
-        ProcessedNode { id, tags: HashMap::new(), x, z }
+        ProcessedNode {
+            id,
+            tags: HashMap::new(),
+            x,
+            z,
+        }
     }
 
     #[test]

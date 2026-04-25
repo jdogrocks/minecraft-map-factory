@@ -192,10 +192,13 @@ mod tests {
     fn test_status_tracking() {
         let mut db = sample_locations();
         db.set_status(0, LocationStatus::Completed);
-        db.set_status(1, LocationStatus::Failed {
-            attempts: 3,
-            last_error: "OOM".into(),
-        });
+        db.set_status(
+            1,
+            LocationStatus::Failed {
+                attempts: 3,
+                last_error: "OOM".into(),
+            },
+        );
 
         let summary = db.status_summary();
         assert_eq!(summary.completed, 1);
@@ -216,7 +219,10 @@ mod tests {
             tier: "small".into(),
             tags: vec![],
         };
-        assert_eq!(LocationDatabase::bbox_string(&loc), "34,-118.3,34.01,-118.29");
+        assert_eq!(
+            LocationDatabase::bbox_string(&loc),
+            "34,-118.3,34.01,-118.29"
+        );
     }
 
     #[test]

@@ -183,7 +183,11 @@ mod tests {
         let provider = IgnFrance;
         let bboxes = provider.coverage_bboxes().unwrap();
         // Should have at least 6 regions (metro + 5 overseas)
-        assert!(bboxes.len() >= 6, "Expected 6+ coverage regions, got {}", bboxes.len());
+        assert!(
+            bboxes.len() >= 6,
+            "Expected 6+ coverage regions, got {}",
+            bboxes.len()
+        );
     }
 
     #[test]
