@@ -590,7 +590,10 @@ mod tests {
 
     #[test]
     fn rail_no_neighbors_defaults_to_ns() {
-        assert_eq!(determine_rail_direction((5, 5), None, None), RAIL_NORTH_SOUTH);
+        assert_eq!(
+            determine_rail_direction((5, 5), None, None),
+            RAIL_NORTH_SOUTH
+        );
     }
 
     #[test]
@@ -627,22 +630,19 @@ mod tests {
 
     #[test]
     fn slope_ascending_when_next_higher() {
-        let block =
-            determine_rail_with_slope((5, 5), Some((4, 5)), Some((6, 5)), 10, 10, 12);
+        let block = determine_rail_with_slope((5, 5), Some((4, 5)), Some((6, 5)), 10, 10, 12);
         assert_eq!(block, RAIL_ASCENDING_EAST);
     }
 
     #[test]
     fn slope_ascending_when_prev_higher() {
-        let block =
-            determine_rail_with_slope((5, 5), Some((4, 5)), Some((6, 5)), 12, 10, 10);
+        let block = determine_rail_with_slope((5, 5), Some((4, 5)), Some((6, 5)), 12, 10, 10);
         assert_eq!(block, RAIL_ASCENDING_WEST);
     }
 
     #[test]
     fn slope_flat_when_same_elevation() {
-        let block =
-            determine_rail_with_slope((5, 5), Some((4, 5)), Some((6, 5)), 10, 10, 10);
+        let block = determine_rail_with_slope((5, 5), Some((4, 5)), Some((6, 5)), 10, 10, 10);
         assert_eq!(block, RAIL_EAST_WEST);
     }
 

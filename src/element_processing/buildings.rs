@@ -5793,14 +5793,27 @@ mod tests {
     use std::collections::HashMap;
 
     fn node(id: u64, x: i32, z: i32) -> ProcessedNode {
-        ProcessedNode { id, tags: HashMap::new(), x, z }
+        ProcessedNode {
+            id,
+            tags: HashMap::new(),
+            x,
+            z,
+        }
     }
 
     fn way_with_tags(tag_pairs: &[(&str, &str)]) -> ProcessedWay {
         ProcessedWay {
             id: 1,
-            nodes: vec![node(1, 0, 0), node(2, 10, 0), node(3, 10, 10), node(4, 0, 10)],
-            tags: tag_pairs.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect(),
+            nodes: vec![
+                node(1, 0, 0),
+                node(2, 10, 0),
+                node(3, 10, 10),
+                node(4, 0, 10),
+            ],
+            tags: tag_pairs
+                .iter()
+                .map(|(k, v)| (k.to_string(), v.to_string()))
+                .collect(),
         }
     }
 
@@ -5808,33 +5821,49 @@ mod tests {
 
     #[test]
     fn skip_underground_negative_layer() {
-        assert!(should_skip_underground_building(&way_with_tags(&[("layer", "-1")])));
+        assert!(should_skip_underground_building(&way_with_tags(&[(
+            "layer", "-1"
+        )])));
     }
 
     #[test]
     fn no_skip_positive_layer() {
-        assert!(!should_skip_underground_building(&way_with_tags(&[("layer", "1")])));
+        assert!(!should_skip_underground_building(&way_with_tags(&[(
+            "layer", "1"
+        )])));
     }
 
     #[test]
     fn skip_underground_negative_level() {
-        assert!(should_skip_underground_building(&way_with_tags(&[("level", "-2")])));
+        assert!(should_skip_underground_building(&way_with_tags(&[(
+            "level", "-2"
+        )])));
     }
 
     #[test]
     fn skip_underground_location() {
-        assert!(should_skip_underground_building(&way_with_tags(&[("location", "underground")])));
-        assert!(should_skip_underground_building(&way_with_tags(&[("location", "subway")])));
+        assert!(should_skip_underground_building(&way_with_tags(&[(
+            "location",
+            "underground"
+        )])));
+        assert!(should_skip_underground_building(&way_with_tags(&[(
+            "location", "subway"
+        )])));
     }
 
     #[test]
     fn no_skip_surface_building() {
-        assert!(!should_skip_underground_building(&way_with_tags(&[("building", "yes")])));
+        assert!(!should_skip_underground_building(&way_with_tags(&[(
+            "building", "yes"
+        )])));
     }
 
     #[test]
     fn skip_underground_levels_only() {
-        assert!(should_skip_underground_building(&way_with_tags(&[("building:levels:underground", "2")])));
+        assert!(should_skip_underground_building(&way_with_tags(&[(
+            "building:levels:underground",
+            "2"
+        )])));
     }
 
     #[test]
@@ -5860,7 +5889,12 @@ mod tests {
 
     #[test]
     fn centroid_square() {
-        let nodes = vec![node(1, 0, 0), node(2, 10, 0), node(3, 10, 10), node(4, 0, 10)];
+        let nodes = vec![
+            node(1, 0, 0),
+            node(2, 10, 0),
+            node(3, 10, 10),
+            node(4, 0, 10),
+        ];
         assert_eq!(compute_building_centroid(&nodes), Some((5, 5)));
     }
 
@@ -5874,12 +5908,20 @@ mod tests {
 
     #[test]
     fn diagonality_too_few_nodes() {
-        assert_eq!(compute_building_diagonality(&[node(1, 0, 0), node(2, 10, 0)]), 1.0);
+        assert_eq!(
+            compute_building_diagonality(&[node(1, 0, 0), node(2, 10, 0)]),
+            1.0
+        );
     }
 
     #[test]
     fn diagonality_axis_aligned_square() {
-        let nodes = vec![node(1, 0, 0), node(2, 10, 0), node(3, 10, 10), node(4, 0, 10)];
+        let nodes = vec![
+            node(1, 0, 0),
+            node(2, 10, 0),
+            node(3, 10, 10),
+            node(4, 0, 10),
+        ];
         let d = compute_building_diagonality(&nodes);
         // Should be close to 1.0 for axis-aligned
         assert!(d > 0.8, "Expected high diagonality for square, got {d}");
@@ -5890,7 +5932,10 @@ mod tests {
         // 45° rotated square — bbox is ~2x the polygon area
         let nodes = vec![node(1, 5, 0), node(2, 10, 5), node(3, 5, 10), node(4, 0, 5)];
         let d = compute_building_diagonality(&nodes);
-        assert!(d < 0.6, "Expected low diagonality for rotated square, got {d}");
+        assert!(
+            d < 0.6,
+            "Expected low diagonality for rotated square, got {d}"
+        );
     }
 
     // ── compute_outward_normal ───────────────────────────────────────
@@ -5915,15 +5960,25 @@ mod tests {
     // ── facing_for_normal ───────────────────────────────────────────
 
     #[test]
-    fn facing_east() { assert_eq!(facing_for_normal(1, 0), "east"); }
+    fn facing_east() {
+        assert_eq!(facing_for_normal(1, 0), "east");
+    }
     #[test]
-    fn facing_west() { assert_eq!(facing_for_normal(-1, 0), "west"); }
+    fn facing_west() {
+        assert_eq!(facing_for_normal(-1, 0), "west");
+    }
     #[test]
-    fn facing_south() { assert_eq!(facing_for_normal(0, 1), "south"); }
+    fn facing_south() {
+        assert_eq!(facing_for_normal(0, 1), "south");
+    }
     #[test]
-    fn facing_north() { assert_eq!(facing_for_normal(0, -1), "north"); }
+    fn facing_north() {
+        assert_eq!(facing_for_normal(0, -1), "north");
+    }
     #[test]
-    fn facing_default() { assert_eq!(facing_for_normal(0, 0), "north"); }
+    fn facing_default() {
+        assert_eq!(facing_for_normal(0, 0), "north");
+    }
 
     // ── make_open_trapdoor ──────────────────────────────────────────
 

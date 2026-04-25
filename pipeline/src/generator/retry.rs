@@ -57,10 +57,7 @@ impl RetryStrategy {
             || msg.contains("memory allocation")
         {
             ErrorClassification::Resource
-        } else if msg.contains("invalid")
-            || msg.contains("not found")
-            || msg.contains("no data")
-        {
+        } else if msg.contains("invalid") || msg.contains("not found") || msg.contains("no data") {
             ErrorClassification::Permanent
         } else {
             // Default to transient for unknown errors
@@ -69,7 +66,11 @@ impl RetryStrategy {
     }
 
     /// Determine whether to retry, and with what backoff.
-    pub fn should_retry(&self, attempt: u32, classification: &ErrorClassification) -> RetryDecision {
+    pub fn should_retry(
+        &self,
+        attempt: u32,
+        classification: &ErrorClassification,
+    ) -> RetryDecision {
         if *classification == ErrorClassification::Permanent {
             return RetryDecision::GiveUp;
         }
@@ -158,4 +159,3 @@ mod tests {
         assert_eq!(b3, Duration::from_secs(4));
     }
 }
-

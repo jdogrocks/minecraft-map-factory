@@ -22,11 +22,7 @@ pub struct Scheduler {
 }
 
 impl Scheduler {
-    pub fn new(
-        config: PipelineConfig,
-        db: LocationDatabase,
-        metrics: MetricsCollector,
-    ) -> Self {
+    pub fn new(config: PipelineConfig, db: LocationDatabase, metrics: MetricsCollector) -> Self {
         let resource_monitor = ResourceMonitor::new(
             config.scheduler.max_memory_mb,
             config.scheduler.max_cpu_percent,
@@ -181,7 +177,10 @@ impl Scheduler {
                             location_idx,
                             LocationStatus::Failed {
                                 attempts: 1,
-                                last_error: format!("Validation: {}", report.failure_reasons.join(", ")),
+                                last_error: format!(
+                                    "Validation: {}",
+                                    report.failure_reasons.join(", ")
+                                ),
                             },
                         );
 
