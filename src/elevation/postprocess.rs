@@ -1566,7 +1566,7 @@ mod tests {
         let vals: Vec<f64> = (0..100).map(|i| i as f64).collect();
         let mode = histogram_mode(&vals, 5.0);
         // Should return some valid value in range
-        assert!(mode >= 0.0 && mode <= 100.0);
+        assert!((0.0..=100.0).contains(&mode));
     }
 
     // ── local_water_median ─────────────────────────────────────────
@@ -1873,9 +1873,9 @@ mod tests {
     #[test]
     fn smooth_built_up_with_built_up() {
         let mut heights = vec![vec![50.0; 20]; 20];
-        for y in 0..20 {
-            for x in 0..20 {
-                heights[y][x] = 50.0 + (x as f64) * 2.0;
+        for row in heights.iter_mut() {
+            for (x, cell) in row.iter_mut().enumerate() {
+                *cell = 50.0 + (x as f64) * 2.0;
             }
         }
         let lc_grid = vec![vec![LC_BUILT_UP; 20]; 20];
