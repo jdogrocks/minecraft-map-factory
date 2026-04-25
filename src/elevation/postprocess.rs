@@ -1258,4 +1258,639 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn fill_nan_all_finite_is_noop() {
+        let original = vec![vec![1.0, 2.0], vec![3.0, 4.0]];
+        let mut grid = original.clone();
+        fill_nan_values(&mut grid);
+        assert_eq!(grid, original);
+    }
+
+    #[test]
+    fn fill_nan_all_nan_remains_nan() {
+        // When all values are NaN, there are no finite neighbors to interpolate from,
+        // so all values remain NaN (the algorithm only fills from finite neighbors).
+        let mut grid = vec![vec![f64::NAN; 3]; 3];
+        fill_nan_values(&mut grid);
+        for row in &grid {
+            for &h in row {
+                assert!(h.is_nan());
+            }
+        }
+    }
+
+    #[test]
+    fn fill_nan_empty_grid() {
+        let mut grid: Vec<Vec<f64>> = vec![];
+        fill_nan_values(&mut grid); // Should not panic
+    }
+
+    #[test]
+    fn fill_nan_single_element_remains_nan() {
+        // A single NaN with no finite neighbors stays NaN
+        let mut grid = vec![vec![f64::NAN]];
+        fill_nan_values(&mut grid);
+        assert!(grid[0][0].is_nan());
+    }
+
+    #[test]
+    fn fill_nan_surrounded_by_finite() {
+        // A NaN surrounded by finite values gets filled
+        let mut grid = vec![
+            vec![10.0, 10.0, 10.0],
+            vec![10.0, f64::NAN, 10.0],
+            vec![10.0, 10.0, 10.0],
+        ];
+        fill_nan_values(&mut grid);
+        assert!(grid[1][1].is_finite());
+        assert!((grid[1][1] - 10.0).abs() < 0.01);
+    }
+
+    // ── filter_elevation_outliers ───────────────────────────────────
+
+    #[test]
+    fn filter_outliers_preserves_normal_data() {
+        // Uniform elevation — nothing to filter
+        let mut grid = vec![vec![100.0; 10]; 10];
+        let original = grid.clone();
+        filter_elevation_outliers(&mut grid);
+        assert_eq!(grid, original);
+    }
+
+    #[test]
+    fn filter_outliers_handles_sparse_data() {
+        let mut grid = vec![vec![1.0, 2.0]]; // < 4 finite values → early return
+        let original = grid.clone();
+        filter_elevation_outliers(&mut grid);
+        assert_eq!(grid, original);
+    }
+
+    #[test]
+    fn filter_outliers_empty_grid() {
+        let mut grid: Vec<Vec<f64>> = vec![];
+        filter_elevation_outliers(&mut grid); // Should not panic
+    }
+
+    #[test]
+    fn filter_outliers_removes_extreme_spike() {
+        // Normal elevation around 100m, with a single extreme outlier
+        let mut grid = vec![vec![100.0; 20]; 20];
+        grid[10][10] = 10000.0; // extreme outlier
+        filter_elevation_outliers(&mut grid);
+        // The outlier should be replaced (filled by neighbor interpolation)
+        assert!(
+            grid[10][10] < 1000.0,
+            "Extreme outlier should be filtered: {}",
+            grid[10][10]
+        );
+    }
+
+    #[test]
+    fn filter_outliers_keeps_gradual_slopes() {
+        // Create a grid with gradual slope — no outliers
+        let mut grid: Vec<Vec<f64>> = (0..20)
+            .map(|z| (0..20).map(|x| (x + z) as f64 * 5.0).collect())
+            .collect();
+        let original = grid.clone();
+        filter_elevation_outliers(&mut grid);
+        // Nothing should change for gradual slopes
+        for (r1, r2) in grid.iter().zip(original.iter()) {
+            for (&a, &b) in r1.iter().zip(r2.iter()) {
+                assert!(
+                    (a - b).abs() < 0.01,
+                    "Gradual slope value changed: {a} vs {b}"
+                );
+            }
+        }
+    }
+
+    // ── repair_terrain_anomalies ────────────────────────────────────
+
+    #[test]
+    fn repair_anomalies_too_small_grid() {
+        let mut grid = vec![vec![1.0; 4]; 4]; // < 5 rows/cols → early return
+        let original = grid.clone();
+        repair_terrain_anomalies(&mut grid);
+        assert_eq!(grid, original);
+    }
+
+    #[test]
+    fn repair_anomalies_flat_terrain_unchanged() {
+        let mut grid = vec![vec![50.0; 10]; 10];
+        let original = grid.clone();
+        repair_terrain_anomalies(&mut grid);
+        assert_eq!(grid, original);
+    }
+
+    #[test]
+    fn repair_anomalies_fixes_spike() {
+        let mut grid = vec![vec![50.0; 10]; 10];
+        grid[5][5] = 200.0; // 150m spike — well above the threshold
+        repair_terrain_anomalies(&mut grid);
+        assert!(
+            (grid[5][5] - 50.0).abs() < 10.0,
+            "Spike should be repaired to near median: {}",
+            grid[5][5]
+        );
+    }
+
+    #[test]
+    fn repair_anomalies_preserves_nan() {
+        let mut grid = vec![vec![50.0; 10]; 10];
+        grid[5][5] = f64::NAN;
+        repair_terrain_anomalies(&mut grid);
+        // NaN should remain NaN (repair skips non-finite)
+        assert!(grid[5][5].is_nan());
+    }
+
+    // ── scale_to_minecraft ──────────────────────────────────────────
+
+    #[test]
+    fn scale_to_minecraft_flat_terrain() {
+        let heights = vec![vec![100.0; 5]; 5];
+        let result = scale_to_minecraft(&heights, 1.0, -62, false, 319);
+        // All same height → all should be ground_level
+        for row in &result {
+            for &h in row {
+                assert!(
+                    (h - (-62.0)).abs() < 1.0,
+                    "Flat terrain should be at ground level: {h}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn scale_to_minecraft_range() {
+        // Heights from 0 to 100m
+        let heights: Vec<Vec<f64>> = (0..10)
+            .map(|z| (0..10).map(|x| (x + z) as f64 * 5.0).collect())
+            .collect();
+        let result = scale_to_minecraft(&heights, 1.0, -62, false, 319);
+        // Check all values are within valid MC range
+        for row in &result {
+            for &h in row {
+                assert!(h >= -62.0, "Height below ground level: {h}");
+                assert!(h <= 319.0, "Height above max Y: {h}");
+            }
+        }
+    }
+
+    #[test]
+    fn scale_to_minecraft_with_height_limit_disabled() {
+        let heights = vec![vec![0.0, 500.0], vec![1000.0, 2000.0]];
+        let result = scale_to_minecraft(&heights, 1.0, -62, true, 2031);
+        // With extended max, heights can go above 319
+        let max_h = result
+            .iter()
+            .flat_map(|r| r.iter())
+            .cloned()
+            .fold(f64::NEG_INFINITY, f64::max);
+        // Should be clamped to at most extended_max_y - buffer
+        assert!(max_h <= 2031.0);
+    }
+
+    #[test]
+    fn scale_to_minecraft_empty_grid() {
+        let heights: Vec<Vec<f64>> = vec![];
+        let result = scale_to_minecraft(&heights, 1.0, -62, false, 319);
+        assert!(result.is_empty());
+    }
+
+    // ── apply_land_cover_repair ─────────────────────────────────────
+
+    #[test]
+    fn land_cover_repair_mismatched_grid_sizes() {
+        let mut heights = vec![vec![50.0; 10]; 10];
+        let mut lc = LandCoverData {
+            grid: vec![vec![0u8; 5]; 5], // wrong size
+            water_distance: vec![vec![0u8; 5]; 5],
+            water_blend_grid: vec![vec![0.0f32; 5]; 5],
+            width: 5,
+            height: 5,
+        };
+        let original = heights.clone();
+        // Should skip and not modify heights
+        apply_land_cover_repair(&mut heights, &mut lc, 3.0, 5);
+        assert_eq!(heights, original);
+    }
+
+    #[test]
+    fn land_cover_repair_empty_grid() {
+        let mut heights: Vec<Vec<f64>> = vec![];
+        let mut lc = LandCoverData {
+            grid: vec![],
+            water_distance: vec![],
+            water_blend_grid: vec![],
+            width: 0,
+            height: 0,
+        };
+        // Should not panic
+        apply_land_cover_repair(&mut heights, &mut lc, 3.0, 5);
+    }
+
+    // ── interquartile_range ────────────────────────────────────────
+
+    #[test]
+    fn iqr_less_than_four_values() {
+        assert_eq!(interquartile_range(&[1.0, 2.0, 3.0]), 0.0);
+        assert_eq!(interquartile_range(&[]), 0.0);
+    }
+
+    #[test]
+    fn iqr_uniform_values() {
+        let vals = vec![5.0; 20];
+        assert_eq!(interquartile_range(&vals), 0.0);
+    }
+
+    #[test]
+    fn iqr_increasing_values() {
+        let vals: Vec<f64> = (0..20).map(|i| i as f64).collect();
+        let iqr = interquartile_range(&vals);
+        // Q3 - Q1 for evenly spaced 0..19 should be around 10
+        assert!(iqr > 0.0);
+        assert!(iqr < 20.0);
+    }
+
+    // ── has_non_water_neighbor ──────────────────────────────────────
+
+    #[test]
+    fn non_water_neighbor_empty_grid() {
+        let grid: Vec<Vec<u8>> = vec![];
+        assert!(!has_non_water_neighbor(&grid, 0, 0));
+    }
+
+    #[test]
+    fn non_water_neighbor_all_water() {
+        let grid = vec![vec![LC_WATER; 5]; 5];
+        // Interior cell surrounded by water
+        assert!(!has_non_water_neighbor(&grid, 2, 2));
+    }
+
+    #[test]
+    fn non_water_neighbor_edge_cell() {
+        let grid = vec![vec![LC_WATER; 3]; 3];
+        // Edge cell at (0, 0) - grid edge counts as non-water
+        assert!(has_non_water_neighbor(&grid, 0, 0));
+    }
+
+    #[test]
+    fn non_water_neighbor_adjacent_land() {
+        let mut grid = vec![vec![LC_WATER; 5]; 5];
+        grid[2][3] = 0; // Non-water neighbor of (2, 2)
+        assert!(has_non_water_neighbor(&grid, 2, 2));
+    }
+
+    // ── histogram_mode ─────────────────────────────────────────────
+
+    #[test]
+    fn histogram_mode_uniform_values() {
+        let vals = vec![10.0; 20];
+        let mode = histogram_mode(&vals, 1.0);
+        // All same value, range < bin_size, returns min_v
+        assert!((mode - 10.0).abs() < 1.0);
+    }
+
+    #[test]
+    fn histogram_mode_bimodal() {
+        let mut vals = vec![10.0; 50];
+        vals.extend(vec![100.0; 10]);
+        let mode = histogram_mode(&vals, 1.0);
+        // Mode should be near 10.0 (dominant cluster)
+        assert!((mode - 10.0).abs() < 2.0, "Mode was {mode}");
+    }
+
+    #[test]
+    fn histogram_mode_spread_values() {
+        let vals: Vec<f64> = (0..100).map(|i| i as f64).collect();
+        let mode = histogram_mode(&vals, 5.0);
+        // Should return some valid value in range
+        assert!((0.0..=100.0).contains(&mode));
+    }
+
+    // ── local_water_median ─────────────────────────────────────────
+
+    #[test]
+    fn local_water_median_empty_grid() {
+        let heights: Vec<Vec<f64>> = vec![];
+        let lc_grid: Vec<Vec<u8>> = vec![];
+        assert!(local_water_median(&heights, &lc_grid, 0, 0, 2, 1).is_none());
+    }
+
+    #[test]
+    fn local_water_median_all_water() {
+        let heights = vec![vec![50.0; 5]; 5];
+        let lc_grid = vec![vec![LC_WATER; 5]; 5];
+        let result = local_water_median(&heights, &lc_grid, 2, 2, 2, 1);
+        assert!(result.is_some());
+        assert!((result.unwrap() - 50.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn local_water_median_not_enough_samples() {
+        let heights = vec![vec![50.0; 5]; 5];
+        let mut lc_grid = vec![vec![0u8; 5]; 5];
+        lc_grid[2][2] = LC_WATER; // Only 1 water cell
+        let result = local_water_median(&heights, &lc_grid, 2, 2, 1, 5);
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn local_water_median_nan_values_excluded() {
+        let mut heights = vec![vec![50.0; 5]; 5];
+        heights[2][2] = f64::NAN;
+        let lc_grid = vec![vec![LC_WATER; 5]; 5];
+        let result = local_water_median(&heights, &lc_grid, 2, 2, 2, 1);
+        assert!(result.is_some());
+        assert!(result.unwrap().is_finite());
+    }
+
+    // ── create_gaussian_kernel ──────────────────────────────────────
+
+    #[test]
+    fn gaussian_kernel_sums_to_one() {
+        let kernel = create_gaussian_kernel(5, 1.0);
+        let sum: f64 = kernel.iter().sum();
+        assert!((sum - 1.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn gaussian_kernel_has_correct_size() {
+        let kernel = create_gaussian_kernel(7, 1.5);
+        assert_eq!(kernel.len(), 7);
+    }
+
+    #[test]
+    fn gaussian_kernel_values_positive() {
+        let kernel = create_gaussian_kernel(5, 1.0);
+        for &v in &kernel {
+            assert!(v > 0.0);
+        }
+    }
+
+    #[test]
+    fn gaussian_kernel_center_is_max() {
+        let kernel = create_gaussian_kernel(5, 1.0);
+        let center = kernel.len() / 2;
+        for (i, &v) in kernel.iter().enumerate() {
+            if i != center {
+                assert!(v <= kernel[center]);
+            }
+        }
+    }
+
+    // ── level_water_surfaces ────────────────────────────────────────
+
+    #[test]
+    fn level_water_all_land_no_change() {
+        let mut heights = vec![vec![50.0; 10]; 10];
+        let lc_grid = vec![vec![0u8; 10]; 10]; // all land
+        let original = heights.clone();
+        let _mask = level_water_surfaces(&mut heights, &lc_grid);
+        assert_eq!(heights, original);
+    }
+
+    #[test]
+    fn level_water_uniform_water() {
+        let mut heights = vec![vec![50.0; 10]; 10];
+        let lc_grid = vec![vec![LC_WATER; 10]; 10]; // all water
+        let _mask = level_water_surfaces(&mut heights, &lc_grid);
+        // Water surface should be leveled to a uniform height
+        let first = heights[0][0];
+        for row in &heights {
+            for &h in row {
+                assert!(
+                    (h - first).abs() < 2.0,
+                    "Water height not leveled: {h} vs {first}"
+                );
+            }
+        }
+    }
+
+    // ── repair_terrain_anomalies additional tests ───────────────────
+
+    #[test]
+    fn repair_anomalies_large_grid_with_multiple_spikes() {
+        let mut grid = vec![vec![50.0; 20]; 20];
+        grid[5][5] = 300.0;
+        grid[15][15] = -200.0;
+        repair_terrain_anomalies(&mut grid);
+        assert!(
+            (grid[5][5] - 50.0).abs() < 15.0,
+            "Positive spike not repaired: {}",
+            grid[5][5]
+        );
+        assert!(
+            (grid[15][15] - 50.0).abs() < 15.0,
+            "Negative spike not repaired: {}",
+            grid[15][15]
+        );
+    }
+
+    #[test]
+    fn repair_anomalies_nan_in_window() {
+        let mut grid = vec![vec![50.0; 10]; 10];
+        // Put some NaNs near the center
+        grid[4][4] = f64::NAN;
+        grid[4][5] = f64::NAN;
+        // Should not panic even with NaN neighbors
+        repair_terrain_anomalies(&mut grid);
+    }
+
+    // ── scale_to_minecraft additional tests ─────────────────────────
+
+    #[test]
+    fn scale_to_minecraft_nan_handling() {
+        let heights = vec![vec![100.0, f64::NAN], vec![f64::NAN, 200.0]];
+        let result = scale_to_minecraft(&heights, 1.0, -62, false, 319);
+        // NaN inputs produce NaN-derived but clamped outputs
+        assert_eq!(result.len(), 2);
+    }
+
+    #[test]
+    fn scale_to_minecraft_single_value() {
+        let heights = vec![vec![100.0]];
+        let result = scale_to_minecraft(&heights, 1.0, -62, false, 319);
+        assert!((result[0][0] - (-62.0)).abs() < 1.0);
+    }
+
+    #[test]
+    fn scale_to_minecraft_compression() {
+        // Very large elevation range that exceeds available Y range
+        let heights = vec![vec![0.0, 5000.0], vec![5000.0, 10000.0]];
+        let result = scale_to_minecraft(&heights, 1.0, -62, false, 319);
+        for row in &result {
+            for &h in row {
+                assert!(h >= -62.0, "Height below ground: {h}");
+                assert!(h <= 304.0, "Height above max: {h}");
+            }
+        }
+    }
+
+    // ── apply_land_cover_repair with matching grids ─────────────────
+
+    #[test]
+    fn land_cover_repair_all_land() {
+        let size = 20;
+        let mut heights = vec![vec![50.0; size]; size];
+        let mut lc = LandCoverData {
+            grid: vec![vec![0u8; size]; size],
+            water_distance: vec![vec![255u8; size]; size],
+            water_blend_grid: vec![vec![0.0f32; size]; size],
+            width: size,
+            height: size,
+        };
+        let original = heights.clone();
+        apply_land_cover_repair(&mut heights, &mut lc, 3.0, 5);
+        // All land, no water - heights should be largely unchanged
+        for (r1, r2) in heights.iter().zip(original.iter()) {
+            for (&a, &b) in r1.iter().zip(r2.iter()) {
+                assert!(
+                    (a - b).abs() < 5.0,
+                    "Land-only height changed too much: {a} vs {b}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn land_cover_repair_with_water_body() {
+        let size = 20;
+        let mut heights = vec![vec![50.0; size]; size];
+        let mut grid = vec![vec![0u8; size]; size];
+        // Create a water body in the center
+        for y in 8..12 {
+            for x in 8..12 {
+                grid[y][x] = LC_WATER;
+                heights[y][x] = 48.0; // slightly lower
+            }
+        }
+        let mut lc = LandCoverData {
+            grid,
+            water_distance: vec![vec![255u8; size]; size],
+            water_blend_grid: vec![vec![0.0f32; size]; size],
+            width: size,
+            height: size,
+        };
+        apply_land_cover_repair(&mut heights, &mut lc, 3.0, 5);
+        // Water cells should be leveled
+    }
+
+    // ── reclassify_non_surface_water_cells ──────────────────────────
+
+    #[test]
+    fn reclassify_empty_grid() {
+        let mut lc_grid: Vec<Vec<u8>> = vec![];
+        let water_surface: Vec<Vec<bool>> = vec![];
+        reclassify_non_surface_water_cells(&mut lc_grid, &water_surface);
+        assert!(lc_grid.is_empty());
+    }
+
+    #[test]
+    fn reclassify_no_water() {
+        let mut lc_grid = vec![vec![0u8; 10]; 10];
+        let water_surface = vec![vec![false; 10]; 10];
+        let original = lc_grid.clone();
+        reclassify_non_surface_water_cells(&mut lc_grid, &water_surface);
+        assert_eq!(lc_grid, original);
+    }
+
+    #[test]
+    fn reclassify_water_cell_not_on_surface() {
+        let mut lc_grid = vec![vec![0u8; 10]; 10];
+        lc_grid[5][5] = LC_WATER;
+        let water_surface = vec![vec![false; 10]; 10]; // none marked as water surface
+        let count = reclassify_non_surface_water_cells(&mut lc_grid, &water_surface);
+        // The water cell not on surface should be reclassified
+        assert!(count > 0 || lc_grid[5][5] != LC_WATER);
+    }
+
+    // ── clamp_by_adjacent_land ──────────────────────────────────────
+
+    #[test]
+    fn clamp_adjacent_land_empty_grid() {
+        let heights: Vec<Vec<f64>> = vec![];
+        let lc_grid: Vec<Vec<u8>> = vec![];
+        let result = clamp_by_adjacent_land(50.0, &[], &heights, &lc_grid);
+        assert_eq!(result, 50.0);
+    }
+
+    #[test]
+    fn clamp_adjacent_land_no_neighbors() {
+        let heights = vec![vec![50.0; 10]; 10];
+        let lc_grid = vec![vec![LC_WATER; 10]; 10]; // all water, no land neighbors
+        let component = vec![(5, 5)];
+        let result = clamp_by_adjacent_land(10.0, &component, &heights, &lc_grid);
+        // Should return proposed since no land neighbors exist
+        assert_eq!(result, 10.0);
+    }
+
+    // ── pull_coastal_builtup_toward_water ───────────────────────────
+
+    #[test]
+    fn pull_coastal_small_grid() {
+        let mut heights = vec![vec![50.0; 5]; 5];
+        let lc_grid = vec![vec![LC_BUILT_UP; 5]; 5];
+        let leveled = vec![vec![false; 5]; 5];
+        let original = heights.clone();
+        pull_coastal_builtup_toward_water(&mut heights, &lc_grid, &leveled, 5);
+        // No water surface so no pull needed
+        assert_eq!(heights, original);
+    }
+
+    #[test]
+    fn pull_coastal_no_water() {
+        let mut heights = vec![vec![50.0; 10]; 10];
+        let lc_grid = vec![vec![LC_BUILT_UP; 10]; 10];
+        let leveled = vec![vec![false; 10]; 10];
+        let original = heights.clone();
+        pull_coastal_builtup_toward_water(&mut heights, &lc_grid, &leveled, 5);
+        assert_eq!(heights, original);
+    }
+
+    // ── smooth_built_up_gaussian ────────────────────────────────────
+
+    #[test]
+    fn smooth_built_up_empty_grid() {
+        let mut heights: Vec<Vec<f64>> = vec![];
+        let lc_grid: Vec<Vec<u8>> = vec![];
+        let water_surface: Vec<Vec<bool>> = vec![];
+        smooth_built_up_gaussian(&mut heights, &lc_grid, &water_surface, 1.0);
+        assert!(heights.is_empty());
+    }
+
+    #[test]
+    fn smooth_built_up_no_built_up() {
+        let mut heights = vec![vec![50.0; 10]; 10];
+        let lc_grid = vec![vec![0u8; 10]; 10]; // no built-up
+        let water_surface = vec![vec![false; 10]; 10];
+        let original = heights.clone();
+        smooth_built_up_gaussian(&mut heights, &lc_grid, &water_surface, 1.0);
+        assert_eq!(heights, original);
+    }
+
+    #[test]
+    fn smooth_built_up_with_built_up() {
+        let mut heights = vec![vec![50.0; 20]; 20];
+        for row in heights.iter_mut() {
+            for (x, cell) in row.iter_mut().enumerate() {
+                *cell = 50.0 + (x as f64) * 2.0;
+            }
+        }
+        let lc_grid = vec![vec![LC_BUILT_UP; 20]; 20];
+        let water_surface = vec![vec![false; 20]; 20];
+        smooth_built_up_gaussian(&mut heights, &lc_grid, &water_surface, 3.0);
+    }
+
+    #[test]
+    fn smooth_built_up_sigma_too_small() {
+        let mut heights = vec![vec![50.0; 10]; 10];
+        let lc_grid = vec![vec![LC_BUILT_UP; 10]; 10];
+        let water_surface = vec![vec![false; 10]; 10];
+        let original = heights.clone();
+        // sigma < MIN_SIGMA (1.5) should early return
+        smooth_built_up_gaussian(&mut heights, &lc_grid, &water_surface, 0.5);
+        assert_eq!(heights, original);
+    }
 }

@@ -547,3 +547,334 @@ impl WorldToModify {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── BlockStorage ────────────────────────────────────────────────
+
+    #[test]
+    fn uniform_storage_returns_same_block() {
+        let storage = BlockStorage::Uniform(STONE);
+        for i in 0..4096 {
+            assert_eq!(storage.get(i), STONE);
+        }
+    }
+
+    #[test]
+    fn uniform_noop_on_same_block_write() {
+        let mut storage = BlockStorage::Uniform(AIR);
+        storage.set(100, AIR);
+        assert!(matches!(storage, BlockStorage::Uniform(b) if b == AIR));
+    }
+
+    #[test]
+    fn uniform_promotes_to_full_on_different_write() {
+        let mut storage = BlockStorage::Uniform(AIR);
+        storage.set(42, STONE);
+        assert!(matches!(storage, BlockStorage::Full(_)));
+        assert_eq!(storage.get(42), STONE);
+        assert_eq!(storage.get(0), AIR);
+        assert_eq!(storage.get(4095), AIR);
+    }
+
+    #[test]
+    fn full_storage_set_and_get() {
+        let mut storage = BlockStorage::Full(vec![AIR; 4096]);
+        storage.set(0, STONE);
+        storage.set(4095, DIRT);
+        assert_eq!(storage.get(0), STONE);
+        assert_eq!(storage.get(4095), DIRT);
+        assert_eq!(storage.get(100), AIR);
+    }
+
+    #[test]
+    fn storage_iter_uniform() {
+        let storage = BlockStorage::Uniform(GRASS_BLOCK);
+        let items: Vec<_> = storage.iter().collect();
+        assert_eq!(items.len(), 4096);
+        assert!(items.iter().all(|&b| b == GRASS_BLOCK));
+    }
+
+    #[test]
+    fn storage_iter_full() {
+        let mut v = vec![AIR; 4096];
+        v[0] = STONE;
+        let storage = BlockStorage::Full(v);
+        let items: Vec<_> = storage.iter().collect();
+        assert_eq!(items.len(), 4096);
+        assert_eq!(items[0], STONE);
+        assert_eq!(items[1], AIR);
+    }
+
+    #[test]
+    fn storage_try_compact_all_same() {
+        let mut storage = BlockStorage::Full(vec![STONE; 4096]);
+        storage.try_compact();
+        assert!(matches!(storage, BlockStorage::Uniform(b) if b == STONE));
+    }
+
+    #[test]
+    fn storage_try_compact_mixed_remains_full() {
+        let mut v = vec![STONE; 4096];
+        v[0] = AIR;
+        let mut storage = BlockStorage::Full(v);
+        storage.try_compact();
+        assert!(matches!(storage, BlockStorage::Full(_)));
+    }
+
+    // ── SectionToModify ─────────────────────────────────────────────
+
+    #[test]
+    fn section_default_is_all_air() {
+        let section = SectionToModify::default();
+        assert!(section.get_block(0, 0, 0).is_none()); // AIR returns None
+        assert!(section.get_block(15, 15, 15).is_none());
+    }
+
+    #[test]
+    fn section_set_and_get_block() {
+        let mut section = SectionToModify::default();
+        section.set_block(5, 7, 3, STONE);
+        assert_eq!(section.get_block(5, 7, 3), Some(STONE));
+        // Other positions remain AIR
+        assert!(section.get_block(0, 0, 0).is_none());
+    }
+
+    #[test]
+    fn section_set_block_with_properties() {
+        let mut section = SectionToModify::default();
+        let bwp = BlockWithProperties::new(STONE, Some(fastnbt::Value::Byte(1)));
+        section.set_block_with_properties(1, 2, 3, bwp);
+        assert_eq!(section.get_block(1, 2, 3), Some(STONE));
+        let idx = SectionToModify::index(1, 2, 3);
+        assert!(section.properties.contains_key(&idx));
+    }
+
+    #[test]
+    fn section_set_block_clears_properties() {
+        let mut section = SectionToModify::default();
+        let bwp = BlockWithProperties::new(STONE, Some(fastnbt::Value::Byte(1)));
+        section.set_block_with_properties(1, 2, 3, bwp);
+        // Now set plain block — properties should be removed
+        section.set_block(1, 2, 3, DIRT);
+        let idx = SectionToModify::index(1, 2, 3);
+        assert!(!section.properties.contains_key(&idx));
+        assert_eq!(section.get_block(1, 2, 3), Some(DIRT));
+    }
+
+    #[test]
+    fn section_index_yzx_ordering() {
+        // Index formula: y%16 * 256 + z * 16 + x
+        assert_eq!(SectionToModify::index(0, 0, 0), 0);
+        assert_eq!(SectionToModify::index(1, 0, 0), 1);
+        assert_eq!(SectionToModify::index(0, 0, 1), 16);
+        assert_eq!(SectionToModify::index(0, 1, 0), 256);
+        assert_eq!(SectionToModify::index(15, 15, 15), 15 * 256 + 15 * 16 + 15);
+    }
+
+    #[test]
+    fn section_compact_uniform_after_reverting() {
+        let mut section = SectionToModify::default();
+        // Write a block then write AIR back → can compact
+        section.set_block(5, 5, 5, STONE);
+        section.set_block(5, 5, 5, AIR);
+        section.compact();
+        assert!(matches!(section.storage, BlockStorage::Uniform(b) if b == AIR));
+    }
+
+    #[test]
+    fn section_to_section_uniform_air() {
+        let section = SectionToModify::default();
+        let nbt_section = section.to_section(0);
+        assert_eq!(nbt_section.y, 0);
+        assert_eq!(nbt_section.block_states.palette.len(), 1);
+        assert!(nbt_section.block_states.palette[0].name.contains("air"));
+        assert!(nbt_section.block_states.data.is_none());
+    }
+
+    #[test]
+    fn section_to_section_mixed_blocks() {
+        let mut section = SectionToModify::default();
+        section.set_block(0, 0, 0, STONE);
+        section.set_block(1, 0, 0, DIRT);
+        let nbt_section = section.to_section(3);
+        assert_eq!(nbt_section.y, 3);
+        // Palette should have AIR + STONE + DIRT = 3 entries
+        assert_eq!(nbt_section.block_states.palette.len(), 3);
+        assert!(nbt_section.block_states.data.is_some());
+    }
+
+    #[test]
+    fn section_get_block_at_index() {
+        let mut section = SectionToModify::default();
+        section.set_block(3, 4, 5, STONE);
+        let idx = SectionToModify::index(3, 4, 5);
+        assert_eq!(section.get_block_at_index(idx), STONE);
+    }
+
+    // ── ChunkToModify ───────────────────────────────────────────────
+
+    #[test]
+    fn chunk_default_has_no_blocks() {
+        let chunk = ChunkToModify::default();
+        assert!(chunk.get_block(0, 0, 0).is_none());
+        assert!(chunk.get_block(0, 64, 0).is_none());
+    }
+
+    #[test]
+    fn chunk_set_and_get_block() {
+        let mut chunk = ChunkToModify::default();
+        chunk.set_block(5, 64, 10, STONE);
+        assert_eq!(chunk.get_block(5, 64, 10), Some(STONE));
+    }
+
+    #[test]
+    fn chunk_y_clamping() {
+        let mut chunk = ChunkToModify::default();
+        // Set block at extreme Y values — should clamp, not panic
+        chunk.set_block(0, -1000, 0, STONE);
+        assert_eq!(chunk.get_block(0, MIN_Y, 0), Some(STONE));
+
+        chunk.set_block(0, 50000, 0, DIRT);
+        assert_eq!(chunk.get_block(0, MAX_Y, 0), Some(DIRT));
+    }
+
+    #[test]
+    fn chunk_set_block_with_properties() {
+        let mut chunk = ChunkToModify::default();
+        let bwp = BlockWithProperties::simple(STONE);
+        chunk.set_block_with_properties(3, 100, 7, bwp);
+        assert_eq!(chunk.get_block(3, 100, 7), Some(STONE));
+    }
+
+    #[test]
+    fn chunk_sections_iterator() {
+        let mut chunk = ChunkToModify::default();
+        chunk.set_block(0, 0, 0, STONE);
+        chunk.set_block(0, 64, 0, DIRT);
+        let sections: Vec<_> = chunk.sections().collect();
+        // Two different Y sections (0 is in section 0, 64 is in section 4)
+        assert_eq!(sections.len(), 2);
+    }
+
+    // ── RegionToModify ──────────────────────────────────────────────
+
+    #[test]
+    fn region_get_or_create_chunk() {
+        let mut region = RegionToModify::default();
+        let chunk = region.get_or_create_chunk(5, 10);
+        chunk.set_block(0, 0, 0, STONE);
+        assert_eq!(
+            region.get_chunk(5, 10).unwrap().get_block(0, 0, 0),
+            Some(STONE)
+        );
+    }
+
+    #[test]
+    fn region_get_nonexistent_chunk() {
+        let region = RegionToModify::default();
+        assert!(region.get_chunk(0, 0).is_none());
+    }
+
+    // ── WorldToModify ───────────────────────────────────────────────
+
+    #[test]
+    fn world_set_and_get_block() {
+        let mut world = WorldToModify::default();
+        world.set_block_with_properties(100, 64, 200, BlockWithProperties::simple(STONE));
+        assert_eq!(world.get_block(100, 64, 200), Some(STONE));
+    }
+
+    #[test]
+    fn world_get_block_nonexistent() {
+        let world = WorldToModify::default();
+        assert!(world.get_block(0, 0, 0).is_none());
+    }
+
+    #[test]
+    fn world_set_block_if_absent() {
+        let mut world = WorldToModify::default();
+        world.set_block_if_absent(10, 64, 10, STONE);
+        assert_eq!(world.get_block(10, 64, 10), Some(STONE));
+
+        // Should NOT overwrite
+        world.set_block_if_absent(10, 64, 10, DIRT);
+        assert_eq!(world.get_block(10, 64, 10), Some(STONE));
+    }
+
+    #[test]
+    fn world_fill_column() {
+        let mut world = WorldToModify::default();
+        world.fill_column(5, 5, 0, 10, STONE, false);
+
+        for y in 0..=10 {
+            assert_eq!(world.get_block(5, y, 5), Some(STONE));
+        }
+        // Outside the column
+        assert!(world.get_block(5, 11, 5).is_none());
+        assert!(world.get_block(5, -1, 5).is_none());
+    }
+
+    #[test]
+    fn world_fill_column_skip_existing() {
+        let mut world = WorldToModify::default();
+        // Pre-place a block
+        world.set_block_with_properties(5, 5, 5, BlockWithProperties::simple(DIRT));
+        // Fill column with skip
+        world.fill_column(5, 5, 0, 10, STONE, true);
+
+        // The pre-placed DIRT should remain
+        assert_eq!(world.get_block(5, 5, 5), Some(DIRT));
+        // Other positions should be STONE
+        assert_eq!(world.get_block(5, 0, 5), Some(STONE));
+        assert_eq!(world.get_block(5, 10, 5), Some(STONE));
+    }
+
+    #[test]
+    fn world_compact_sections() {
+        let mut world = WorldToModify::default();
+        // Fill column to create Full storage
+        world.fill_column(0, 0, 0, 15, STONE, false);
+        // Now overwrite all with same block to make it compact-able
+        // The entire section at y=0 is STONE where we wrote, AIR elsewhere
+        // This won't compact because it's mixed. Let's force uniform:
+        for x in 0..16u8 {
+            for y in 0..16u8 {
+                for z in 0..16u8 {
+                    let chunk_x: i32 = 0 >> 4;
+                    let chunk_z: i32 = 0 >> 4;
+                    let region_x: i32 = chunk_x >> 5;
+                    let region_z: i32 = chunk_z >> 5;
+                    let region = world.get_or_create_region(region_x, region_z);
+                    let chunk = region.get_or_create_chunk(chunk_x & 31, chunk_z & 31);
+                    let section = chunk.sections.entry(0).or_default();
+                    section.set_block(x, y, z, STONE);
+                }
+            }
+        }
+        world.compact_sections();
+        // After compaction, the section should be Uniform(STONE)
+        let region = world.get_region(0, 0).unwrap();
+        let chunk = region.get_chunk(0, 0).unwrap();
+        let section = chunk.sections.get(&0).unwrap();
+        assert!(matches!(section.storage, BlockStorage::Uniform(b) if b == STONE));
+    }
+
+    #[test]
+    fn world_coordinate_mapping() {
+        // Verify that blocks at different world coordinates map to correct regions/chunks
+        let mut world = WorldToModify::default();
+        // Block at (0, 0, 0) → chunk (0,0), region (0,0)
+        world.set_block_with_properties(0, 0, 0, BlockWithProperties::simple(STONE));
+        // Block at (16, 0, 16) → chunk (1,1), region (0,0)
+        world.set_block_with_properties(16, 0, 16, BlockWithProperties::simple(DIRT));
+        // Block at (512, 0, 512) → chunk (0,0) in region (1,1)
+        world.set_block_with_properties(512, 0, 512, BlockWithProperties::simple(GRASS_BLOCK));
+
+        assert_eq!(world.get_block(0, 0, 0), Some(STONE));
+        assert_eq!(world.get_block(16, 0, 16), Some(DIRT));
+        assert_eq!(world.get_block(512, 0, 512), Some(GRASS_BLOCK));
+    }
+}

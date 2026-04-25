@@ -48,6 +48,14 @@ pub struct Args {
     #[arg(long, default_value_t = true, action = ArgAction::Set, num_args = 0..=1, default_missing_value = "true")]
     pub interior: bool,
 
+    /// Enable entity placement in buildings (optional)
+    #[arg(long, default_value_t = true, action = ArgAction::Set, num_args = 0..=1, default_missing_value = "true")]
+    pub entities: bool,
+
+    /// Entity theme pack to use (default, fantasy)
+    #[arg(long, default_value = "default")]
+    pub entity_theme: String,
+
     /// Enable roof generation (optional)
     #[arg(long, default_value_t = true, action = ArgAction::Set, num_args = 0..=1, default_missing_value = "true")]
     pub roof: bool,
