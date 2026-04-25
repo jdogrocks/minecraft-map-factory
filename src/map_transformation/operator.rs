@@ -107,10 +107,8 @@ mod tests {
 
     #[test]
     fn test_operator_from_json_unknown_operation() {
-        let json: serde_json::Value = serde_json::from_str(
-            r#"{"operation":"mirror","config":{}}"#,
-        )
-        .unwrap();
+        let json: serde_json::Value =
+            serde_json::from_str(r#"{"operation":"mirror","config":{}}"#).unwrap();
         let result = operator_from_json(&json);
         assert!(result.is_err());
         let err = result.err().unwrap();
@@ -119,20 +117,14 @@ mod tests {
 
     #[test]
     fn test_operator_from_json_missing_operation_field() {
-        let json: serde_json::Value = serde_json::from_str(
-            r#"{"config":{}}"#,
-        )
-        .unwrap();
+        let json: serde_json::Value = serde_json::from_str(r#"{"config":{}}"#).unwrap();
         let result = operator_from_json(&json);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_operator_from_json_missing_config_field() {
-        let json: serde_json::Value = serde_json::from_str(
-            r#"{"operation":"translate"}"#,
-        )
-        .unwrap();
+        let json: serde_json::Value = serde_json::from_str(r#"{"operation":"translate"}"#).unwrap();
         let result = operator_from_json(&json);
         assert!(result.is_err());
     }
@@ -154,10 +146,9 @@ mod tests {
 
     #[test]
     fn test_valid_rotate_from_json() {
-        let json: serde_json::Value = serde_json::from_str(
-            r#"{"operation":"rotate","config":{"angle_degrees":45.0}}"#,
-        )
-        .unwrap();
+        let json: serde_json::Value =
+            serde_json::from_str(r#"{"operation":"rotate","config":{"angle_degrees":45.0}}"#)
+                .unwrap();
         let result = operator_from_json(&json);
         assert!(result.is_ok());
         assert!(result.unwrap().repr().contains("45"));
