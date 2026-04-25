@@ -5,6 +5,7 @@ on:
   pull_request:
     paths:
       - '.github/**'
+      - '.semgrep/**'
       - 'src/**'
       - 'Cargo.toml'
       - 'Cargo.lock'
@@ -91,3 +92,14 @@ jobs:
 
     - name: Run security audit
       run: cargo audit
+
+  sast:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v6
+
+    - name: Run semgrep security scan
+      uses: returntocorp/semgrep-action@v1
+      with:
+        config: .semgrep/rust-security.yml
