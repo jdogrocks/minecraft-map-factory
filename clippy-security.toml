@@ -1,0 +1,37 @@
+# Clippy Security Lint Configuration
+# Apply with: cargo clippy -- -D warnings -W clippy::all
+# Or use the deny list below in Cargo.toml [lints.clippy]
+#
+# This file documents the recommended security-relevant clippy lints.
+# To enforce, add the [lints.clippy] section to Cargo.toml.
+
+# --- Security-critical: deny these ---
+# Prevents panics from unwrap() in production code
+# unwrap_used = "deny"
+# expect_used = "deny"
+
+# Prevents unchecked indexing that can panic
+# indexing_slicing = "deny"
+
+# Prevents lossy integer casts
+# cast_possible_truncation = "deny"
+# cast_sign_loss = "deny"
+# cast_possible_wrap = "deny"
+
+# Prevents use of unsafe code
+# allow_attributes_without_reason = "deny"
+
+# --- Recommended security lints for Cargo.toml [lints.clippy] ---
+# [lints.clippy]
+# unwrap_used = "warn"
+# expect_used = "warn"
+# indexing_slicing = "warn"
+# cast_possible_truncation = "warn"
+# cast_sign_loss = "warn"
+# cast_possible_wrap = "warn"
+# panic = "warn"
+# todo = "warn"
+# unimplemented = "warn"
+# dbg_macro = "warn"
+# print_stdout = "warn"
+# print_stderr = "warn"
