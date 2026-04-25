@@ -5785,3 +5785,161 @@ fn generate_bridge(
         editor.set_block_absolute(floor_block, x, floor_y, z, None, None);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::osm_parser::ProcessedNode;
+    use std::collections::HashMap;
+
+    fn node(id: u64, x: i32, z: i32) -> ProcessedNode {
+        ProcessedNode { id, tags: HashMap::new(), x, z }
+    }
+
+    fn way_with_tags(tag_pairs: &[(&str, &str)]) -> ProcessedWay {
+        ProcessedWay {
+            id: 1,
+            nodes: vec![node(1, 0, 0), node(2, 10, 0), node(3, 10, 10), node(4, 0, 10)],
+            tags: tag_pairs.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect(),
+        }
+    }
+
+    // ── should_skip_underground_building ─────────────────────────────
+
+    #[test]
+    fn skip_underground_negative_layer() {
+        assert!(should_skip_underground_building(&way_with_tags(&[("layer", "-1")])));
+    }
+
+    #[test]
+    fn no_skip_positive_layer() {
+        assert!(!should_skip_underground_building(&way_with_tags(&[("layer", "1")])));
+    }
+
+    #[test]
+    fn skip_underground_negative_level() {
+        assert!(should_skip_underground_building(&way_with_tags(&[("level", "-2")])));
+    }
+
+    #[test]
+    fn skip_underground_location() {
+        assert!(should_skip_underground_building(&way_with_tags(&[("location", "underground")])));
+        assert!(should_skip_underground_building(&way_with_tags(&[("location", "subway")])));
+    }
+
+    #[test]
+    fn no_skip_surface_building() {
+        assert!(!should_skip_underground_building(&way_with_tags(&[("building", "yes")])));
+    }
+
+    #[test]
+    fn skip_underground_levels_only() {
+        assert!(should_skip_underground_building(&way_with_tags(&[("building:levels:underground", "2")])));
+    }
+
+    #[test]
+    fn no_skip_when_both_levels_present() {
+        assert!(!should_skip_underground_building(&way_with_tags(&[
+            ("building:levels:underground", "1"),
+            ("building:levels", "3"),
+        ])));
+    }
+
+    // ── compute_building_centroid ────────────────────────────────────
+
+    #[test]
+    fn centroid_empty() {
+        assert_eq!(compute_building_centroid(&[]), None);
+    }
+
+    #[test]
+    fn centroid_single_node() {
+        let nodes = vec![node(1, 10, 20)];
+        assert_eq!(compute_building_centroid(&nodes), Some((10, 20)));
+    }
+
+    #[test]
+    fn centroid_square() {
+        let nodes = vec![node(1, 0, 0), node(2, 10, 0), node(3, 10, 10), node(4, 0, 10)];
+        assert_eq!(compute_building_centroid(&nodes), Some((5, 5)));
+    }
+
+    #[test]
+    fn centroid_negative_coords() {
+        let nodes = vec![node(1, -10, -10), node(2, 10, 10)];
+        assert_eq!(compute_building_centroid(&nodes), Some((0, 0)));
+    }
+
+    // ── compute_building_diagonality ────────────────────────────────
+
+    #[test]
+    fn diagonality_too_few_nodes() {
+        assert_eq!(compute_building_diagonality(&[node(1, 0, 0), node(2, 10, 0)]), 1.0);
+    }
+
+    #[test]
+    fn diagonality_axis_aligned_square() {
+        let nodes = vec![node(1, 0, 0), node(2, 10, 0), node(3, 10, 10), node(4, 0, 10)];
+        let d = compute_building_diagonality(&nodes);
+        // Should be close to 1.0 for axis-aligned
+        assert!(d > 0.8, "Expected high diagonality for square, got {d}");
+    }
+
+    #[test]
+    fn diagonality_rotated_square() {
+        // 45° rotated square — bbox is ~2x the polygon area
+        let nodes = vec![node(1, 5, 0), node(2, 10, 5), node(3, 5, 10), node(4, 0, 5)];
+        let d = compute_building_diagonality(&nodes);
+        assert!(d < 0.6, "Expected low diagonality for rotated square, got {d}");
+    }
+
+    // ── compute_outward_normal ───────────────────────────────────────
+
+    #[test]
+    fn outward_normal_points_away_from_centroid() {
+        // Vertical segment at x=0, centroid at (5,5) → normal should point west (away)
+        let (nx, nz) = compute_outward_normal(0, 0, 0, 10, 5, 5);
+        assert_eq!((nx, nz), (-1, 0));
+    }
+
+    #[test]
+    fn outward_normal_snaps_to_axis() {
+        // Diagonal segment → normal still snaps to one of the 4 cardinal directions
+        let (nx, nz) = compute_outward_normal(0, 0, 3, 3, 10, 10);
+        assert!(
+            (nx.abs() == 1 && nz == 0) || (nx == 0 && nz.abs() == 1),
+            "Normal should be axis-aligned: ({nx}, {nz})"
+        );
+    }
+
+    // ── facing_for_normal ───────────────────────────────────────────
+
+    #[test]
+    fn facing_east() { assert_eq!(facing_for_normal(1, 0), "east"); }
+    #[test]
+    fn facing_west() { assert_eq!(facing_for_normal(-1, 0), "west"); }
+    #[test]
+    fn facing_south() { assert_eq!(facing_for_normal(0, 1), "south"); }
+    #[test]
+    fn facing_north() { assert_eq!(facing_for_normal(0, -1), "north"); }
+    #[test]
+    fn facing_default() { assert_eq!(facing_for_normal(0, 0), "north"); }
+
+    // ── make_open_trapdoor ──────────────────────────────────────────
+
+    #[test]
+    fn trapdoor_has_correct_properties() {
+        let bwp = make_open_trapdoor(OAK_TRAPDOOR, "north");
+        assert_eq!(bwp.block, OAK_TRAPDOOR);
+        assert!(bwp.properties.is_some());
+    }
+
+    // ── make_top_slab ───────────────────────────────────────────────
+
+    #[test]
+    fn top_slab_has_correct_properties() {
+        let bwp = make_top_slab(STONE_BRICK_SLAB);
+        assert_eq!(bwp.block, STONE_BRICK_SLAB);
+        assert!(bwp.properties.is_some());
+    }
+}

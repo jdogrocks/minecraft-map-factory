@@ -496,6 +496,205 @@ fn generate_subway_shell(
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── subway_shell_block ──────────────────────────────────────────
+
+    #[test]
+    fn shell_block_returns_valid_blocks() {
+        for x in 0..20 {
+            for z in 0..20 {
+                let block = subway_shell_block(x, 0, z);
+                assert!(
+                    block == STONE_BRICKS
+                        || block == CRACKED_STONE_BRICKS
+                        || block == MOSSY_STONE_BRICKS,
+                    "Unexpected block at ({x}, 0, {z})"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn shell_block_is_deterministic() {
+        let a = subway_shell_block(42, 7, 13);
+        let b = subway_shell_block(42, 7, 13);
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn shell_block_distribution_roughly_correct() {
+        let mut stone = 0;
+        let mut cracked = 0;
+        let mut mossy = 0;
+        for x in 0..100 {
+            for z in 0..100 {
+                match subway_shell_block(x, 0, z) {
+                    b if b == STONE_BRICKS => stone += 1,
+                    b if b == CRACKED_STONE_BRICKS => cracked += 1,
+                    b if b == MOSSY_STONE_BRICKS => mossy += 1,
+                    _ => {}
+                }
+            }
+        }
+        // STONE_BRICKS should be the majority (~82%), cracked ~15%, mossy ~3%
+        assert!(stone > cracked, "STONE_BRICKS should dominate");
+        assert!(cracked > mossy, "CRACKED should be more than MOSSY");
+    }
+
+    // ── ascending_toward ────────────────────────────────────────────
+
+    #[test]
+    fn ascending_east() {
+        assert_eq!(ascending_toward((0, 0), (5, 0)), RAIL_ASCENDING_EAST);
+    }
+
+    #[test]
+    fn ascending_west() {
+        assert_eq!(ascending_toward((5, 0), (0, 0)), RAIL_ASCENDING_WEST);
+    }
+
+    #[test]
+    fn ascending_north() {
+        assert_eq!(ascending_toward((0, 5), (0, 0)), RAIL_ASCENDING_NORTH);
+    }
+
+    #[test]
+    fn ascending_south() {
+        assert_eq!(ascending_toward((0, 0), (0, 5)), RAIL_ASCENDING_SOUTH);
+    }
+
+    #[test]
+    fn ascending_diagonal_uses_dominant_axis() {
+        // dx=3, dz=1 → east dominates
+        assert_eq!(ascending_toward((0, 0), (3, 1)), RAIL_ASCENDING_EAST);
+        // dx=1, dz=3 → south dominates
+        assert_eq!(ascending_toward((0, 0), (1, 3)), RAIL_ASCENDING_SOUTH);
+    }
+
+    // ── determine_rail_direction ────────────────────────────────────
+
+    #[test]
+    fn rail_straight_ns() {
+        let block = determine_rail_direction((5, 5), Some((5, 4)), Some((5, 6)));
+        assert_eq!(block, RAIL_NORTH_SOUTH);
+    }
+
+    #[test]
+    fn rail_straight_ew() {
+        let block = determine_rail_direction((5, 5), Some((4, 5)), Some((6, 5)));
+        assert_eq!(block, RAIL_EAST_WEST);
+    }
+
+    #[test]
+    fn rail_no_neighbors_defaults_to_ns() {
+        assert_eq!(determine_rail_direction((5, 5), None, None), RAIL_NORTH_SOUTH);
+    }
+
+    #[test]
+    fn rail_single_neighbor_ns() {
+        assert_eq!(
+            determine_rail_direction((5, 5), Some((5, 4)), None),
+            RAIL_NORTH_SOUTH
+        );
+    }
+
+    #[test]
+    fn rail_single_neighbor_ew() {
+        assert_eq!(
+            determine_rail_direction((5, 5), Some((4, 5)), None),
+            RAIL_EAST_WEST
+        );
+    }
+
+    #[test]
+    fn rail_corner_north_east() {
+        // From west (x-1) turning to north (z-1)
+        let block = determine_rail_direction((5, 5), Some((6, 5)), Some((5, 4)));
+        assert_eq!(block, RAIL_NORTH_EAST);
+    }
+
+    #[test]
+    fn rail_corner_south_west() {
+        // From east (x+1) turning to south (z+1)
+        let block = determine_rail_direction((5, 5), Some((6, 5)), Some((5, 6)));
+        assert_eq!(block, RAIL_SOUTH_EAST);
+    }
+
+    // ── determine_rail_with_slope ───────────────────────────────────
+
+    #[test]
+    fn slope_ascending_when_next_higher() {
+        let block =
+            determine_rail_with_slope((5, 5), Some((4, 5)), Some((6, 5)), 10, 10, 12);
+        assert_eq!(block, RAIL_ASCENDING_EAST);
+    }
+
+    #[test]
+    fn slope_ascending_when_prev_higher() {
+        let block =
+            determine_rail_with_slope((5, 5), Some((4, 5)), Some((6, 5)), 12, 10, 10);
+        assert_eq!(block, RAIL_ASCENDING_WEST);
+    }
+
+    #[test]
+    fn slope_flat_when_same_elevation() {
+        let block =
+            determine_rail_with_slope((5, 5), Some((4, 5)), Some((6, 5)), 10, 10, 10);
+        assert_eq!(block, RAIL_EAST_WEST);
+    }
+
+    // ── smooth_diagonal_rails ───────────────────────────────────────
+
+    #[test]
+    fn smooth_straight_line_unchanged() {
+        let points = vec![(0, 0, 0), (1, 0, 0), (2, 0, 0)];
+        let result = smooth_diagonal_rails(&points);
+        assert_eq!(result, points);
+    }
+
+    #[test]
+    fn smooth_diagonal_inserts_intermediate() {
+        // Two diagonally adjacent points
+        let points = vec![(0, 0, 0), (1, 0, 1)];
+        let result = smooth_diagonal_rails(&points);
+        assert_eq!(result.len(), 3); // Original 2 + 1 intermediate
+        assert_eq!(result[0], (0, 0, 0));
+        assert_eq!(result[2], (1, 0, 1));
+    }
+
+    #[test]
+    fn smooth_no_points_is_empty() {
+        let result = smooth_diagonal_rails(&[]);
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn smooth_single_point() {
+        let result = smooth_diagonal_rails(&[(5, 0, 5)]);
+        assert_eq!(result.len(), 1);
+    }
+
+    // ── Constants ───────────────────────────────────────────────────
+
+    #[test]
+    fn layer_height_step_positive() {
+        assert!(LAYER_HEIGHT_STEP > 0);
+    }
+
+    #[test]
+    fn wall_radius_greater_than_air_radius() {
+        assert!(WALL_RADIUS > AIR_RADIUS);
+    }
+
+    #[test]
+    fn interior_height_provides_minecart_clearance() {
+        assert!(INTERIOR_HEIGHT >= 4);
+    }
+}
+
 /// Phase 2 of subway generation: carve the 3x3 air interior and place
 /// ceiling lights.  Called AFTER ground generation so that the carved
 /// air blocks are not overwritten by the underground stone fill.

@@ -439,3 +439,59 @@ fn scanline_fill_water(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+
+    fn node(id: u64, x: i32, z: i32) -> ProcessedNode {
+        ProcessedNode { id, tags: HashMap::new(), x, z }
+    }
+
+    #[test]
+    fn closed_ring_by_id() {
+        let n1 = node(1, 0, 0);
+        let ring = vec![n1.clone(), node(2, 10, 0), node(3, 10, 10), n1];
+        assert!(verify_closed_rings(&[ring]));
+    }
+
+    #[test]
+    fn closed_ring_by_proximity() {
+        let ring = vec![
+            node(1, 0, 0),
+            node(2, 10, 0),
+            node(3, 10, 10),
+            node(99, 0, 1), // within 1 block of first
+        ];
+        assert!(verify_closed_rings(&[ring]));
+    }
+
+    #[test]
+    fn open_ring_detected() {
+        let ring = vec![
+            node(1, 0, 0),
+            node(2, 10, 0),
+            node(3, 10, 10),
+            node(4, 5, 5), // far from first
+        ];
+        assert!(!verify_closed_rings(&[ring]));
+    }
+
+    #[test]
+    fn multiple_rings_all_closed() {
+        let n1 = node(1, 0, 0);
+        let n5 = node(5, 20, 20);
+        let ring1 = vec![n1.clone(), node(2, 10, 0), node(3, 10, 10), n1];
+        let ring2 = vec![n5.clone(), node(6, 30, 20), node(7, 30, 30), n5];
+        assert!(verify_closed_rings(&[ring1, ring2]));
+    }
+
+    #[test]
+    fn multiple_rings_one_open() {
+        let n1 = node(1, 0, 0);
+        let ring1 = vec![n1.clone(), node(2, 10, 0), node(3, 10, 10), n1];
+        let ring2 = vec![node(5, 20, 20), node(6, 30, 20), node(7, 30, 30)]; // open
+        assert!(!verify_closed_rings(&[ring1, ring2]));
+    }
+}
