@@ -253,11 +253,7 @@ mod tests {
     fn merge_segments_x_first_y_first() {
         // Both start at the same node → one gets reversed
         let seg_a = vec![make_node(1, 0, 0), make_node(2, 5, 0), make_node(3, 10, 0)];
-        let seg_b = vec![
-            make_node(1, 0, 0),
-            make_node(4, 0, 5),
-            make_node(5, 0, 10),
-        ];
+        let seg_b = vec![make_node(1, 0, 0), make_node(4, 0, 5), make_node(5, 0, 10)];
         let mut rings = vec![seg_a, seg_b];
         merge_way_segments(&mut rings);
         assert_eq!(rings.len(), 1);
@@ -269,11 +265,7 @@ mod tests {
         // Segment A: 1 → 2 → 3
         // Segment B: 4 → 5 → 1  (B's last matches A's first)
         let seg_a = vec![make_node(1, 0, 0), make_node(2, 5, 0), make_node(3, 10, 0)];
-        let seg_b = vec![
-            make_node(4, 0, 10),
-            make_node(5, 0, 5),
-            make_node(1, 0, 0),
-        ];
+        let seg_b = vec![make_node(4, 0, 10), make_node(5, 0, 5), make_node(1, 0, 0)];
         let mut rings = vec![seg_a, seg_b];
         merge_way_segments(&mut rings);
         assert_eq!(rings.len(), 1);
@@ -369,11 +361,13 @@ mod tests {
         // dist=1 won't be found; dist=2 candidates are checked
         // (10, 8), (10, 12), (8, 10), (12, 10) etc. — none are roads
         // So unless there's a road at distance 2, result is None
-        assert!(result.is_none() || {
-            let (rx, rz) = result.unwrap();
-            let dx = (rx - 10).abs();
-            let dz = (rz - 10).abs();
-            dx >= 2 || dz >= 2
-        });
+        assert!(
+            result.is_none() || {
+                let (rx, rz) = result.unwrap();
+                let dx = (rx - 10).abs();
+                let dz = (rz - 10).abs();
+                dx >= 2 || dz >= 2
+            }
+        );
     }
 }

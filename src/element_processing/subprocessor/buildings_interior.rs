@@ -19,9 +19,9 @@ impl InteriorStyle {
     pub fn from_category(category: BuildingCategory) -> Self {
         match category {
             BuildingCategory::House | BuildingCategory::Residential => InteriorStyle::Residential,
-            BuildingCategory::Commercial
-            | BuildingCategory::Hotel
-            | BuildingCategory::Office => InteriorStyle::Commercial,
+            BuildingCategory::Commercial | BuildingCategory::Hotel | BuildingCategory::Office => {
+                InteriorStyle::Commercial
+            }
             BuildingCategory::School
             | BuildingCategory::Hospital
             | BuildingCategory::Religious
@@ -275,22 +275,22 @@ pub fn get_interior_block_styled(
         'U' => Some(OAK_FENCE),
         'S' => Some(OAK_STAIRS),
         'B' => match style {
-            InteriorStyle::Commercial => Some(BARREL),    // Display barrels
-            InteriorStyle::Industrial => Some(BARREL),    // Storage barrels
-            InteriorStyle::Farm => Some(HAY_BALE),        // Hay storage
-            _ => Some(BOOKSHELF),                         // Bookshelves
+            InteriorStyle::Commercial => Some(BARREL), // Display barrels
+            InteriorStyle::Industrial => Some(BARREL), // Storage barrels
+            InteriorStyle::Farm => Some(HAY_BALE),     // Hay storage
+            _ => Some(BOOKSHELF),                      // Bookshelves
         },
         'C' => match style {
-            InteriorStyle::Commercial => Some(CHEST),     // Shop storage
-            InteriorStyle::Industrial => Some(ANVIL),     // Workbench
-            InteriorStyle::Farm => Some(BARREL),          // Feed barrel
-            _ => Some(CRAFTING_TABLE),                    // Crafting table
+            InteriorStyle::Commercial => Some(CHEST), // Shop storage
+            InteriorStyle::Industrial => Some(ANVIL), // Workbench
+            InteriorStyle::Farm => Some(BARREL),      // Feed barrel
+            _ => Some(CRAFTING_TABLE),                // Crafting table
         },
         'F' => match style {
-            InteriorStyle::Commercial => Some(BARREL),    // Display barrel
-            InteriorStyle::Public => Some(NOTE_BLOCK),    // Lectern-like
-            InteriorStyle::Farm => Some(CAULDRON),        // Water trough
-            _ => Some(FURNACE),                           // Furnace
+            InteriorStyle::Commercial => Some(BARREL), // Display barrel
+            InteriorStyle::Public => Some(NOTE_BLOCK), // Lectern-like
+            InteriorStyle::Farm => Some(CAULDRON),     // Water trough
+            _ => Some(FURNACE),                        // Furnace
         },
         '1' => match style {
             InteriorStyle::Commercial | InteriorStyle::Public | InteriorStyle::Industrial => {
@@ -341,12 +341,12 @@ pub fn get_interior_block_styled(
             _ => Some(RED_BED_WEST_FOOT),
         },
         'L' => match style {
-            InteriorStyle::Farm => Some(WATER_CAULDRON),  // Water trough
+            InteriorStyle::Farm => Some(WATER_CAULDRON), // Water trough
             _ => Some(CAULDRON),
         },
         'A' => match style {
-            InteriorStyle::Commercial => Some(CHEST),     // Shop chest
-            InteriorStyle::Farm => Some(BARREL),          // Feed barrel
+            InteriorStyle::Commercial => Some(CHEST), // Shop chest
+            InteriorStyle::Farm => Some(BARREL),      // Feed barrel
             _ => Some(ANVIL),
         },
         'P' => Some(OAK_PRESSURE_PLATE),
@@ -364,13 +364,13 @@ pub fn get_interior_block_styled(
         'G' => Some(GLOWSTONE),
         'N' => Some(BREWING_STAND),
         'T' => match style {
-            InteriorStyle::Commercial => Some(RED_CARPET),    // Shop carpet
+            InteriorStyle::Commercial => Some(RED_CARPET), // Shop carpet
             InteriorStyle::Public => Some(WHITE_CARPET),
-            InteriorStyle::Industrial => Some(IRON_BLOCK),    // Floor plating
+            InteriorStyle::Industrial => Some(IRON_BLOCK), // Floor plating
             _ => Some(WHITE_CARPET),
         },
         'E' => match style {
-            InteriorStyle::Farm => Some(OAK_LEAVES),          // Crop leaves
+            InteriorStyle::Farm => Some(OAK_LEAVES), // Crop leaves
             _ => Some(OAK_LEAVES),
         },
         'O' => Some(COBWEB),
@@ -502,7 +502,9 @@ pub fn generate_building_interior(
                 let cell2 = layer2[pattern_z as usize][pattern_x as usize];
 
                 // Place first layer blocks
-                if let Some(block) = get_interior_block_styled(cell1, false, wall_block, interior_style) {
+                if let Some(block) =
+                    get_interior_block_styled(cell1, false, wall_block, interior_style)
+                {
                     editor.set_block_absolute(
                         block,
                         x,
@@ -523,7 +525,9 @@ pub fn generate_building_interior(
                 }
 
                 // Place second layer blocks
-                if let Some(block) = get_interior_block_styled(cell2, true, wall_block, interior_style) {
+                if let Some(block) =
+                    get_interior_block_styled(cell2, true, wall_block, interior_style)
+                {
                     editor.set_block_absolute(
                         block,
                         x,

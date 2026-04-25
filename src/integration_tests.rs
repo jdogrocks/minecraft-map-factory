@@ -8,13 +8,13 @@ mod tests {
     use crate::args::Args;
     use crate::coordinate_system::cartesian::XZBBox;
     use crate::coordinate_system::geographic::LLBBox;
-    use crate::data_processing::{GenerationOptions, generate_world_with_options};
+    use crate::data_processing::{generate_world_with_options, GenerationOptions};
     use crate::ground::Ground;
     use crate::osm_parser::{self, OsmData, ProcessedElement};
     use crate::retrieve_data;
     use crate::world_editor::WorldFormat;
-    use std::path::PathBuf;
     use std::fs;
+    use std::path::PathBuf;
     use tempfile::TempDir;
 
     // ── Helpers ─────────────────────────────────────────────────────
@@ -55,15 +55,16 @@ mod tests {
 
     /// Load the small_area.json fixture and parse it through the OSM pipeline.
     fn load_and_parse_fixture() -> (Vec<ProcessedElement>, XZBBox, LLBBox) {
-        let fixture_path =
-            concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/small_area.json");
+        let fixture_path = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/fixtures/small_area.json"
+        );
         let osm_data = retrieve_data::fetch_data_from_file(fixture_path)
             .expect("Failed to load small_area.json fixture");
 
         let llbbox = fixture_llbbox();
         let (mut elements, xzbbox) = osm_parser::parse_osm_data(osm_data, llbbox, 1.0, false);
-        elements
-            .sort_by_key(|el: &ProcessedElement| osm_parser::get_priority(el));
+        elements.sort_by_key(|el: &ProcessedElement| osm_parser::get_priority(el));
 
         (elements, xzbbox, llbbox)
     }
@@ -90,7 +91,11 @@ mod tests {
         };
 
         let result = generate_world_with_options(elements, xzbbox, llbbox, ground, &args, options);
-        assert!(result.is_ok(), "World generation failed: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "World generation failed: {:?}",
+            result.err()
+        );
 
         let output_path = result.unwrap();
         // Verify region directory and .mca files were created
@@ -100,11 +105,7 @@ mod tests {
         let mca_files: Vec<_> = std::fs::read_dir(&region_dir)
             .expect("Failed to read region dir")
             .filter_map(|e| e.ok())
-            .filter(|e| {
-                e.path()
-                    .extension()
-                    .map_or(false, |ext| ext == "mca")
-            })
+            .filter(|e| e.path().extension().map_or(false, |ext| ext == "mca"))
             .collect();
 
         assert!(
@@ -120,17 +121,35 @@ mod tests {
         );
 
         // Validate metadata content
-        let metadata_str = std::fs::read_to_string(&metadata_path)
-            .expect("Failed to read metadata.json");
+        let metadata_str =
+            std::fs::read_to_string(&metadata_path).expect("Failed to read metadata.json");
         let metadata: serde_json::Value =
             serde_json::from_str(&metadata_str).expect("metadata.json should be valid JSON");
 
-        assert!(metadata.get("minMcX").is_some(), "metadata should contain minMcX");
-        assert!(metadata.get("maxMcX").is_some(), "metadata should contain maxMcX");
-        assert!(metadata.get("minMcZ").is_some(), "metadata should contain minMcZ");
-        assert!(metadata.get("maxMcZ").is_some(), "metadata should contain maxMcZ");
-        assert!(metadata.get("minGeoLat").is_some(), "metadata should contain minGeoLat");
-        assert!(metadata.get("maxGeoLon").is_some(), "metadata should contain maxGeoLon");
+        assert!(
+            metadata.get("minMcX").is_some(),
+            "metadata should contain minMcX"
+        );
+        assert!(
+            metadata.get("maxMcX").is_some(),
+            "metadata should contain maxMcX"
+        );
+        assert!(
+            metadata.get("minMcZ").is_some(),
+            "metadata should contain minMcZ"
+        );
+        assert!(
+            metadata.get("maxMcZ").is_some(),
+            "metadata should contain maxMcZ"
+        );
+        assert!(
+            metadata.get("minGeoLat").is_some(),
+            "metadata should contain minGeoLat"
+        );
+        assert!(
+            metadata.get("maxGeoLon").is_some(),
+            "metadata should contain maxGeoLon"
+        );
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -154,10 +173,9 @@ mod tests {
             spawn_point: None,
         };
 
-        let output_path = generate_world_with_options(
-            elements, xzbbox, llbbox, ground, &args, options,
-        )
-        .expect("World generation should succeed");
+        let output_path =
+            generate_world_with_options(elements, xzbbox, llbbox, ground, &args, options)
+                .expect("World generation should succeed");
 
         // Read back each .mca file and verify it can be parsed by fastanvil
         let region_dir = output_path.join("region");
@@ -165,8 +183,7 @@ mod tests {
             let entry = entry.expect("dir entry");
             let path = entry.path();
             if path.extension().map_or(false, |ext| ext == "mca") {
-                let file = std::fs::File::open(&path)
-                    .expect("Failed to open region file");
+                let file = std::fs::File::open(&path).expect("Failed to open region file");
                 let mut region = fastanvil::Region::from_stream(file)
                     .expect("Region file should be valid Anvil format");
 
@@ -206,10 +223,9 @@ mod tests {
             spawn_point: None,
         };
 
-        let output_path = generate_world_with_options(
-            elements, xzbbox, llbbox, ground, &args, options,
-        )
-        .expect("World generation should succeed");
+        let output_path =
+            generate_world_with_options(elements, xzbbox, llbbox, ground, &args, options)
+                .expect("World generation should succeed");
 
         let region_dir = output_path.join("region");
         let mut found_sections = false;
@@ -219,8 +235,7 @@ mod tests {
             let path = entry.path();
             if path.extension().map_or(false, |ext| ext == "mca") {
                 let file = std::fs::File::open(&path).expect("open region file");
-                let mut region =
-                    fastanvil::Region::from_stream(file).expect("valid region");
+                let mut region = fastanvil::Region::from_stream(file).expect("valid region");
 
                 for chunk_result in region.iter() {
                     if let Ok(chunk) = chunk_result {
@@ -254,15 +269,23 @@ mod tests {
         let (elements, xzbbox, _) = load_and_parse_fixture();
 
         // The fixture has: 1 building way, 1 highway way, 1 tree node
-        let building_count = elements.iter().filter(|e| {
-            e.tags().contains_key("building")
-        }).count();
-        let highway_count = elements.iter().filter(|e| {
-            e.tags().contains_key("highway")
-        }).count();
-        let tree_count = elements.iter().filter(|e| {
-            e.tags().get("natural").map(|v| v == "tree").unwrap_or(false)
-        }).count();
+        let building_count = elements
+            .iter()
+            .filter(|e| e.tags().contains_key("building"))
+            .count();
+        let highway_count = elements
+            .iter()
+            .filter(|e| e.tags().contains_key("highway"))
+            .count();
+        let tree_count = elements
+            .iter()
+            .filter(|e| {
+                e.tags()
+                    .get("natural")
+                    .map(|v| v == "tree")
+                    .unwrap_or(false)
+            })
+            .count();
 
         assert_eq!(building_count, 1, "Should parse exactly 1 building");
         assert_eq!(highway_count, 1, "Should parse exactly 1 highway");
@@ -305,8 +328,10 @@ mod tests {
 
     #[test]
     fn corrupt_osm_file_returns_error() {
-        let fixture_path =
-            concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/corrupt_osm.json");
+        let fixture_path = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/fixtures/corrupt_osm.json"
+        );
         let result = retrieve_data::fetch_data_from_file(fixture_path);
 
         // The corrupt file has no "elements" field; serde should fail
@@ -324,8 +349,10 @@ mod tests {
 
     #[test]
     fn empty_osm_produces_no_elements() {
-        let fixture_path =
-            concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/empty_area.json");
+        let fixture_path = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/fixtures/empty_area.json"
+        );
         let osm_data = retrieve_data::fetch_data_from_file(fixture_path)
             .expect("Empty OSM file should still parse");
 
@@ -371,19 +398,27 @@ mod tests {
     fn out_of_bounds_nodes_are_clipped() {
         // Create a very small bbox that excludes most fixture nodes
         let narrow_bbox = LLBBox::new(54.6299, 9.9299, 54.6301, 9.9301).unwrap();
-        let fixture_path =
-            concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/small_area.json");
-        let osm_data = retrieve_data::fetch_data_from_file(fixture_path)
-            .expect("Failed to load fixture");
+        let fixture_path = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/fixtures/small_area.json"
+        );
+        let osm_data =
+            retrieve_data::fetch_data_from_file(fixture_path).expect("Failed to load fixture");
 
         let (elements, _xzbbox) = osm_parser::parse_osm_data(osm_data, narrow_bbox, 1.0, false);
 
         // With such a narrow bbox, most elements should be clipped out
         // or have coordinates snapped to the bbox boundary
         // The tree node at (54.6302, 9.9295) is outside this bbox
-        let tree_count = elements.iter().filter(|e| {
-            e.tags().get("natural").map(|v| v == "tree").unwrap_or(false)
-        }).count();
+        let tree_count = elements
+            .iter()
+            .filter(|e| {
+                e.tags()
+                    .get("natural")
+                    .map(|v| v == "tree")
+                    .unwrap_or(false)
+            })
+            .count();
 
         assert_eq!(
             tree_count, 0,
@@ -406,8 +441,10 @@ mod tests {
         let (elements, _, llbbox) = load_and_parse_fixture();
 
         // Re-parse at scale 2.0 — should produce larger XZ coordinates
-        let fixture_path =
-            concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/small_area.json");
+        let fixture_path = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/fixtures/small_area.json"
+        );
         let osm_data = retrieve_data::fetch_data_from_file(fixture_path).unwrap();
         let (_, xzbbox_2x) = osm_parser::parse_osm_data(osm_data, llbbox, 2.0, false);
 
@@ -457,8 +494,10 @@ mod tests {
 
     #[test]
     fn generation_is_deterministic() {
-        let fixture_path =
-            concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/small_area.json");
+        let fixture_path = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/fixtures/small_area.json"
+        );
         let llbbox = fixture_llbbox();
 
         // Run 1
@@ -477,8 +516,9 @@ mod tests {
             level_name: None,
             spawn_point: None,
         };
-        let out1 = generate_world_with_options(elements_1, xzbbox_1, llbbox, ground1, &args1, opts1)
-            .expect("Run 1 should succeed");
+        let out1 =
+            generate_world_with_options(elements_1, xzbbox_1, llbbox, ground1, &args1, opts1)
+                .expect("Run 1 should succeed");
 
         // Run 2
         let osm_data_2 = retrieve_data::fetch_data_from_file(fixture_path).unwrap();
@@ -496,14 +536,13 @@ mod tests {
             level_name: None,
             spawn_point: None,
         };
-        let out2 = generate_world_with_options(elements_2, xzbbox_2, llbbox, ground2, &args2, opts2)
-            .expect("Run 2 should succeed");
+        let out2 =
+            generate_world_with_options(elements_2, xzbbox_2, llbbox, ground2, &args2, opts2)
+                .expect("Run 2 should succeed");
 
         // Compare metadata files — they should be byte-identical
-        let meta1 = std::fs::read_to_string(out1.join("metadata.json"))
-            .expect("metadata run 1");
-        let meta2 = std::fs::read_to_string(out2.join("metadata.json"))
-            .expect("metadata run 2");
+        let meta1 = std::fs::read_to_string(out1.join("metadata.json")).expect("metadata run 1");
+        let meta2 = std::fs::read_to_string(out2.join("metadata.json")).expect("metadata run 2");
         assert_eq!(meta1, meta2, "Metadata should be identical across runs");
 
         // Compare region file sets
