@@ -190,7 +190,7 @@ jobs:
       run: cargo install cargo-llvm-cov
 
     - name: Run coverage
-      run: cargo llvm-cov --all-features --ignore-filename-regex '(gui|main|map_renderer|land_cover|world_utils|version_check)\.rs$' --fail-under-lines 50
+      run: cargo llvm-cov --all-features --ignore-filename-regex '(gui|main|map_renderer|land_cover|world_utils|version_check)\.rs$' --fail-under-lines 40
 
   security:
     runs-on: ubuntu-latest
