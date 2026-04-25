@@ -410,3 +410,369 @@ pub fn get_priority(element: &ProcessedElement) -> usize {
     // Return a default priority if none of the tags match
     PRIORITY_ORDER.len()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Arc;
+
+    // ── Helper constructors ─────────────────────────────────────────
+
+    fn tags(pairs: &[(&str, &str)]) -> HashMap<String, String> {
+        pairs
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect()
+    }
+
+    fn node(id: u64, x: i32, z: i32, tag_pairs: &[(&str, &str)]) -> ProcessedNode {
+        ProcessedNode {
+            id,
+            tags: tags(tag_pairs),
+            x,
+            z,
+        }
+    }
+
+    fn way(id: u64, nodes: Vec<ProcessedNode>, tag_pairs: &[(&str, &str)]) -> ProcessedWay {
+        ProcessedWay {
+            id,
+            nodes,
+            tags: tags(tag_pairs),
+        }
+    }
+
+    fn relation(
+        id: u64,
+        members: Vec<ProcessedMember>,
+        tag_pairs: &[(&str, &str)],
+    ) -> ProcessedRelation {
+        ProcessedRelation {
+            id,
+            tags: tags(tag_pairs),
+            members,
+        }
+    }
+
+    // ── OsmData ─────────────────────────────────────────────────────
+
+    #[test]
+    fn osm_data_is_empty_on_no_elements() {
+        let data: OsmData = serde_json::from_str(r#"{"elements":[]}"#).unwrap();
+        assert!(data.is_empty());
+    }
+
+    #[test]
+    fn osm_data_is_not_empty_with_elements() {
+        let json = r#"{"elements":[{"type":"node","id":1,"lat":54.63,"lon":9.93}]}"#;
+        let data: OsmData = serde_json::from_str(json).unwrap();
+        assert!(!data.is_empty());
+    }
+
+    #[test]
+    fn osm_data_remark_field_optional() {
+        let data: OsmData = serde_json::from_str(r#"{"elements":[]}"#).unwrap();
+        assert!(data.remark.is_none());
+
+        let data: OsmData =
+            serde_json::from_str(r#"{"elements":[],"remark":"rate limit"}"#).unwrap();
+        assert_eq!(data.remark.as_deref(), Some("rate limit"));
+    }
+
+    // ── SplitOsmData ────────────────────────────────────────────────
+
+    #[test]
+    fn split_osm_data_classifies_elements_correctly() {
+        let json = r#"{"elements":[
+            {"type":"node","id":1,"lat":54.63,"lon":9.93},
+            {"type":"node","id":2,"lat":54.64,"lon":9.94},
+            {"type":"way","id":10,"nodes":[1,2]},
+            {"type":"relation","id":100,"members":[]},
+            {"type":"area","id":200}
+        ]}"#;
+        let data: OsmData = serde_json::from_str(json).unwrap();
+        let split = SplitOsmData::from_raw_osm_data(data);
+
+        assert_eq!(split.nodes.len(), 2);
+        assert_eq!(split.ways.len(), 1);
+        assert_eq!(split.relations.len(), 1);
+        assert_eq!(split.others.len(), 1);
+        assert_eq!(split.total_count(), 5);
+    }
+
+    #[test]
+    fn split_osm_data_empty_input() {
+        let data: OsmData = serde_json::from_str(r#"{"elements":[]}"#).unwrap();
+        let split = SplitOsmData::from_raw_osm_data(data);
+        assert_eq!(split.total_count(), 0);
+    }
+
+    // ── ProcessedNode ───────────────────────────────────────────────
+
+    #[test]
+    fn processed_node_xz_returns_correct_point() {
+        let n = node(1, 42, -7, &[]);
+        let pt = n.xz();
+        assert_eq!(pt.x, 42);
+        assert_eq!(pt.z, -7);
+    }
+
+    // ── ProcessedElement accessors ──────────────────────────────────
+
+    #[test]
+    fn element_tags_returns_correct_map() {
+        let elem = ProcessedElement::Node(node(1, 0, 0, &[("building", "yes")]));
+        assert_eq!(elem.tags().get("building").unwrap(), "yes");
+    }
+
+    #[test]
+    fn element_id_returns_correct_id() {
+        let elem = ProcessedElement::Node(node(42, 0, 0, &[]));
+        assert_eq!(elem.id(), 42);
+
+        let w = way(99, vec![], &[]);
+        assert_eq!(ProcessedElement::Way(w).id(), 99);
+
+        let r = relation(200, vec![], &[]);
+        assert_eq!(ProcessedElement::Relation(r).id(), 200);
+    }
+
+    #[test]
+    fn element_kind_returns_correct_string() {
+        assert_eq!(
+            ProcessedElement::Node(node(1, 0, 0, &[])).kind(),
+            "node"
+        );
+        assert_eq!(
+            ProcessedElement::Way(way(1, vec![], &[])).kind(),
+            "way"
+        );
+        assert_eq!(
+            ProcessedElement::Relation(relation(1, vec![], &[])).kind(),
+            "relation"
+        );
+    }
+
+    #[test]
+    fn element_nodes_iterator_for_node() {
+        let n = node(1, 10, 20, &[]);
+        let elem = ProcessedElement::Node(n);
+        let nodes: Vec<_> = elem.nodes().collect();
+        assert_eq!(nodes.len(), 1);
+        assert_eq!(nodes[0].x, 10);
+    }
+
+    #[test]
+    fn element_nodes_iterator_for_way() {
+        let w = way(
+            1,
+            vec![node(1, 0, 0, &[]), node(2, 5, 5, &[])],
+            &[],
+        );
+        let elem = ProcessedElement::Way(w);
+        let nodes: Vec<_> = elem.nodes().collect();
+        assert_eq!(nodes.len(), 2);
+    }
+
+    #[test]
+    fn element_nodes_iterator_for_relation_is_empty() {
+        let r = relation(1, vec![], &[]);
+        let elem = ProcessedElement::Relation(r);
+        assert_eq!(elem.nodes().count(), 0);
+    }
+
+    // ── get_priority ────────────────────────────────────────────────
+
+    #[test]
+    fn priority_entrance_is_highest() {
+        let elem = ProcessedElement::Node(node(1, 0, 0, &[("entrance", "main")]));
+        assert_eq!(get_priority(&elem), 0);
+    }
+
+    #[test]
+    fn priority_building_is_second() {
+        let elem = ProcessedElement::Node(node(1, 0, 0, &[("building", "yes")]));
+        assert_eq!(get_priority(&elem), 1);
+    }
+
+    #[test]
+    fn priority_highway() {
+        let elem = ProcessedElement::Way(way(
+            1,
+            vec![],
+            &[("highway", "residential")],
+        ));
+        assert_eq!(get_priority(&elem), 2);
+    }
+
+    #[test]
+    fn priority_waterway() {
+        let elem = ProcessedElement::Way(way(1, vec![], &[("waterway", "river")]));
+        assert_eq!(get_priority(&elem), 3);
+    }
+
+    #[test]
+    fn priority_water() {
+        let elem = ProcessedElement::Way(way(1, vec![], &[("water", "lake")]));
+        assert_eq!(get_priority(&elem), 4);
+    }
+
+    #[test]
+    fn priority_barrier() {
+        let elem = ProcessedElement::Way(way(1, vec![], &[("barrier", "fence")]));
+        assert_eq!(get_priority(&elem), 5);
+    }
+
+    #[test]
+    fn priority_unknown_tag_returns_default() {
+        let elem = ProcessedElement::Node(node(1, 0, 0, &[("amenity", "cafe")]));
+        assert_eq!(get_priority(&elem), PRIORITY_ORDER.len());
+    }
+
+    #[test]
+    fn priority_no_tags_returns_default() {
+        let elem = ProcessedElement::Node(node(1, 0, 0, &[]));
+        assert_eq!(get_priority(&elem), PRIORITY_ORDER.len());
+    }
+
+    #[test]
+    fn priority_multiple_tags_uses_first_match() {
+        // "building" (idx 1) should win over "barrier" (idx 5)
+        let elem = ProcessedElement::Node(node(
+            1,
+            0,
+            0,
+            &[("building", "yes"), ("barrier", "wall")],
+        ));
+        let p = get_priority(&elem);
+        assert!(p <= 1); // building or entrance
+    }
+
+    // ── is_water_element ────────────────────────────────────────────
+
+    #[test]
+    fn water_element_with_water_tag() {
+        assert!(is_water_element(&tags(&[("water", "lake")])));
+    }
+
+    #[test]
+    fn water_element_natural_water() {
+        assert!(is_water_element(&tags(&[("natural", "water")])));
+    }
+
+    #[test]
+    fn water_element_natural_bay() {
+        assert!(is_water_element(&tags(&[("natural", "bay")])));
+    }
+
+    #[test]
+    fn water_element_waterway_dock() {
+        assert!(is_water_element(&tags(&[("waterway", "dock")])));
+    }
+
+    #[test]
+    fn not_water_element_waterway_river() {
+        assert!(!is_water_element(&tags(&[("waterway", "river")])));
+    }
+
+    #[test]
+    fn not_water_element_natural_wood() {
+        assert!(!is_water_element(&tags(&[("natural", "wood")])));
+    }
+
+    #[test]
+    fn not_water_element_empty_tags() {
+        assert!(!is_water_element(&tags(&[])));
+    }
+
+    #[test]
+    fn not_water_element_unrelated_tags() {
+        assert!(!is_water_element(&tags(&[
+            ("building", "yes"),
+            ("highway", "primary"),
+        ])));
+    }
+
+    // ── parse_osm_data (integration-style, no network) ──────────────
+
+    #[test]
+    fn parse_osm_data_processes_nodes_ways_relations() {
+        // Build minimal OSM data with known lat/lon inside Arnis bbox
+        let json = r#"{"elements":[
+            {"type":"node","id":1,"lat":54.630,"lon":9.930},
+            {"type":"node","id":2,"lat":54.631,"lon":9.932},
+            {"type":"node","id":3,"lat":54.632,"lon":9.934,"tags":{"amenity":"bench"}},
+            {"type":"way","id":10,"nodes":[1,2,3],"tags":{"highway":"footway"}},
+            {"type":"relation","id":100,"members":[{"type":"way","ref":10,"role":"outer"}],"tags":{"type":"multipolygon","natural":"water"}}
+        ]}"#;
+        let osm_data: OsmData = serde_json::from_str(json).unwrap();
+        let bbox = LLBBox::new(54.627, 9.927, 54.635, 9.938).unwrap();
+
+        let (elements, xzbbox) = parse_osm_data(osm_data, bbox, 1.0, false);
+
+        // Should have at least a way and possibly a tagged node and relation
+        assert!(!elements.is_empty());
+        // Bounding box should be valid
+        assert!(xzbbox.max_x() >= xzbbox.min_x());
+        assert!(xzbbox.max_z() >= xzbbox.min_z());
+    }
+
+    #[test]
+    fn parse_osm_data_empty_input() {
+        let osm_data: OsmData = serde_json::from_str(r#"{"elements":[]}"#).unwrap();
+        let bbox = LLBBox::new(54.627, 9.927, 54.635, 9.938).unwrap();
+        let (elements, _xzbbox) = parse_osm_data(osm_data, bbox, 1.0, false);
+        assert!(elements.is_empty());
+    }
+
+    #[test]
+    fn parse_osm_data_nodes_without_lat_lon_are_skipped() {
+        // Node missing lat/lon should not panic or be included
+        let json =
+            r#"{"elements":[{"type":"node","id":1,"tags":{"amenity":"bench"}}]}"#;
+        let osm_data: OsmData = serde_json::from_str(json).unwrap();
+        let bbox = LLBBox::new(54.627, 9.927, 54.635, 9.938).unwrap();
+        let (elements, _) = parse_osm_data(osm_data, bbox, 1.0, false);
+        assert!(elements.is_empty());
+    }
+
+    #[test]
+    fn parse_osm_data_relation_non_multipolygon_skipped() {
+        let json = r#"{"elements":[
+            {"type":"node","id":1,"lat":54.630,"lon":9.930},
+            {"type":"node","id":2,"lat":54.631,"lon":9.932},
+            {"type":"way","id":10,"nodes":[1,2]},
+            {"type":"relation","id":100,"members":[{"type":"way","ref":10,"role":"outer"}],"tags":{"type":"route","route":"bus"}}
+        ]}"#;
+        let osm_data: OsmData = serde_json::from_str(json).unwrap();
+        let bbox = LLBBox::new(54.627, 9.927, 54.635, 9.938).unwrap();
+        let (elements, _) = parse_osm_data(osm_data, bbox, 1.0, false);
+        // No relations should be in the output (route relations are ignored)
+        assert!(elements
+            .iter()
+            .all(|e| e.kind() != "relation"));
+    }
+
+    // ── ProcessedMemberRole ─────────────────────────────────────────
+
+    #[test]
+    fn member_role_variants_are_distinct() {
+        assert_ne!(ProcessedMemberRole::Outer, ProcessedMemberRole::Inner);
+        assert_ne!(ProcessedMemberRole::Inner, ProcessedMemberRole::Part);
+        assert_ne!(ProcessedMemberRole::Outer, ProcessedMemberRole::Part);
+    }
+
+    // ── ProcessedMember / ProcessedRelation Clone + PartialEq ──────
+
+    #[test]
+    fn processed_relation_clone_and_eq() {
+        let w = Arc::new(way(10, vec![node(1, 0, 0, &[])], &[]));
+        let member = ProcessedMember {
+            role: ProcessedMemberRole::Outer,
+            way: Arc::clone(&w),
+        };
+        let rel = relation(100, vec![member], &[("type", "multipolygon")]);
+        let rel2 = rel.clone();
+        assert_eq!(rel, rel2);
+    }
+}
