@@ -142,3 +142,90 @@ impl ElevationProvider for Usgs3dep {
         fetch_fixed_tile_grid(self, bbox, grid_width, grid_height)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn name_is_usgs_3dep() {
+        let provider = Usgs3dep;
+        assert_eq!(provider.name(), "usgs_3dep");
+    }
+
+    #[test]
+    fn coverage_bboxes_includes_conus() {
+        let provider = Usgs3dep;
+        let bboxes = provider.coverage_bboxes().unwrap();
+        // New York City (40.7, -74.0) should be in CONUS
+        let nyc_covered = bboxes.iter().any(|b| {
+            b.min().lat() <= 40.7
+                && b.max().lat() >= 40.7
+                && b.min().lng() <= -74.0
+                && b.max().lng() >= -74.0
+        });
+        assert!(nyc_covered, "NYC should be covered");
+    }
+
+    #[test]
+    fn coverage_includes_alaska() {
+        let provider = Usgs3dep;
+        let bboxes = provider.coverage_bboxes().unwrap();
+        // Anchorage (61.2, -149.9)
+        let ak_covered = bboxes.iter().any(|b| {
+            b.min().lat() <= 61.2
+                && b.max().lat() >= 61.2
+                && b.min().lng() <= -149.9
+                && b.max().lng() >= -149.9
+        });
+        assert!(ak_covered, "Alaska should be covered");
+    }
+
+    #[test]
+    fn coverage_includes_hawaii() {
+        let provider = Usgs3dep;
+        let bboxes = provider.coverage_bboxes().unwrap();
+        // Honolulu (21.3, -157.8)
+        let hi_covered = bboxes.iter().any(|b| {
+            b.min().lat() <= 21.3
+                && b.max().lat() >= 21.3
+                && b.min().lng() <= -157.8
+                && b.max().lng() >= -157.8
+        });
+        assert!(hi_covered, "Hawaii should be covered");
+    }
+
+    #[test]
+    fn coverage_has_five_regions() {
+        let provider = Usgs3dep;
+        let bboxes = provider.coverage_bboxes().unwrap();
+        assert_eq!(bboxes.len(), 5, "Expected CONUS + AK + HI + PR + Guam");
+    }
+
+    #[test]
+    fn native_resolution_is_1m() {
+        let provider = Usgs3dep;
+        assert_eq!(provider.native_resolution_m(), 1.0);
+    }
+
+    #[test]
+    fn resolution_levels_ordered() {
+        let provider = Usgs3dep;
+        let levels = provider.resolution_levels();
+        assert_eq!(levels.len(), 4);
+        for i in 1..levels.len() {
+            assert!(levels[i].meters_per_pixel() > levels[i - 1].meters_per_pixel());
+        }
+    }
+
+    #[test]
+    fn resolution_level_ids() {
+        assert_eq!(Resolution::M1.level_id(), "r1");
+        assert_eq!(Resolution::M30.level_id(), "r30");
+    }
+
+    #[test]
+    fn cache_name_matches_provider_name() {
+        assert_eq!(Usgs3dep::CACHE_NAME, "usgs_3dep");
+    }
+}

@@ -336,4 +336,143 @@ mod tests {
         // Target must be untouched.
         assert!(real.join("important.txt").exists());
     }
+
+    // ── get_cache_dir ──────────────────────────────────────────────
+
+    #[test]
+    fn cache_dir_includes_provider_name() {
+        let dir = get_cache_dir("aws_terrain");
+        let path_str = dir.to_string_lossy();
+        assert!(
+            path_str.contains("aws_terrain"),
+            "Expected provider in path: {path_str}"
+        );
+        assert!(
+            path_str.contains(TILE_CACHE_DIR_NAME),
+            "Expected cache dir name in path: {path_str}"
+        );
+    }
+
+    #[test]
+    fn cache_dir_different_providers_differ() {
+        let dir_a = get_cache_dir("provider_a");
+        let dir_b = get_cache_dir("provider_b");
+        assert_ne!(dir_a, dir_b);
+    }
+
+    // ── get_base_cache_dir ─────────────────────────────────────────
+
+    #[test]
+    fn base_cache_dir_contains_cache_name() {
+        let dir = get_base_cache_dir();
+        let path_str = dir.to_string_lossy();
+        assert!(path_str.contains(TILE_CACHE_DIR_NAME));
+    }
+
+    // ── CacheClearStats ────────────────────────────────────────────
+
+    #[test]
+    fn cache_clear_stats_default() {
+        let stats = CacheClearStats::default();
+        assert_eq!(stats.files_deleted, 0);
+        assert_eq!(stats.bytes_freed, 0);
+        assert_eq!(stats.errors, 0);
+    }
+
+    #[test]
+    fn cache_clear_stats_combined() {
+        let a = CacheClearStats {
+            files_deleted: 5,
+            bytes_freed: 1000,
+            errors: 1,
+        };
+        let b = CacheClearStats {
+            files_deleted: 3,
+            bytes_freed: 500,
+            errors: 2,
+        };
+        let c = a.combined(b);
+        assert_eq!(c.files_deleted, 8);
+        assert_eq!(c.bytes_freed, 1500);
+        assert_eq!(c.errors, 3);
+    }
+
+    // ── cleanup_old_cached_files ────────────────────────────────────
+
+    #[test]
+    fn cleanup_dir_recursive_removes_old_files() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+
+        // Create a file and manually set its modified time to the past
+        let old_file = root.join("old.bin");
+        std::fs::write(&old_file, b"old data").unwrap();
+
+        // Use a very short max_age so the file is "old"
+        let max_age = std::time::Duration::from_secs(0);
+        let now = std::time::SystemTime::now();
+        let mut deleted = 0u32;
+        let mut errors = 0u32;
+
+        cleanup_dir_recursive(root, max_age, now, &mut deleted, &mut errors);
+
+        assert!(deleted >= 1);
+        assert_eq!(errors, 0);
+    }
+
+    #[test]
+    fn cleanup_dir_recursive_keeps_new_files() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+
+        let new_file = root.join("new.bin");
+        std::fs::write(&new_file, b"new data").unwrap();
+
+        // Use very large max_age so nothing is old
+        let max_age = std::time::Duration::from_secs(365 * 24 * 60 * 60);
+        let now = std::time::SystemTime::now();
+        let mut deleted = 0u32;
+        let mut errors = 0u32;
+
+        cleanup_dir_recursive(root, max_age, now, &mut deleted, &mut errors);
+
+        assert_eq!(deleted, 0);
+        assert!(new_file.exists());
+    }
+
+    #[test]
+    fn cleanup_dir_recursive_missing_dir() {
+        let mut deleted = 0u32;
+        let mut errors = 0u32;
+        cleanup_dir_recursive(
+            std::path::Path::new("/nonexistent/path"),
+            std::time::Duration::from_secs(1),
+            std::time::SystemTime::now(),
+            &mut deleted,
+            &mut errors,
+        );
+        assert_eq!(deleted, 0);
+    }
+
+    // ── clear_cache_dir nested dirs ────────────────────────────────
+
+    #[test]
+    fn clear_empty_dir() {
+        let tmp = tempfile::tempdir().unwrap();
+        let stats = clear_cache_dir(tmp.path());
+        assert_eq!(stats.files_deleted, 0);
+        assert_eq!(stats.errors, 0);
+    }
+
+    #[test]
+    fn clear_deeply_nested_dir() {
+        let tmp = tempfile::tempdir().unwrap();
+        let deep = tmp.path().join("a").join("b").join("c");
+        std::fs::create_dir_all(&deep).unwrap();
+        std::fs::write(deep.join("file.txt"), b"data").unwrap();
+
+        let stats = clear_cache_dir(tmp.path());
+        assert_eq!(stats.files_deleted, 1);
+        assert_eq!(stats.errors, 0);
+    }
 }
