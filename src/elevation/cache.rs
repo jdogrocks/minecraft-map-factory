@@ -1,14 +1,14 @@
 use std::path::PathBuf;
 
 /// Subdirectory name for tile cache within the OS cache directory
-const TILE_CACHE_DIR_NAME: &str = "arnis-tile-cache";
+const TILE_CACHE_DIR_NAME: &str = "mmf-tile-cache";
 
 /// Maximum age for cached tiles in days before they are cleaned up
 const TILE_CACHE_MAX_AGE_DAYS: u64 = 7;
 
 /// Returns the tile cache directory path for a specific provider.
 /// Uses the OS-standard cache directory (e.g. AppData/Local on Windows, ~/.cache on Linux).
-/// Falls back to ./arnis-tile-cache if the OS cache directory is unavailable.
+/// Falls back to ./mmf-tile-cache if the OS cache directory is unavailable.
 pub fn get_cache_dir(provider_name: &str) -> PathBuf {
     let base = if let Some(cache_dir) = dirs::cache_dir() {
         cache_dir.join(TILE_CACHE_DIR_NAME)

@@ -2,10 +2,10 @@
 members = [".", "pipeline"]
 
 [package]
-name = "arnis"
+name = "minecraft-map-factory"
 version = "2.7.0"
 edition = "2021"
-description = "Arnis - Generate real life cities in Minecraft"
+description = "Generate real-world locations in Minecraft"
 homepage = "https://github.com/jdogrocks/minecraft-map-factory"
 repository = "https://github.com/jdogrocks/minecraft-map-factory"
 license = "Apache-2.0"

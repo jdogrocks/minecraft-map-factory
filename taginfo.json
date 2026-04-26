@@ -1,13 +1,13 @@
 {
     "data_format": 1,
-    "data_url": "https://raw.githubusercontent.com/louis-e/arnis/main/taginfo.json",
-    "data_updated": "20250824T120000Z",
+    "data_url": "https://raw.githubusercontent.com/jdogrocks/minecraft-map-factory/main/taginfo.json",
+    "data_updated": "20260425T120000Z",
     "project": {
-        "name": "Arnis",
-        "description": "Generate real life cities in Minecraft. Creates complex and accurate Minecraft Java Edition worlds that reflect real-world geography, topography, and architecture.",
-        "project_url": "https://github.com/louis-e/arnis",
-        "contact_name": "Louis Erbkamm",
-        "contact_email": "info@louisdev.de"
+        "name": "Minecraft Map Factory",
+        "description": "Generate real-world locations in Minecraft. Creates complex and accurate Minecraft Java and Bedrock Edition worlds that reflect real-world geography, topography, and architecture. Derived from Arnis by Louis Erbkamm.",
+        "project_url": "https://github.com/jdogrocks/minecraft-map-factory",
+        "contact_name": "Fullstack Forge",
+        "contact_email": ""
     },
     "tags": [
         {

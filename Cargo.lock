@@ -196,53 +196,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "arnis"
-version = "2.7.0"
-dependencies = [
- "base64 0.22.1",
- "bedrockrs_level",
- "bedrockrs_shared",
- "byteorder",
- "bytes",
- "clap",
- "colored",
- "dirs",
- "fastanvil",
- "fastnbt",
- "flate2",
- "fnv",
- "fs2",
- "geo",
- "image 0.25.10",
- "indicatif",
- "itertools 0.14.0",
- "jsonwebtoken 10.3.0",
- "log",
- "nbtx",
- "once_cell",
- "parquet",
- "rand 0.9.4",
- "rand_chacha 0.9.0",
- "rayon",
- "reqwest",
- "rfd",
- "rusty-leveldb",
- "semver",
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
- "tauri-plugin-log",
- "tauri-plugin-shell",
- "tempfile",
- "tiff",
- "tokio",
- "vek",
- "windows 0.62.2",
- "zip",
-]
-
-[[package]]
 name = "arrayvec"
 version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3384,6 +3337,53 @@ name = "mime"
 version = "0.3.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6877bb514081ee2a7ff5ef9de3281f14a4dd4bceac4c09388074a6b5df8a139a"
+
+[[package]]
+name = "minecraft-map-factory"
+version = "2.7.0"
+dependencies = [
+ "base64 0.22.1",
+ "bedrockrs_level",
+ "bedrockrs_shared",
+ "byteorder",
+ "bytes",
+ "clap",
+ "colored",
+ "dirs",
+ "fastanvil",
+ "fastnbt",
+ "flate2",
+ "fnv",
+ "fs2",
+ "geo",
+ "image 0.25.10",
+ "indicatif",
+ "itertools 0.14.0",
+ "jsonwebtoken 10.3.0",
+ "log",
+ "nbtx",
+ "once_cell",
+ "parquet",
+ "rand 0.9.4",
+ "rand_chacha 0.9.0",
+ "rayon",
+ "reqwest",
+ "rfd",
+ "rusty-leveldb",
+ "semver",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-log",
+ "tauri-plugin-shell",
+ "tempfile",
+ "tiff",
+ "tokio",
+ "vek",
+ "windows 0.62.2",
+ "zip",
+]
 
 [[package]]
 name = "minecraft-map-factory-pipeline"

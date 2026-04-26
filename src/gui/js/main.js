@@ -60,7 +60,7 @@ window.initFooter = initFooter;
  */
 async function getLocalization() {
   // Check if user has a saved language preference
-  const savedLanguage = localStorage.getItem('arnis-language');
+  const savedLanguage = localStorage.getItem('mmf-language');
 
   // If there's a saved preference, use it
   if (savedLanguage) {
@@ -370,7 +370,7 @@ function initSettings() {
   const availableOptions = Array.from(languageSelect.options).map(opt => opt.value);
   
   // Check for saved language preference first
-  const savedLanguage = localStorage.getItem('arnis-language');
+  const savedLanguage = localStorage.getItem('mmf-language');
   let languageToSet = 'en'; // Default to English
   
   if (savedLanguage && availableOptions.includes(savedLanguage)) {
@@ -398,7 +398,7 @@ function initSettings() {
     const selectedLanguage = languageSelect.value;
 
     // Store the selected language in localStorage for persistence
-    localStorage.setItem('arnis-language', selectedLanguage);
+    localStorage.setItem('mmf-language', selectedLanguage);
 
     // Reload localization with the new language
     const localization = await fetchLanguage(selectedLanguage);
@@ -461,7 +461,7 @@ let selectedWorldFormat = 'java'; // Default to Java
 
 function initWorldFormatToggle() {
   // Load saved format preference
-  const savedFormat = localStorage.getItem('arnis-world-format');
+  const savedFormat = localStorage.getItem('mmf-world-format');
   if (savedFormat && (savedFormat === 'java' || savedFormat === 'bedrock')) {
     selectedWorldFormat = savedFormat;
   }
@@ -474,7 +474,7 @@ function setWorldFormat(format) {
   if (format !== 'java' && format !== 'bedrock') return;
   
   selectedWorldFormat = format;
-  localStorage.setItem('arnis-world-format', format);
+  localStorage.setItem('mmf-world-format', format);
   updateFormatToggleUI(format);
 }
 
@@ -691,20 +691,20 @@ let savePath = "";
 
 async function initSavePath() {
   // Check if user has a saved path in localStorage
-  const saved = localStorage.getItem('arnis-save-path');
+  const saved = localStorage.getItem('mmf-save-path');
   if (saved) {
     // Validate the saved path still exists (handles upgrades / moved directories)
     try {
       const normalized = await invoke('gui_set_save_path', { path: saved });
       savePath = normalized;
-      localStorage.setItem('arnis-save-path', savePath);
+      localStorage.setItem('mmf-save-path', savePath);
     } catch (_) {
       // Saved path is no longer valid – re-detect
       console.warn("Stored save path no longer valid, re-detecting...");
-      localStorage.removeItem('arnis-save-path');
+      localStorage.removeItem('mmf-save-path');
       try {
         savePath = await invoke('gui_get_default_save_path');
-        localStorage.setItem('arnis-save-path', savePath);
+        localStorage.setItem('mmf-save-path', savePath);
       } catch (error) {
         console.error("Failed to detect save path:", error);
       }
@@ -713,7 +713,7 @@ async function initSavePath() {
     // Auto-detect on first run
     try {
       savePath = await invoke('gui_get_default_save_path');
-      localStorage.setItem('arnis-save-path', savePath);
+      localStorage.setItem('mmf-save-path', savePath);
     } catch (error) {
       console.error("Failed to detect save path:", error);
     }
@@ -743,7 +743,7 @@ function initSavePathSetting() {
     try {
       const validated = await invoke('gui_set_save_path', { path: newPath });
       savePath = validated;
-      localStorage.setItem('arnis-save-path', savePath);
+      localStorage.setItem('mmf-save-path', savePath);
     } catch (_) {
       // Invalid path – silently revert to previous value
       savePathInput.value = savePath;
@@ -759,7 +759,7 @@ function initSavePathSetting() {
         if (picked) {
           savePath = picked;
           savePathInput.value = savePath;
-          localStorage.setItem('arnis-save-path', savePath);
+          localStorage.setItem('mmf-save-path', savePath);
         }
       } catch (error) {
         console.error("Folder picker failed:", error);

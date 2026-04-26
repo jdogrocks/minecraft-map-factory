@@ -32,7 +32,7 @@ Orchestrates the pipeline. Pulls pending locations from the database, spawns con
 
 ### Generator
 
-Invokes the `arnis` binary with bounding-box parameters for each location. Handles failures through the retry strategy.
+Invokes the map generator binary with bounding-box parameters for each location. Handles failures through the retry strategy.
 
 - Output lands in `jobs/{location_name}_attempt{N}/`
 - On transient errors: retries with exponential backoff (1s -> 2s -> 4s, capped at 300s)
@@ -66,8 +66,8 @@ locations_file = "locations.toml"
 # Required: output directory for generated and published maps
 output_dir = "./output"
 
-# Path to the arnis binary (default: "arnis" on PATH)
-arnis_binary = "./target/release/arnis"
+# Path to the map generator binary (default: "minecraft-map-factory" on PATH)
+arnis_binary = "./target/release/minecraft-map-factory"
 
 [scheduler]
 max_concurrency = 4        # default: num_cpus / 2
@@ -147,7 +147,7 @@ When enabled, the self-tuner monitors success rate and resource usage between jo
 ## Running End-to-End
 
 1. **Prepare locations** -- create a `locations.toml` with your target areas
-2. **Configure** -- create `pipeline.toml` pointing to your locations file, output dir, and arnis binary
+2. **Configure** -- create `pipeline.toml` pointing to your locations file, output dir, and generator binary
 3. **Validate** -- run with `--dry-run` to check configuration
 4. **Execute** -- run without `--dry-run` to start generation
 5. **Monitor** -- watch structured logs and periodic metrics summaries

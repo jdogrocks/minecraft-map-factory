@@ -32,7 +32,7 @@ Thumbs.db
 /parsed_osm_data.txt
 /elevation_debug.png
 /terrain-tile-cache
-/arnis-tile-cache
+/mmf-tile-cache
 /gen/
 /build/
 *.rmeta

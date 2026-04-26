@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (languageSelect) {
         // Set initial value based on saved preference or browser language
-        const savedLanguage = localStorage.getItem('arnis-language');
+        const savedLanguage = localStorage.getItem('mmf-language');
         const currentLang = savedLanguage || navigator.language;
         const availableOptions = Array.from(languageSelect.options).map(opt => opt.value);
 
@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const selectedLanguage = languageSelect.value;
 
             // Store selection in localStorage
-            localStorage.setItem('arnis-language', selectedLanguage);
+            localStorage.setItem('mmf-language', selectedLanguage);
             // Reload localization with the new language
             if (window.fetchLanguage) {
                 window.fetchLanguage(selectedLanguage).then(localization => {

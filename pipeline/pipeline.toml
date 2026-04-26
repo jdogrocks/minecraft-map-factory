@@ -3,7 +3,7 @@
 
 locations_file = "data/locations.toml"
 output_dir = "./output"
-arnis_binary = "../target/release/arnis"
+arnis_binary = "../target/release/minecraft-map-factory"
 
 [scheduler]
 max_concurrency = 2
