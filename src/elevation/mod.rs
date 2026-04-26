@@ -130,14 +130,6 @@ pub fn fetch_elevation_data(
                     "Warning: Regional provider '{}' returned {:.0}% empty data. Falling back to AWS Terrain Tiles.",
                     provider_name, nan_ratio * 100.0
                 );
-                #[cfg(feature = "gui")]
-                crate::telemetry::send_log(
-                    crate::telemetry::LogLevel::Warning,
-                    &format!(
-                        "Regional provider '{}' returned mostly empty data, using AWS fallback.",
-                        provider_name
-                    ),
-                );
                 let fallback = providers::aws_terrain::AwsTerrain;
                 fallback.fetch_raw(bbox, grid_width, grid_height)?
             } else {
@@ -149,14 +141,6 @@ pub fn fetch_elevation_data(
             eprintln!(
                 "Warning: Regional provider '{}' failed: {}. Falling back to AWS Terrain Tiles.",
                 provider_name, e
-            );
-            #[cfg(feature = "gui")]
-            crate::telemetry::send_log(
-                crate::telemetry::LogLevel::Warning,
-                &format!(
-                    "Regional elevation provider '{}' failed, using AWS fallback.",
-                    provider_name
-                ),
             );
             let fallback = providers::aws_terrain::AwsTerrain;
             emit_gui_progress_update(16.0, "Regional provider failed, fetching from AWS...");
