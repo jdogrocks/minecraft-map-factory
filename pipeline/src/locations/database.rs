@@ -41,7 +41,7 @@ pub struct LocationDatabase {
 
 #[derive(Debug, Deserialize)]
 struct LocationFile {
-    #[serde(rename = "location")]
+    #[serde(rename = "location", default)]
     locations: Vec<Location>,
 }
 
