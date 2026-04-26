@@ -774,10 +774,7 @@ impl BedrockWriter {
             writer.start_file("behavior_packs/mmf_tall/manifest.json", options)?;
             writer.write_all(BP_MANIFEST)?;
 
-            writer.start_file(
-                "behavior_packs/mmf_tall/dimensions/overworld.json",
-                options,
-            )?;
+            writer.start_file("behavior_packs/mmf_tall/dimensions/overworld.json", options)?;
             writer.write_all(BP_OVERWORLD)?;
 
             writer.start_file("world_behavior_packs.json", options)?;

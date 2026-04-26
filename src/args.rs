@@ -195,7 +195,13 @@ mod tests {
         assert!(args.debug);
         assert!(args.terrain);
 
-        let cmd = ["minecraft-map-factory", "--output-dir", tmp_path, "--bbox", "1,2,3,4"];
+        let cmd = [
+            "minecraft-map-factory",
+            "--output-dir",
+            tmp_path,
+            "--bbox",
+            "1,2,3,4",
+        ];
         let args = Args::parse_from(cmd.iter());
         assert!(!args.debug);
         assert!(!args.terrain);
@@ -273,7 +279,13 @@ mod tests {
         let tmp_path = tmpdir.path().to_str().unwrap();
 
         // Default is false
-        let cmd = ["minecraft-map-factory", "--output-dir", tmp_path, "--bbox", "1,2,3,4"];
+        let cmd = [
+            "minecraft-map-factory",
+            "--output-dir",
+            tmp_path,
+            "--bbox",
+            "1,2,3,4",
+        ];
         let args = Args::parse_from(cmd.iter());
         assert!(!args.disable_height_limit);
 
@@ -322,7 +334,13 @@ mod tests {
         let tmpfile = tempfile::NamedTempFile::new().unwrap();
         let tmp_path = tmpfile.path().to_str().unwrap();
 
-        let cmd = ["minecraft-map-factory", "--output-dir", tmp_path, "--bbox", "1,2,3,4"];
+        let cmd = [
+            "minecraft-map-factory",
+            "--output-dir",
+            tmp_path,
+            "--bbox",
+            "1,2,3,4",
+        ];
         let args = Args::parse_from(cmd.iter());
         let result = validate_args(&args);
         assert!(result.is_err());
@@ -353,16 +371,34 @@ mod tests {
         let cmd = ["minecraft-map-factory"];
         assert!(Args::try_parse_from(cmd.iter()).is_err());
 
-        let cmd = ["minecraft-map-factory", "--output-dir", tmp_path, "--bbox", "1,2,3,4"];
+        let cmd = [
+            "minecraft-map-factory",
+            "--output-dir",
+            tmp_path,
+            "--bbox",
+            "1,2,3,4",
+        ];
         let args = Args::try_parse_from(cmd.iter()).unwrap();
         assert!(validate_args(&args).is_ok());
 
         // Verify --path still works as a deprecated alias
-        let cmd = ["minecraft-map-factory", "--path", tmp_path, "--bbox", "1,2,3,4"];
+        let cmd = [
+            "minecraft-map-factory",
+            "--path",
+            tmp_path,
+            "--bbox",
+            "1,2,3,4",
+        ];
         let args = Args::try_parse_from(cmd.iter()).unwrap();
         assert!(validate_args(&args).is_ok());
 
-        let cmd = ["minecraft-map-factory", "--output-dir", tmp_path, "--file", ""];
+        let cmd = [
+            "minecraft-map-factory",
+            "--output-dir",
+            tmp_path,
+            "--file",
+            "",
+        ];
         assert!(Args::try_parse_from(cmd.iter()).is_err());
 
         // The --gui flag isn't used here, ugh. TODO clean up main.rs and its argparse usage.
