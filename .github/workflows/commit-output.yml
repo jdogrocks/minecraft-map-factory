@@ -1,0 +1,101 @@
+name: Commit Output Artifacts
+
+on:
+  workflow_dispatch:
+    inputs:
+      output-path:
+        description: 'Path to the output directory containing generated artifacts'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  commit-artifacts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check for new or modified files
+        id: check-changes
+        run: |
+          OUTPUT_PATH="${{ inputs.output-path }}"
+
+          if [ ! -d "$OUTPUT_PATH" ]; then
+            echo "Output directory '$OUTPUT_PATH' does not exist. Nothing to commit."
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Check if there are any files in the output path
+          FILE_COUNT=$(find "$OUTPUT_PATH" -type f | wc -l)
+          if [ "$FILE_COUNT" -eq 0 ]; then
+            echo "No files found in '$OUTPUT_PATH'. Nothing to commit."
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Stage files and check for actual changes
+          git add "$OUTPUT_PATH"
+          if git diff --cached --quiet; then
+            echo "No new or modified files in '$OUTPUT_PATH'. Nothing to commit."
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Changes detected in '$OUTPUT_PATH'."
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build commit message
+        if: steps.check-changes.outputs.has_changes == 'true'
+        id: commit-msg
+        run: |
+          OUTPUT_PATH="${{ inputs.output-path }}"
+
+          # Count staged files
+          ADDED=$(git diff --cached --numstat | wc -l)
+
+          # Try to extract metadata from common metadata files in the output
+          CONTEXT=""
+          for META_FILE in "$OUTPUT_PATH"/metadata.json "$OUTPUT_PATH"/**/metadata.json; do
+            if [ -f "$META_FILE" ]; then
+              # Attempt to read coordinates or region from metadata
+              COORDS=$(python3 -c "
+          import json, sys
+          try:
+              d = json.load(open('$META_FILE'))
+              parts = []
+              if 'coordinates' in d: parts.append(f\"coords {d['coordinates']}\")
+              if 'region' in d: parts.append(f\"region {d['region']}\")
+              if 'name' in d: parts.append(d['name'])
+              print(' — '.join(parts) if parts else '')
+          except: pass
+          " 2>/dev/null || true)
+              if [ -n "$COORDS" ]; then
+                CONTEXT="$COORDS"
+                break
+              fi
+            fi
+          done
+
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+          if [ -n "$CONTEXT" ]; then
+            MSG="Add generated map output: ${CONTEXT} (${ADDED} file(s))"
+          else
+            MSG="Add generated map output from ${OUTPUT_PATH} — ${ADDED} file(s) at ${TIMESTAMP}"
+          fi
+
+          # Use environment file to handle multiline-safe output
+          echo "message=${MSG}" >> "$GITHUB_OUTPUT"
+
+      - name: Commit and push
+        if: steps.check-changes.outputs.has_changes == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "${{ steps.commit-msg.outputs.message }}"
+          git push
