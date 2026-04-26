@@ -9,7 +9,7 @@ use std::process::Stdio;
 use tokio::process::Command;
 use tracing::{debug, error, info, warn};
 
-/// Wraps arnis CLI invocation with retry logic.
+/// Wraps map generator CLI invocation with retry logic.
 pub struct Generator {
     arnis_binary: PathBuf,
     retry_strategy: RetryStrategy,
@@ -47,12 +47,12 @@ impl Generator {
                 name = %location.name,
                 attempt,
                 bbox = %bbox_str,
-                "Invoking arnis"
+                "Invoking map generator"
             );
 
-            match self.invoke_arnis(&bbox_str, &output_dir).await {
+            match self.invoke_generator(&bbox_str, &output_dir).await {
                 Ok(()) => {
-                    info!(name = %location.name, attempt, "arnis completed successfully");
+                    info!(name = %location.name, attempt, "Map generator completed successfully");
                     return Ok(output_dir);
                 }
                 Err(e) => {
@@ -62,7 +62,7 @@ impl Generator {
                         attempt,
                         error = %e,
                         classification = ?classification,
-                        "arnis invocation failed"
+                        "Map generator invocation failed"
                     );
 
                     match self.retry_strategy.should_retry(attempt, &classification) {
@@ -104,7 +104,7 @@ impl Generator {
         }
     }
 
-    async fn invoke_arnis(
+    async fn invoke_generator(
         &self,
         bbox: &str,
         output_dir: &std::path::Path,
@@ -125,13 +125,13 @@ impl Generator {
 
         if output.status.success() {
             let stdout = String::from_utf8_lossy(&output.stdout);
-            debug!(stdout = %stdout, "arnis stdout");
+            debug!(stdout = %stdout, "generator stdout");
             Ok(())
         } else {
             let stderr = String::from_utf8_lossy(&output.stderr);
             let stdout = String::from_utf8_lossy(&output.stdout);
             Err(format!(
-                "arnis exited with status {}: stderr={}, stdout={}",
+                "Generator exited with status {}: stderr={}, stdout={}",
                 output.status, stderr, stdout
             )
             .into())

@@ -183,7 +183,7 @@ mod tests {
 
         // Test that terrain/debug are SetTrue
         let cmd = [
-            "arnis",
+            "minecraft-map-factory",
             "--output-dir",
             tmp_path,
             "--bbox",
@@ -195,7 +195,7 @@ mod tests {
         assert!(args.debug);
         assert!(args.terrain);
 
-        let cmd = ["arnis", "--output-dir", tmp_path, "--bbox", "1,2,3,4"];
+        let cmd = ["minecraft-map-factory", "--output-dir", tmp_path, "--bbox", "1,2,3,4"];
         let args = Args::parse_from(cmd.iter());
         assert!(!args.debug);
         assert!(!args.terrain);
@@ -214,7 +214,7 @@ mod tests {
 
         // Test disabling interior/roof/land-cover with =false
         let cmd = [
-            "arnis",
+            "minecraft-map-factory",
             "--output-dir",
             tmp_path,
             "--bbox",
@@ -230,7 +230,7 @@ mod tests {
 
         // Test enabling with bare flag (no value)
         let cmd = [
-            "arnis",
+            "minecraft-map-factory",
             "--output-dir",
             tmp_path,
             "--bbox",
@@ -246,7 +246,7 @@ mod tests {
 
         // Test backwards compatibility with old --city-boundaries alias
         let cmd = [
-            "arnis",
+            "minecraft-map-factory",
             "--output-dir",
             tmp_path,
             "--bbox",
@@ -260,7 +260,7 @@ mod tests {
     #[test]
     fn test_bedrock_flag() {
         // Bedrock mode doesn't require --output-dir
-        let cmd = ["arnis", "--bedrock", "--bbox", "1,2,3,4"];
+        let cmd = ["minecraft-map-factory", "--bedrock", "--bbox", "1,2,3,4"];
         let args = Args::parse_from(cmd.iter());
         assert!(args.bedrock);
         assert!(args.path.is_none());
@@ -273,13 +273,13 @@ mod tests {
         let tmp_path = tmpdir.path().to_str().unwrap();
 
         // Default is false
-        let cmd = ["arnis", "--output-dir", tmp_path, "--bbox", "1,2,3,4"];
+        let cmd = ["minecraft-map-factory", "--output-dir", tmp_path, "--bbox", "1,2,3,4"];
         let args = Args::parse_from(cmd.iter());
         assert!(!args.disable_height_limit);
 
         // Flag enables it
         let cmd = [
-            "arnis",
+            "minecraft-map-factory",
             "--output-dir",
             tmp_path,
             "--bbox",
@@ -292,7 +292,7 @@ mod tests {
 
     #[test]
     fn test_java_requires_path() {
-        let cmd = ["arnis", "--bbox", "1,2,3,4"];
+        let cmd = ["minecraft-map-factory", "--bbox", "1,2,3,4"];
         let args = Args::parse_from(cmd.iter());
         assert!(!args.bedrock);
         assert!(args.path.is_none());
@@ -305,7 +305,7 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let nonexistent = tmp.path().join("does_not_exist");
         let cmd = [
-            "arnis",
+            "minecraft-map-factory",
             "--output-dir",
             nonexistent.to_str().unwrap(),
             "--bbox",
@@ -322,7 +322,7 @@ mod tests {
         let tmpfile = tempfile::NamedTempFile::new().unwrap();
         let tmp_path = tmpfile.path().to_str().unwrap();
 
-        let cmd = ["arnis", "--output-dir", tmp_path, "--bbox", "1,2,3,4"];
+        let cmd = ["minecraft-map-factory", "--output-dir", tmp_path, "--bbox", "1,2,3,4"];
         let args = Args::parse_from(cmd.iter());
         let result = validate_args(&args);
         assert!(result.is_err());
@@ -332,7 +332,7 @@ mod tests {
     #[test]
     fn test_bedrock_path_must_exist() {
         let cmd = [
-            "arnis",
+            "minecraft-map-factory",
             "--bedrock",
             "--output-dir",
             "/nonexistent/path",
@@ -350,23 +350,23 @@ mod tests {
         let tmpdir = tempfile::tempdir().unwrap();
         let tmp_path = tmpdir.path().to_str().unwrap();
 
-        let cmd = ["arnis"];
+        let cmd = ["minecraft-map-factory"];
         assert!(Args::try_parse_from(cmd.iter()).is_err());
 
-        let cmd = ["arnis", "--output-dir", tmp_path, "--bbox", "1,2,3,4"];
+        let cmd = ["minecraft-map-factory", "--output-dir", tmp_path, "--bbox", "1,2,3,4"];
         let args = Args::try_parse_from(cmd.iter()).unwrap();
         assert!(validate_args(&args).is_ok());
 
         // Verify --path still works as a deprecated alias
-        let cmd = ["arnis", "--path", tmp_path, "--bbox", "1,2,3,4"];
+        let cmd = ["minecraft-map-factory", "--path", tmp_path, "--bbox", "1,2,3,4"];
         let args = Args::try_parse_from(cmd.iter()).unwrap();
         assert!(validate_args(&args).is_ok());
 
-        let cmd = ["arnis", "--output-dir", tmp_path, "--file", ""];
+        let cmd = ["minecraft-map-factory", "--output-dir", tmp_path, "--file", ""];
         assert!(Args::try_parse_from(cmd.iter()).is_err());
 
         // The --gui flag isn't used here, ugh. TODO clean up main.rs and its argparse usage.
-        // let cmd = ["arnis", "--gui"];
+        // let cmd = ["minecraft-map-factory", "--gui"];
         // assert!(Args::try_parse_from(cmd.iter()).is_ok());
     }
 
@@ -377,7 +377,7 @@ mod tests {
 
         // Only spawn-lat without spawn-lng should fail validation
         let cmd = [
-            "arnis",
+            "minecraft-map-factory",
             "--output-dir",
             tmp_path,
             "--bbox",
@@ -390,7 +390,7 @@ mod tests {
 
         // Only spawn-lng without spawn-lat should fail validation
         let cmd = [
-            "arnis",
+            "minecraft-map-factory",
             "--output-dir",
             tmp_path,
             "--bbox",
@@ -403,7 +403,7 @@ mod tests {
 
         // Both provided and within bbox should pass
         let cmd = [
-            "arnis",
+            "minecraft-map-factory",
             "--output-dir",
             tmp_path,
             "--bbox",
@@ -418,7 +418,7 @@ mod tests {
 
         // Spawn point outside bbox should fail
         let cmd = [
-            "arnis",
+            "minecraft-map-factory",
             "--output-dir",
             tmp_path,
             "--bbox",

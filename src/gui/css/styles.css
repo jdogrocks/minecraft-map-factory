@@ -48,7 +48,7 @@ p {
   max-height: 600px;
 }
 
-.logo.arnis:hover {
+.logo.mmf:hover {
   filter: drop-shadow(0 0 0.8em rgba(179, 179, 179, 0.5));
 }
 
@@ -997,7 +997,7 @@ button:hover {
 }
 
 /* Logo Animation */
-#arnis-logo {
+#mmf-logo {
   width: 30%;
   height: auto;
   opacity: 0;

@@ -84,7 +84,7 @@ pub fn render_world_map(
     });
 
     // Save the image
-    let output_path = world_dir.join("arnis_world_map.png");
+    let output_path = world_dir.join("world_map.png");
     img.into_inner()
         .unwrap()
         .save(&output_path)

@@ -768,14 +768,14 @@ impl BedrockWriter {
             const BP_HEADER_UUID: &str = "a7f3b2e0-8c4d-4e92-9b1a-3d7f5c8e4a61";
 
             writer.add_directory("behavior_packs/", options)?;
-            writer.add_directory("behavior_packs/arnis_tall/", options)?;
-            writer.add_directory("behavior_packs/arnis_tall/dimensions/", options)?;
+            writer.add_directory("behavior_packs/mmf_tall/", options)?;
+            writer.add_directory("behavior_packs/mmf_tall/dimensions/", options)?;
 
-            writer.start_file("behavior_packs/arnis_tall/manifest.json", options)?;
+            writer.start_file("behavior_packs/mmf_tall/manifest.json", options)?;
             writer.write_all(BP_MANIFEST)?;
 
             writer.start_file(
-                "behavior_packs/arnis_tall/dimensions/overworld.json",
+                "behavior_packs/mmf_tall/dimensions/overworld.json",
                 options,
             )?;
             writer.write_all(BP_OVERWORLD)?;
@@ -1380,18 +1380,18 @@ mod tests {
             "missing world_behavior_packs.json: {entries:?}"
         );
         assert!(
-            entries.contains(&"behavior_packs/arnis_tall/manifest.json".to_string()),
+            entries.contains(&"behavior_packs/mmf_tall/manifest.json".to_string()),
             "missing BP manifest: {entries:?}"
         );
         assert!(
-            entries.contains(&"behavior_packs/arnis_tall/dimensions/overworld.json".to_string()),
+            entries.contains(&"behavior_packs/mmf_tall/dimensions/overworld.json".to_string()),
             "missing BP overworld.json: {entries:?}"
         );
 
         // Pack won't load if header.uuid and pack_id drift apart.
         let manifest_bytes = {
             let mut f = archive
-                .by_name("behavior_packs/arnis_tall/manifest.json")
+                .by_name("behavior_packs/mmf_tall/manifest.json")
                 .expect("open manifest");
             let mut buf = Vec::new();
             std::io::Read::read_to_end(&mut f, &mut buf).expect("read manifest");

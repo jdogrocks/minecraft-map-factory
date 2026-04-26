@@ -10,7 +10,7 @@ pub struct PipelineConfig {
     /// Output directory for generated maps.
     pub output_dir: PathBuf,
 
-    /// Path to the arnis binary.
+    /// Path to the map generator binary.
     #[serde(default = "default_arnis_path")]
     pub arnis_binary: PathBuf,
 
@@ -161,7 +161,7 @@ impl Default for TuningConfig {
 }
 
 fn default_arnis_path() -> PathBuf {
-    PathBuf::from("arnis")
+    PathBuf::from("minecraft-map-factory")
 }
 
 fn default_max_concurrency() -> usize {

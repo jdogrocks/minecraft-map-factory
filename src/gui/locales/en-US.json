@@ -13,7 +13,7 @@
   "floodfill_timeout": "Floodfill Timeout (sec)",
   "ground_level": "Ground Level",
   "customization_settings": "Settings",
-  "footer_text": "© {year} Arnis v{version} by louis-e",
+  "footer_text": "© {year} MMF v{version} by louis-e",
   "new_version_available": "There's a new version available! Click here to download it.",
   "minecraft_directory_not_found": "Minecraft directory not found",
   "world_in_use": "The selected world is currently in use",

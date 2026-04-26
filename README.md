@@ -1,6 +1,6 @@
 # Minecraft Map Factory
 
-Autonomous pipeline for generating real-world Minecraft Java Edition (1.17+) and Bedrock Edition maps from geographic data. Built on [Arnis](https://github.com/louis-e/arnis), Minecraft Map Factory adds a multi-stage pipeline that schedules, generates, validates, and publishes maps at scale.
+Autonomous pipeline for generating real-world Minecraft Java Edition (1.17+) and Bedrock Edition maps from geographic data. Originally derived from [Arnis](https://github.com/louis-e/arnis), Minecraft Map Factory adds a multi-stage pipeline that schedules, generates, validates, and publishes maps at scale.
 
 ## Features
 
@@ -16,7 +16,7 @@ Autonomous pipeline for generating real-world Minecraft Java Edition (1.17+) and
 ### Prerequisites
 
 - Rust 1.75+ (2021 edition)
-- A built `arnis` binary (the core map generator)
+- A built `minecraft-map-factory` binary (the core map generator)
 
 ### Build
 

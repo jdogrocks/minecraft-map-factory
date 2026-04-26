@@ -12,12 +12,12 @@ jobs:
         include:
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            binary_name: arnis.exe
-            asset_name: arnis-windows-x64.exe
+            binary_name: minecraft-map-factory.exe
+            asset_name: mmf-windows-x64.exe
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            binary_name: arnis
-            asset_name: arnis-linux-x64
+            binary_name: minecraft-map-factory
+            asset_name: mmf-linux-x64
 
     runs-on: ${{ matrix.os }}
 
@@ -74,7 +74,7 @@ jobs:
           path: ./builds/linux
 
       - name: Make Linux binary executable
-        run: chmod +x ./builds/linux/arnis
+        run: chmod +x ./builds/linux/minecraft-map-factory
 
       - name: Create Pre-release on GitHub
         uses: ncipollo/release-action@v1
@@ -86,7 +86,7 @@ jobs:
           prerelease: true
           makeLatest: false
           files: |
-            builds/windows/arnis.exe
-            builds/linux/arnis
+            builds/windows/minecraft-map-factory.exe
+            builds/linux/minecraft-map-factory
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
