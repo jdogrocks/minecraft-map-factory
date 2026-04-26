@@ -46,7 +46,7 @@ minecraft-map-factory-pipeline --config pipeline.toml --dry-run
 minecraft-map-factory-pipeline --config pipeline.toml --json-logs
 ```
 
-See [docs/pipeline-operations.md](docs/pipeline-operations.md) for full pipeline operations documentation.
+See [docs/pipeline-operations.md](docs/pipeline-operations.md) for full pipeline operations documentation and [docs/architecture.md](docs/architecture.md) for the system architecture overview.
 
 ### Run the GUI (Arnis)
 
@@ -67,7 +67,8 @@ cargo run --no-default-features -- \
 minecraft-map-factory/
   src/              # Arnis core -- map generation engine
   pipeline/         # Autonomous pipeline (scheduler, generator, validator, publisher)
-  docs/             # Operations documentation
+  docs/             # Architecture and operations documentation
+  marketing/        # Map request templates and output format guides
   assets/           # GUI and documentation assets
   tests/            # Integration tests
 ```
