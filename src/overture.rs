@@ -191,7 +191,7 @@ fn fetch_overture_buildings_inner(
         .user_agent(concat!(
             "Arnis/",
             env!("CARGO_PKG_VERSION"),
-            " (+https://github.com/louis-e/arnis)"
+            " (+https://github.com/jdogrocks/minecraft-map-factory)"
         ))
         .build()?;
 

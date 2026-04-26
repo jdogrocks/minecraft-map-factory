@@ -9,8 +9,6 @@
 //! areas. We use HTTP Range requests to read only the portions we need, avoiding
 //! downloading the full ~500MB tiles.
 
-#[cfg(feature = "gui")]
-use crate::telemetry::{send_log, LogLevel};
 use crate::{coordinate_system::geographic::LLBBox, progress::emit_gui_progress_update};
 use flate2::read::DeflateDecoder;
 use rayon::prelude::*;
@@ -198,11 +196,6 @@ pub fn fetch_land_cover_data(
     let has_data = grid.iter().any(|row| row.iter().any(|&v| v != 0));
     if !has_data {
         eprintln!("Warning: No land cover data received for this area");
-        #[cfg(feature = "gui")]
-        send_log(
-            LogLevel::Warning,
-            "ESA WorldCover returned no data for the requested bbox (generation proceeding without land cover).",
-        );
         return None;
     }
 

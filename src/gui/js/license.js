@@ -48,10 +48,6 @@ Land cover classification data provided by the <a href="https://esa-worldcover.o
 Bedrock Edition world format support uses the <a href="https://github.com/bedrock-crustaceans/bedrock-rs" style="color: inherit;" target="_blank">bedrock-rs</a> library, licensed under the Apache License 2.0.
 <br><br>
 
-<p><b>Privacy Policy:</b></p>
-If you consent to telemetry data collection, please review our Privacy Policy at:
-<a href="https://arnismc.com/privacypolicy.html" style="color: inherit;" target="_blank">https://arnismc.com/privacypolicy.html</a>.
-
 <p>NOT AN OFFICIAL MINECRAFT PRODUCT. NOT APPROVED BY OR ASSOCIATED WITH MOJANG OR MICROSOFT.</p>
 
 <p><b>License:</b></p>
