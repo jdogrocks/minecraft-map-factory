@@ -159,3 +159,38 @@ minecraft-map-factory-pipeline \
   --config pipeline.toml \
   --json-logs 2>&1 | tee pipeline.log
 ```
+
+## Test Run Results
+
+First validated pipeline run on 2026-04-26.
+
+### Location
+
+**Times Square, NYC** (small tier)
+- Bounding box: `40.7565, -73.9882, 40.7600, -73.9842`
+- State: NY
+
+### Configuration
+
+- `max_concurrency = 1`
+- `validate_structure = true`
+- `arnis_binary = ../target/release/minecraft-map-factory` (release build)
+
+### Results
+
+| Metric | Value |
+|--------|-------|
+| Generation time | 9.6 seconds |
+| Region files | 1 (`r.0.0.mca`) |
+| Output size | 7.4 MB |
+| Validation | Passed (region count, size, Anvil structure) |
+| Success rate | 100% (1/1) |
+| Retries | 0 |
+
+Output published to `output/published/Times_Square__NYC/MMF World 1/region/r.0.0.mca`.
+
+### Observations
+
+- The `max_memory_mb` setting checks **total system memory**, not pipeline-specific RSS. On machines with less than 8 GB RAM (or high baseline memory usage), the default `4096` threshold may block the pipeline before it starts. Raise this value or lower the threshold to match available headroom.
+- The generator creates output under an `MMF World 1/` subdirectory inside the job output dir, so the Anvil region files are at `{output}/MMF World 1/region/*.mca` rather than directly under `{output}/region/`.
+- Small-tier locations (< 0.01 degree bbox) complete in under 10 seconds on Apple Silicon (M-series).

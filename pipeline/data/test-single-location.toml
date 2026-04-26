@@ -1,0 +1,9 @@
+# Single location for pipeline test run (MIN-35)
+# Times Square, NYC — small tier for quick validation
+
+[[location]]
+name = "Times Square, NYC"
+state = "NY"
+bbox = [40.7565, -73.9882, 40.7600, -73.9842]
+tier = "small"
+tags = ["landmark", "urban"]
