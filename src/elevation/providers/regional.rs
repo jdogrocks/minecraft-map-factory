@@ -69,7 +69,7 @@ impl ElevationProvider for JapanGsi {
             .user_agent(concat!(
                 "Arnis/",
                 env!("CARGO_PKG_VERSION"),
-                " (+https://github.com/louis-e/arnis)"
+                " (+https://github.com/jdogrocks/minecraft-map-factory)"
             ))
             .timeout(std::time::Duration::from_secs(120))
             .build()?;
@@ -233,7 +233,7 @@ pub(super) fn fetch_or_cache(
                 .user_agent(concat!(
                     "Arnis/",
                     env!("CARGO_PKG_VERSION"),
-                    " (+https://github.com/louis-e/arnis)"
+                    " (+https://github.com/jdogrocks/minecraft-map-factory)"
                 ))
                 .timeout(std::time::Duration::from_secs(180))
                 .build()?;

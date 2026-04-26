@@ -1,8 +1,6 @@
 use crate::coordinate_system::geographic::LLBBox;
 use crate::elevation::cache::get_cache_dir;
 use crate::elevation::provider::{ElevationProvider, RawElevationGrid};
-#[cfg(feature = "gui")]
-use crate::telemetry::{send_log, LogLevel};
 use rayon::prelude::*;
 use std::path::Path;
 
@@ -63,7 +61,7 @@ impl ElevationProvider for AwsTerrain {
             .user_agent(concat!(
                 "Arnis/",
                 env!("CARGO_PKG_VERSION"),
-                " (+https://github.com/louis-e/arnis)"
+                " (+https://github.com/jdogrocks/minecraft-map-factory)"
             ))
             .build()?;
 
@@ -333,19 +331,9 @@ fn fetch_or_load_tile(
                     tile_path.display(),
                     e
                 );
-                #[cfg(feature = "gui")]
-                send_log(
-                    LogLevel::Warning,
-                    "Cached tile is corrupted or invalid. Re-downloading...",
-                );
 
                 if let Err(e) = std::fs::remove_file(tile_path) {
                     eprintln!("Warning: Failed to remove corrupted tile file: {e}");
-                    #[cfg(feature = "gui")]
-                    send_log(
-                        LogLevel::Warning,
-                        "Failed to remove corrupted tile file during re-download.",
-                    );
                 }
 
                 download_tile(client, tile_x, tile_y, zoom, tile_path)

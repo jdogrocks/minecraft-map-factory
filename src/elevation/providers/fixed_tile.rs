@@ -418,7 +418,7 @@ pub(super) fn fetch_fixed_tile_grid<P: FixedTileProvider>(
         .user_agent(concat!(
             "Arnis/",
             env!("CARGO_PKG_VERSION"),
-            " (+https://github.com/louis-e/arnis)"
+            " (+https://github.com/jdogrocks/minecraft-map-factory)"
         ))
         .timeout(std::time::Duration::from_secs(180))
         .build()

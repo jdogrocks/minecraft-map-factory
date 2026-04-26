@@ -38,7 +38,6 @@ window.addEventListener("DOMContentLoaded", async () => {
   setupProgressListener();
   await initSavePath();
   initSettings();
-  initTelemetryConsent();
   initClearCacheButton();
   initTooltips();
   handleBboxInput();
@@ -47,7 +46,6 @@ window.addEventListener("DOMContentLoaded", async () => {
   updateFormatToggleUI(selectedWorldFormat);
   initFooter();
   initEasterEggs();
-  checkForUpdates();
 });
 
 // Expose language functions to window for use by language-selector.js
@@ -177,30 +175,6 @@ async function initFooter() {
     footerElement.textContent = footerText
       .replace("{year}", currentYear)
       .replace("{version}", version);
-  }
-}
-
-// Function to check for updates and display a notification if available
-async function checkForUpdates() {
-  try {
-    const isUpdateAvailable = await invoke('gui_check_for_updates');
-    if (isUpdateAvailable) {
-      const footer = document.querySelector(".footer");
-      const updateMessage = document.createElement("a");
-      updateMessage.href = "https://github.com/louis-e/arnis/releases";
-      updateMessage.target = "_blank";
-      updateMessage.style.color = "#fecc44";
-      updateMessage.style.marginTop = "-5px";
-      updateMessage.style.fontSize = "0.95em";
-      updateMessage.style.display = "block";
-      updateMessage.style.textDecoration = "none";
-
-      localizeElement(window.localization, { element: updateMessage }, "new_version_available");
-      footer.style.marginTop = "10px";
-      footer.appendChild(updateMessage);
-    }
-  } catch (error) {
-    console.error("Failed to check for updates: ", error);
   }
 }
 
@@ -458,20 +432,6 @@ function initSettings() {
     }
   });
 
-  // Telemetry consent toggle
-  const telemetryToggle = document.getElementById("telemetry-toggle");
-  const telemetryKey = 'telemetry-consent';
-
-  // Load saved telemetry consent
-  const savedConsent = localStorage.getItem(telemetryKey);
-  telemetryToggle.checked = savedConsent === 'true';
-
-  // Handle telemetry consent change
-  telemetryToggle.addEventListener("change", () => {
-    const isEnabled = telemetryToggle.checked;
-    localStorage.setItem(telemetryKey, isEnabled ? 'true' : 'false');
-  });
-
 
   /// License and Credits
   function openLicense() {
@@ -544,48 +504,6 @@ function updateFormatToggleUI(format) {
 // Expose to window for onclick handlers
 window.setWorldFormat = setWorldFormat;
 
-// Telemetry consent (first run only)
-function initTelemetryConsent() {
-  const key = 'telemetry-consent'; // values: 'true' | 'false'
-  const existing = localStorage.getItem(key);
-
-  const modal = document.getElementById('telemetry-modal');
-  if (!modal) return;
-
-  if (existing === null) {
-    // First run: ask for consent
-    modal.style.display = 'flex';
-    modal.style.justifyContent = 'center';
-    modal.style.alignItems = 'center';
-  }
-
-  // Expose handlers
-  window.acceptTelemetry = () => {
-    localStorage.setItem(key, 'true');
-    modal.style.display = 'none';
-    // Update settings toggle to reflect the consent
-    const telemetryToggle = document.getElementById('telemetry-toggle');
-    if (telemetryToggle) {
-      telemetryToggle.checked = true;
-    }
-  };
-
-  window.rejectTelemetry = () => {
-    localStorage.setItem(key, 'false');
-    modal.style.display = 'none';
-    // Update settings toggle to reflect the consent
-    const telemetryToggle = document.getElementById('telemetry-toggle');
-    if (telemetryToggle) {
-      telemetryToggle.checked = false;
-    }
-  };
-
-  // Utility for other scripts to read consent
-  window.getTelemetryConsent = () => {
-    const v = localStorage.getItem(key);
-    return v === null ? null : v === 'true';
-  };
-}
 
 // Wires the "Clear Tile Cache" button in the Application settings panel
 // to the Rust-side `gui_clear_tile_caches` command. User feedback is a
@@ -1153,9 +1071,6 @@ async function startGeneration() {
     // Validate ground_level
     ground_level = isNaN(ground_level) || ground_level < -62 ? -62 : ground_level;
 
-    // Get telemetry consent (defaults to false if not set)
-    const telemetryConsent = window.getTelemetryConsent ? window.getTelemetryConsent() : false;
-
     // Get rotation angle
     var rotationAngle = parseFloat(document.getElementById("rotation-angle-input").value) || 0;
 
@@ -1174,7 +1089,6 @@ async function startGeneration() {
         disableHeightLimit: disable_height_limit,
         isNewWorld: true,
         spawnPoint: spawnPoint,
-        telemetryConsent: telemetryConsent || false,
         worldFormat: selectedWorldFormat,
         rotationAngle: rotationAngle
     });

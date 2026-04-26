@@ -20,4 +20,4 @@ Please tell us what version of Arnis and Minecraft you used, as well as if you a
 If applicable, add screenshots to help explain your problem.
 
 **Additional context**
-Add any other context about the problem here. If you used any more custom settings, please provide them here too. Please provide the log file if possible as well, which can be found at C:\Users\USERNAME\AppData\Local\com.louisdev.arnis\logs
+Add any other context about the problem here. If you used any more custom settings, please provide them here too. Please provide the log file if possible as well, which can be found at C:\Users\USERNAME\AppData\Local\com.jdogrocks.minecraft-map-factory\logs
