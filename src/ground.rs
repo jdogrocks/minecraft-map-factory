@@ -4,8 +4,6 @@ use crate::elevation::compute_grid_dims;
 use crate::elevation_data::{fetch_elevation_data, ElevationData};
 use crate::land_cover::{self, LandCoverData};
 use crate::progress::emit_gui_progress_update;
-#[cfg(feature = "gui")]
-use crate::telemetry::{send_log, LogLevel};
 use colored::Colorize;
 use image::{Rgb, RgbImage};
 
@@ -90,14 +88,6 @@ impl Ground {
             },
             Err(e) => {
                 eprintln!("Failed to fetch elevation data: {}", e);
-                #[cfg(feature = "gui")]
-                {
-                    let short: String = e.to_string().chars().take(200).collect();
-                    send_log(
-                        LogLevel::Warning,
-                        &format!("Elevation unavailable, using flat ground ({short})"),
-                    );
-                }
                 // Graceful fallback: disable elevation and keep provided ground_level.
                 // Land cover we already fetched is discarded since it has no
                 // elevation grid to align against.

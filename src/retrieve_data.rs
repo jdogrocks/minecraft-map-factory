@@ -1,8 +1,6 @@
 use crate::coordinate_system::geographic::LLBBox;
 use crate::osm_parser::OsmData;
 use crate::progress::{emit_gui_error, emit_gui_progress_update, is_running_with_gui};
-#[cfg(feature = "gui")]
-use crate::telemetry::{send_log, LogLevel};
 use colored::Colorize;
 use rand::prelude::SliceRandom;
 use rand::Rng;
@@ -36,7 +34,7 @@ fn download_with_reqwest(
         .user_agent(concat!(
             "Arnis/",
             env!("CARGO_PKG_VERSION"),
-            " (+https://github.com/louis-e/arnis)"
+            " (+https://github.com/jdogrocks/minecraft-map-factory)"
         ))
         .build()?;
 
@@ -131,13 +129,20 @@ pub fn fetch_data_from_overpass(
     println!("{} Fetching data...", "[1/7]".bold());
     emit_gui_progress_update(1.0, "Fetching data...");
 
-    // List of Overpass API servers
-    let arnis_api_server = "https://api.arnismc.com/overpass/api/interpreter";
-    let api_servers: Vec<&str> = vec![
-        "https://overpass-api.de/api/interpreter",
-        "https://lz4.overpass-api.de/api/interpreter",
-        "https://z.overpass-api.de/api/interpreter",
-    ];
+    // List of Overpass API servers (configurable via OVERPASS_API_URL env var)
+    let env_server = std::env::var("OVERPASS_API_URL").ok();
+    let api_servers: Vec<&str> = {
+        let mut servers = Vec::new();
+        if let Some(ref url) = env_server {
+            servers.push(url.as_str());
+        }
+        servers.extend_from_slice(&[
+            "https://overpass-api.de/api/interpreter",
+            "https://lz4.overpass-api.de/api/interpreter",
+            "https://z.overpass-api.de/api/interpreter",
+        ]);
+        servers
+    };
     let fallback_api_servers: Vec<&str> = vec![
         "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
         "https://overpass.private.coffee/api/interpreter",
@@ -214,8 +219,6 @@ pub fn fetch_data_from_overpass(
             probed_server = Some(probe_server);
         }
 
-        request_plan.push((arnis_api_server, ServerKind::Primary));
-
         let mut shuffled_primary_servers = api_servers.clone();
         shuffled_primary_servers.shuffle(&mut rng);
         if let Some(probed_server) = probed_server {
@@ -279,22 +282,6 @@ pub fn fetch_data_from_overpass(
                 }
             }
             // All servers exhausted
-            #[cfg(feature = "gui")]
-            {
-                let err_summary = last_error
-                    .as_ref()
-                    .map(|e| e.to_string().chars().take(120).collect::<String>())
-                    .unwrap_or_else(|| "unknown".to_string());
-                send_log(
-                    LogLevel::Error,
-                    &format!(
-                        "Overpass fetch failed on all {} providers ({}); last error: {}",
-                        attempted_hosts.len(),
-                        attempted_hosts.join(", "),
-                        err_summary,
-                    ),
-                );
-            }
             return Err(last_error.unwrap_or_else(|| "All servers failed".into()));
         };
 
@@ -354,7 +341,7 @@ pub fn fetch_area_name(lat: f64, lon: f64) -> Result<Option<String>, Box<dyn std
         .user_agent(concat!(
             "Arnis/",
             env!("CARGO_PKG_VERSION"),
-            " (+https://github.com/louis-e/arnis)"
+            " (+https://github.com/jdogrocks/minecraft-map-factory)"
         ))
         .build()?;
 
