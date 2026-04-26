@@ -39,9 +39,6 @@ fn get_base_chunk_sections() -> &'static [Section] {
     })
 }
 
-#[cfg(feature = "gui")]
-use crate::telemetry::{send_log, LogLevel};
-
 impl<'a> WorldEditor<'a> {
     /// Creates a region file for the given region coordinates.
     pub(super) fn create_region(
@@ -106,8 +103,6 @@ impl<'a> WorldEditor<'a> {
         // Save metadata with error handling
         if let Err(e) = self.save_metadata() {
             eprintln!("Failed to save world metadata: {}", e);
-            #[cfg(feature = "gui")]
-            send_log(LogLevel::Warning, "Failed to save world metadata.");
             // Continue with world saving even if metadata fails
         }
 

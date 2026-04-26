@@ -39,8 +39,6 @@ use std::sync::Arc;
 
 #[cfg(feature = "gui")]
 use crate::progress::emit_gui_error;
-#[cfg(feature = "gui")]
-use crate::telemetry::{send_log, LogLevel};
 
 /// Walks the error chain to determine whether a save failure was caused by
 /// insufficient disk space.
@@ -1065,10 +1063,7 @@ impl<'a> WorldEditor<'a> {
                     };
                     eprintln!("{}", user_msg);
                     #[cfg(feature = "gui")]
-                    {
-                        send_log(LogLevel::Error, &user_msg);
-                        emit_gui_error(&user_msg);
-                    }
+                    emit_gui_error(&user_msg);
                     return Err(e);
                 }
             }
@@ -1087,11 +1082,6 @@ impl<'a> WorldEditor<'a> {
         {
             if let Err(error) = self.save_bedrock_internal() {
                 eprintln!("Failed to save Bedrock world: {error}");
-                #[cfg(feature = "gui")]
-                send_log(
-                    LogLevel::Error,
-                    &format!("Failed to save Bedrock world: {error}"),
-                );
             }
         }
 
@@ -1099,11 +1089,6 @@ impl<'a> WorldEditor<'a> {
         {
             eprintln!(
                 "Bedrock output requested but the 'bedrock' feature is not enabled at build time."
-            );
-            #[cfg(feature = "gui")]
-            send_log(
-                LogLevel::Error,
-                "Bedrock output requested but the 'bedrock' feature is not enabled at build time.",
             );
         }
     }

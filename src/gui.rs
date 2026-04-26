@@ -9,8 +9,7 @@ use crate::osm_parser;
 use crate::overture;
 use crate::progress::{self, emit_gui_progress_update};
 use crate::retrieve_data;
-use crate::telemetry::{self, send_log, LogLevel};
-use crate::version_check;
+use crate::telemetry;
 use crate::world_editor::WorldFormat;
 use colored::Colorize;
 use fastnbt::Value;
@@ -149,7 +148,6 @@ pub fn run_gui() {
             gui_pick_save_directory,
             gui_start_generation,
             gui_get_version,
-            gui_check_for_updates,
             gui_clear_tile_caches,
             gui_get_world_map_data,
             gui_show_in_folder
@@ -360,11 +358,6 @@ fn add_localized_world_name(world_path: PathBuf, bbox: &LLBBox) -> PathBuf {
                                         Err(e) => {
                                             eprintln!(
                                                 "Failed to update level.dat with area name: {e}"
-                                            );
-                                            #[cfg(feature = "gui")]
-                                            send_log(
-                                                LogLevel::Warning,
-                                                "Failed to update level.dat with area name",
                                             );
                                         }
                                     }
@@ -608,14 +601,6 @@ fn gui_get_version() -> String {
     env!("CARGO_PKG_VERSION").to_string()
 }
 
-#[tauri::command]
-fn gui_check_for_updates() -> Result<bool, String> {
-    match version_check::check_for_updates() {
-        Ok(is_newer) => Ok(is_newer),
-        Err(e) => Err(format!("Error checking for updates: {e}")),
-    }
-}
-
 /// Wipe both the elevation-tile and ESA-land-cover on-disk caches, so
 /// subsequent generations re-download from the upstream providers. This
 /// is what the "Clean tile cache" button in the GUI's Application
@@ -803,18 +788,11 @@ fn gui_start_generation(
     disable_height_limit: bool,
     is_new_world: bool,
     spawn_point: Option<(f64, f64)>,
-    telemetry_consent: bool,
     world_format: String,
     rotation_angle: f64,
 ) -> Result<(), String> {
     use progress::emit_gui_error;
     use LLBBox;
-
-    // Store telemetry consent for crash reporting
-    telemetry::set_telemetry_consent(telemetry_consent);
-
-    // Send generation click telemetry
-    telemetry::send_generation_click();
 
     // For new Java worlds, set the spawn point in level.dat
     // Only update player position for Java worlds - Bedrock worlds don't have a pre-existing

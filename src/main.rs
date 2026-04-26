@@ -36,7 +36,6 @@ mod retrieve_data;
 mod telemetry;
 #[cfg(test)]
 mod test_utilities;
-mod version_check;
 mod world_editor;
 mod world_utils;
 
@@ -90,15 +89,6 @@ fn run_cli() {
         version,
         repository.bright_white().bold()
     );
-
-    // Check for updates
-    if let Err(e) = version_check::check_for_updates() {
-        eprintln!(
-            "{}: {}",
-            "Error checking for version updates".red().bold(),
-            e
-        );
-    }
 
     // Parse input arguments
     let args: Args = Args::parse();

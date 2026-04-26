@@ -12,9 +12,9 @@
         toml = lib.importTOML ./Cargo.toml;
       in
       {
-        default = self.packages.${system}.arnis;
-        arnis = pkgs.rustPlatform.buildRustPackage {
-          pname = "arnis";
+        default = self.packages.${system}.minecraft-map-factory;
+        minecraft-map-factory = pkgs.rustPlatform.buildRustPackage {
+          pname = "minecraft-map-factory";
           version = toml.package.version;
 
           src = ./.;
@@ -49,15 +49,15 @@
             homepage = toml.package.homepage;
             license = lib.licenses.asl20;
             maintainers = [ ];
-            mainProgram = "arnis";
+            mainProgram = "arnis";  # binary name unchanged
           };
         };
       });
     apps = nixpkgs.lib.genAttrs nixpkgs.lib.systems.flakeExposed (system: {
-      default = self.apps.${system}.arnis;
-      arnis = {
+      default = self.apps.${system}.minecraft-map-factory;
+      minecraft-map-factory = {
         type = "app";
-        program = "${self.packages.${system}.arnis}/bin/arnis";
+        program = "${self.packages.${system}.minecraft-map-factory}/bin/arnis";
       };
     });
   };

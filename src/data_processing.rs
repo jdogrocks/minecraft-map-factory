@@ -8,8 +8,6 @@ use crate::ground_generation;
 use crate::map_renderer;
 use crate::osm_parser::{ProcessedElement, ProcessedMemberRole};
 use crate::progress::{emit_gui_progress_update, emit_map_preview_ready, emit_show_in_folder};
-#[cfg(feature = "gui")]
-use crate::telemetry::{send_log, LogLevel};
 use crate::world_editor::{WorldEditor, WorldFormat};
 use colored::Colorize;
 use indicatif::{ProgressBar, ProgressStyle};
@@ -411,8 +409,6 @@ pub fn generate_world_with_options(
             ) {
                 let warning_msg = format!("Failed to update spawn point Y coordinate: {}", e);
                 eprintln!("Warning: {}", warning_msg);
-                #[cfg(feature = "gui")]
-                send_log(LogLevel::Warning, &warning_msg);
             }
         }
     }
