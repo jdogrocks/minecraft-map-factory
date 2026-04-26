@@ -1,0 +1,57 @@
+name: Scheduled Pipeline
+
+on:
+  schedule:
+    - cron: '1 0 * * *'
+    - cron: '1 12 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: scheduled-pipeline
+  cancel-in-progress: false
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v6
+
+    - name: Set up Rust
+      uses: dtolnay/rust-toolchain@v1
+      with:
+        toolchain: stable
+
+    - name: Install Linux dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y software-properties-common
+        sudo add-apt-repository universe
+        echo "deb http://archive.ubuntu.com/ubuntu $(lsb_release -sc)-backports main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list
+        sudo apt update
+        sudo apt install -y libgtk-3-dev build-essential pkg-config libglib2.0-dev libsoup-3.0-dev libwebkit2gtk-4.1-dev
+        echo "PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig" >> $GITHUB_ENV
+
+    - uses: Swatinem/rust-cache@v2
+
+    - name: Build pipeline (release)
+      run: cargo build --release -p minecraft-map-factory-pipeline
+
+    - name: Run pipeline
+      run: ./target/release/minecraft-map-factory-pipeline --config pipeline/pipeline.toml --output-dir pipeline/output --json-logs
+
+    - name: Upload pipeline output
+      if: success()
+      uses: actions/upload-artifact@v4
+      with:
+        name: pipeline-output
+        path: pipeline/output/
+        retention-days: 30
+
+    - name: Upload pipeline logs on failure
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: pipeline-failure-logs
+        path: pipeline/output/
+        retention-days: 30
