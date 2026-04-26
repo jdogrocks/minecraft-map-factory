@@ -13,7 +13,7 @@ use std::io::{self, BufReader, Cursor, Write};
 use std::process::Command;
 use std::time::Duration;
 
-/// Extract the host portion of a URL for telemetry
+/// Extract the host portion of a URL for error reporting
 fn url_host(url: &str) -> String {
     let after_scheme = url.split("://").nth(1).unwrap_or(url);
     after_scheme
