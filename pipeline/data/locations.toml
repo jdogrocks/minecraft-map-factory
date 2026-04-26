@@ -1,5 +1,5 @@
 # Curated US City & Landmark Location Database
-# Each location defines a bounding box for arnis map generation.
+# Each location defines a bounding box for map generation.
 # Tiers: small (< 0.01 deg), medium (0.01-0.05 deg), large (> 0.05 deg)
 
 # === Small Tier (Quick Generation) ===

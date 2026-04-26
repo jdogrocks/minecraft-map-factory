@@ -336,7 +336,7 @@ fn main() {
     // Only run CLI mode if the user supplied args.
     #[cfg(feature = "gui")]
     {
-        let gui_mode = std::env::args().len() == 1; // Just "arnis" with no args
+        let gui_mode = std::env::args().len() == 1; // No CLI args = GUI mode
         if gui_mode {
             gui::run_gui();
         }

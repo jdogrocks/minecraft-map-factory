@@ -107,7 +107,7 @@ impl LocationDatabase {
         self.locations.len()
     }
 
-    /// Returns the bbox string formatted for the arnis CLI.
+    /// Returns the bbox string formatted for the map generator CLI.
     pub fn bbox_string(location: &Location) -> String {
         format!(
             "{},{},{},{}",

@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
-Name=Arnis
-Comment=Generate cities from real life in Minecraft
+Name=Minecraft Map Factory
+Comment=Generate real-world locations in Minecraft
 Comment[lt]=Sugeneruokite tikrovės miestus „Minecraft“ žaidime
 Comment[de]=Generiere echte Städte in Minecraft
 Comment[fr]=Générez des villes réelles dans Minecraft
@@ -9,7 +9,7 @@ Comment[es]=Genera ciudades reales en Minecraft
 Comment[pt]=Gere cidades reais no Minecraft
 Comment[zh_CN]=在 Minecraft 中生成现实城市
 Icon=icon
-Exec=arnis
+Exec=minecraft-map-factory
 Categories=Game;Education;Geoscience
 Keywords=OSM;OpenStreetMap;Minecraft
-StartupWMClass=arnis
+StartupWMClass=minecraft-map-factory

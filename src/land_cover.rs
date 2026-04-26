@@ -20,7 +20,7 @@ use std::path::{Path, PathBuf};
 const ESA_BASE_URL: &str = "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map";
 
 /// Cache directory for land cover data
-const LAND_COVER_CACHE_DIR: &str = "arnis-landcover-cache";
+const LAND_COVER_CACHE_DIR: &str = "mmf-landcover-cache";
 
 /// ESA tile size in degrees (each tile covers a 3x3 degree area)
 const ESA_TILE_DEGREES: f64 = 3.0;
