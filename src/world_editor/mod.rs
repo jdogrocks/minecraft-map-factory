@@ -128,7 +128,7 @@ pub struct WorldEditor<'a> {
     /// Uses FNV hashing (not SipHash): `get_ground_level` sits on a hot
     /// path (called per-block during placement), so the hash cost matters.
     road_surface_overrides: FnvHashMap<(i32, i32), i32>,
-    /// Optional level name for Bedrock worlds (e.g., "Arnis World: New York City")
+    /// Optional level name for Bedrock worlds (e.g., "MMF World: New York City")
     #[cfg(feature = "bedrock")]
     bedrock_level_name: Option<String>,
     /// Optional spawn point for Bedrock worlds (x, z coordinates)
@@ -1100,7 +1100,7 @@ impl<'a> WorldEditor<'a> {
             self.world_dir
                 .file_stem()
                 .and_then(|s| s.to_str())
-                .unwrap_or("Arnis World")
+                .unwrap_or("MMF World")
                 .to_string()
         });
 

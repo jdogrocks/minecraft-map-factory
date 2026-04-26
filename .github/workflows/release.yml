@@ -1,4 +1,4 @@
-name: Build and Release Arnis
+name: Build and Release
 
 on:
   release:
@@ -11,20 +11,20 @@ jobs:
         include:
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            binary_name: arnis.exe
-            asset_name: arnis-windows.exe
+            binary_name: minecraft-map-factory.exe
+            asset_name: mmf-windows.exe
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            binary_name: arnis
-            asset_name: arnis-linux
+            binary_name: minecraft-map-factory
+            asset_name: mmf-linux
           - os: macos-15-intel  # Intel runner for x86_64 builds
             target: x86_64-apple-darwin
-            binary_name: arnis
-            asset_name: arnis-mac-intel
+            binary_name: minecraft-map-factory
+            asset_name: mmf-mac-intel
           - os: macos-latest  # ARM64 runner for ARM64 builds
             target: aarch64-apple-darwin
-            binary_name: arnis
-            asset_name: arnis-mac-arm64
+            binary_name: minecraft-map-factory
+            asset_name: mmf-mac-arm64
 
     runs-on: ${{ matrix.os }}
 
@@ -87,9 +87,9 @@ jobs:
       if: matrix.os == 'windows-latest'
       run: |
         $password = ConvertTo-SecureString -String $env:WINDOWS_CERT_PASSWORD -Force -AsPlainText
-        $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject 'CN=Arnis' -CertStoreLocation Cert:\CurrentUser\My -NotAfter (Get-Date).AddYears(5)
-        Export-PfxCertificate -Cert $cert -FilePath arnis-cert.pfx -Password $password
-        & $env:signtool sign /f arnis-cert.pfx /p $env:WINDOWS_CERT_PASSWORD /t http://timestamp.digicert.com target/release/${{ matrix.asset_name }}
+        $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject 'CN=Minecraft Map Factory' -CertStoreLocation Cert:\CurrentUser\My -NotAfter (Get-Date).AddYears(5)
+        Export-PfxCertificate -Cert $cert -FilePath mmf-cert.pfx -Password $password
+        & $env:signtool sign /f mmf-cert.pfx /p $env:WINDOWS_CERT_PASSWORD /t http://timestamp.digicert.com target/release/${{ matrix.asset_name }}
       env:
         WINDOWS_CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
       shell: powershell
@@ -118,20 +118,20 @@ jobs:
 
     - name: Extract Intel and ARM64 binaries
       run: |
-        tar -xzf ./intel/arnis-mac-intel.tar.gz -C ./intel
-        tar -xzf ./arm64/arnis-mac-arm64.tar.gz -C ./arm64
+        tar -xzf ./intel/mmf-mac-intel.tar.gz -C ./intel
+        tar -xzf ./arm64/mmf-mac-arm64.tar.gz -C ./arm64
 
     - name: Create universal binary
       run: |
-        lipo -create -output arnis-mac-universal ./intel/arnis-mac-intel ./arm64/arnis-mac-arm64
-        chmod +x arnis-mac-universal
-        tar -czf arnis-mac-universal.tar.gz arnis-mac-universal
+        lipo -create -output mmf-mac-universal ./intel/mmf-mac-intel ./arm64/mmf-mac-arm64
+        chmod +x mmf-mac-universal
+        tar -czf mmf-mac-universal.tar.gz mmf-mac-universal
 
     - name: Upload universal binary
       uses: actions/upload-artifact@v7
       with:
         name: macos-universal-build
-        path: arnis-mac-universal.tar.gz
+        path: mmf-mac-universal.tar.gz
 
   release:
     needs: [build, create-universal-macos]
@@ -162,8 +162,8 @@ jobs:
       uses: softprops/action-gh-release@v2
       with:
         files: |
-          builds/windows/arnis-windows.exe
-          builds/linux/arnis-linux.tar.gz
-          builds/macos/arnis-mac-universal.tar.gz
+          builds/windows/mmf-windows.exe
+          builds/linux/mmf-linux.tar.gz
+          builds/macos/mmf-mac-universal.tar.gz
       env:
         GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}

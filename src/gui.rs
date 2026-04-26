@@ -64,7 +64,7 @@ impl Drop for SessionLock {
 
 /// Removes a freshly created Java world directory. Called whenever generation
 /// bails out before producing anything useful, so the user isn't left with a
-/// growing pile of empty "Arnis World N" folders.
+/// growing pile of empty "MMF World N" folders.
 fn remove_new_java_world(path: &Path) {
     if path.exists() {
         if let Err(e) = fs::remove_dir_all(path) {
@@ -134,7 +134,7 @@ pub fn run_gui() {
                 .level(LevelFilter::Info)
                 .targets([
                     Target::new(TargetKind::LogDir {
-                        file_name: Some("arnis".into()),
+                        file_name: Some("minecraft-map-factory".into()),
                     }),
                     Target::new(TargetKind::Stdout),
                 ])
@@ -298,8 +298,8 @@ fn add_localized_world_name(world_path: PathBuf, bbox: &LLBBox) -> PathBuf {
         return world_path;
     };
 
-    // Only modify if it's an Arnis world and doesn't already have an area name
-    if !current_name.starts_with("Arnis World ") || current_name.contains(": ") {
+    // Only modify if it's an MMF world and doesn't already have an area name
+    if !current_name.starts_with("MMF World ") || current_name.contains(": ") {
         return world_path;
     }
 
@@ -651,7 +651,7 @@ fn gui_clear_tile_caches() -> Result<String, String> {
 #[tauri::command]
 fn gui_get_world_map_data(world_path: String) -> Result<Option<WorldMapData>, String> {
     let world_dir = PathBuf::from(&world_path);
-    let map_path = world_dir.join("arnis_world_map.png");
+    let map_path = world_dir.join("world_map.png");
     let metadata_path = world_dir.join("metadata.json");
 
     // Check if both files exist

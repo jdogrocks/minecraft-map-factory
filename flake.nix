@@ -45,11 +45,11 @@
           ];
 
           meta = {
-            description = "Generate any location from the real world in Minecraft Java Edition with a high level of detail.";
+            description = "Generate real-world locations in Minecraft Java and Bedrock Edition.";
             homepage = toml.package.homepage;
             license = lib.licenses.asl20;
             maintainers = [ ];
-            mainProgram = "arnis";  # binary name unchanged
+            mainProgram = "minecraft-map-factory";
           };
         };
       });
@@ -57,7 +57,7 @@
       default = self.apps.${system}.minecraft-map-factory;
       minecraft-map-factory = {
         type = "app";
-        program = "${self.packages.${system}.minecraft-map-factory}/bin/arnis";
+        program = "${self.packages.${system}.minecraft-map-factory}/bin/minecraft-map-factory";
       };
     });
   };

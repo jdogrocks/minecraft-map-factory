@@ -17,9 +17,9 @@ jobs:
       matrix:
         include:
           - target: x86_64-apple-darwin
-            asset_name: arnis-mac-intel
+            asset_name: mmf-mac-intel
           - target: aarch64-apple-darwin
-            asset_name: arnis-mac-arm64
+            asset_name: mmf-mac-arm64
 
     runs-on: macos-latest
 
@@ -40,7 +40,7 @@ jobs:
       run: cargo build --release --target ${{ matrix.target }}
 
     - name: Rename binary
-      run: mv target/${{ matrix.target }}/release/arnis target/${{ matrix.target }}/release/${{ matrix.asset_name }}
+      run: mv target/${{ matrix.target }}/release/minecraft-map-factory target/${{ matrix.target }}/release/${{ matrix.asset_name }}
 
     - name: Check binary architecture
       run: |
@@ -77,24 +77,24 @@ jobs:
 
     - name: Create and test universal binary
       run: |
-        lipo -create -output arnis-mac-universal ./intel/arnis-mac-intel ./arm64/arnis-mac-arm64
-        chmod +x arnis-mac-universal
-        
+        lipo -create -output mmf-mac-universal ./intel/mmf-mac-intel ./arm64/mmf-mac-arm64
+        chmod +x mmf-mac-universal
+
         # Verify it's actually universal
         echo "=== Universal Binary Info ==="
-        file arnis-mac-universal
-        lipo -info arnis-mac-universal
-        
+        file mmf-mac-universal
+        lipo -info mmf-mac-universal
+
         # Test execution
         echo "=== Testing Universal Binary ==="
-        ./arnis-mac-universal --help || echo "Universal binary help command completed"
-        
+        ./mmf-mac-universal --help || echo "Universal binary help command completed"
+
         # Check file size (should be sum of both architectures roughly)
         echo "=== File Sizes ==="
-        ls -lah ./intel/arnis-mac-intel ./arm64/arnis-mac-arm64 arnis-mac-universal
+        ls -lah ./intel/mmf-mac-intel ./arm64/mmf-mac-arm64 mmf-mac-universal
 
     - name: Upload universal binary
       uses: actions/upload-artifact@v4
       with:
         name: test-universal-build
-        path: arnis-mac-universal
+        path: mmf-mac-universal

@@ -13,7 +13,7 @@
   "floodfill_timeout": "Limit czasu wypełniania (sek)",
   "ground_level": "Wysokość obszaru",
   "customization_settings": "Ustawienia personalizacji",
-  "footer_text": "© {year} Arnis v{version} autorstwa louis-e",
+  "footer_text": "© {year} MMF v{version} autorstwa louis-e",
   "new_version_available": "Dostępna jest nowa wersja! Kliknij tutaj, aby ją pobrać.",
   "minecraft_directory_not_found": "Nie znaleziono katalogu Minecrafta",
   "world_in_use": "Wybrany świat jest obecnie używany",

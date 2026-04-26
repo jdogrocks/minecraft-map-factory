@@ -1,8 +1,8 @@
 {
   "format_version": 2,
   "header": {
-    "name": "Arnis Extended Build Height",
-    "description": "Extends the Overworld build height for Arnis-generated worlds.",
+    "name": "MMF Extended Build Height",
+    "description": "Extends the Overworld build height for Minecraft Map Factory-generated worlds.",
     "uuid": "a7f3b2e0-8c4d-4e92-9b1a-3d7f5c8e4a61",
     "version": [1, 0, 0],
     "min_engine_version": [1, 21, 40]
