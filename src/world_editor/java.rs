@@ -39,7 +39,6 @@ fn get_base_chunk_sections() -> &'static [Section] {
     })
 }
 
-
 impl<'a> WorldEditor<'a> {
     /// Creates a region file for the given region coordinates.
     pub(super) fn create_region(

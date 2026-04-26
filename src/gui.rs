@@ -601,7 +601,6 @@ fn gui_get_version() -> String {
     env!("CARGO_PKG_VERSION").to_string()
 }
 
-
 /// Wipe both the elevation-tile and ESA-land-cover on-disk caches, so
 /// subsequent generations re-download from the upstream providers. This
 /// is what the "Clean tile cache" button in the GUI's Application
