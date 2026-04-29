@@ -138,9 +138,7 @@ impl Generator {
         for (flag, value) in bool_flags {
             command.arg(format!("{flag}={value}"));
         }
-        command
-            .arg("--entity-theme")
-            .arg(&self.flags.entity_theme);
+        command.arg("--entity-theme").arg(&self.flags.entity_theme);
 
         let output = command
             .stdout(Stdio::piped())

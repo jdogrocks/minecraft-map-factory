@@ -1092,14 +1092,7 @@ pub fn generate_ground_layer(
                     // intact.
                     let fill_y_max = ground_y - 3;
                     if fill_y_max > MIN_Y {
-                        editor.fill_column_absolute(
-                            STONE,
-                            x,
-                            z,
-                            MIN_Y + 1,
-                            fill_y_max,
-                            true,
-                        );
+                        editor.fill_column_absolute(STONE, x, z, MIN_Y + 1, fill_y_max, true);
                     }
                     // Generate a bedrock level at MIN_Y
                     editor.set_block_absolute(BEDROCK, x, MIN_Y, z, None, Some(&[BEDROCK]));
