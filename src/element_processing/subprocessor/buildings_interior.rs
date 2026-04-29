@@ -790,7 +790,9 @@ fn place_bed_in_corner(
     if room.width() < 3 || room.depth() < 3 {
         return false;
     }
-    let candidates: [((i32, i32), (i32, i32), (Block, Block)); 4] = [
+    /// Bed candidate: (head_cell, head→foot offset, (head_block, foot_block)).
+    type BedCandidate = ((i32, i32), (i32, i32), (Block, Block));
+    let candidates: [BedCandidate; 4] = [
         (
             (room.x0 + 1, room.z0 + 1),
             (1, 0),
