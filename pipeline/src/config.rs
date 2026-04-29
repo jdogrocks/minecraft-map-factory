@@ -127,19 +127,81 @@ pub struct RetryConfig {
     pub bbox_shrink_factor: f64,
 }
 
+/// Quality validator configuration. Each block of fields corresponds to one
+/// of the four checks the validator runs (structure/size sanity, ground
+/// continuity, interior populated, surface diversity) plus the legacy
+/// minimums that predate MIN-43.
+///
+/// Defaults are picked to (a) reject the existing 4,202,496-byte
+/// empty-chunks signature, and (b) reject the 20 floating maps already on
+/// disk while leaving room to tighten thresholds empirically once a
+/// terrain-fixed map exists (MIN-41).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ValidationConfig {
+    // ---- Structural sanity (legacy MIN-7 / MIN-29 checks) ----
     /// Minimum number of region files for a valid map.
     #[serde(default = "default_min_region_files")]
     pub min_region_files: usize,
 
-    /// Minimum total map size in bytes.
+    /// Minimum total map size in bytes (sum across `region/*.mca`).
     #[serde(default = "default_min_map_size_bytes")]
     pub min_map_size_bytes: u64,
 
-    /// Whether to validate Anvil region file structure.
+    /// Whether to validate Anvil region file structure (>= 8 KiB header).
     #[serde(default = "default_true")]
     pub validate_structure: bool,
+
+    // ---- Region-file size sanity (MIN-43 #3) ----
+    /// Region file sizes that exactly match this byte count are flagged as
+    /// the "empty chunks" signature with a named failure reason. Default
+    /// 4,202,496 — observed on the 20 rural maps where chunks were
+    /// allocated but not filled with terrain (see MIN-40 diagnostic).
+    #[serde(default = "default_region_empty_signature_bytes")]
+    pub region_empty_signature_bytes: u64,
+
+    /// Minimum bytes per occupied chunk in a region file. The 4,202,496 B
+    /// empty signature works out to ~4,104 B/chunk; a populated map runs
+    /// well above that. Tunable per region area instead of a hardcoded
+    /// total threshold.
+    #[serde(default = "default_region_min_bytes_per_chunk")]
+    pub region_min_bytes_per_chunk: u64,
+
+    // ---- Ground continuity (MIN-43 #1) ----
+    /// Number of (x,z) columns sampled per region for the ground-continuity
+    /// scan. Sampled on a deterministic stride so the same map produces
+    /// the same report on repeated runs.
+    #[serde(default = "default_ground_sample_columns_per_region")]
+    pub ground_sample_columns_per_region: usize,
+
+    /// Bottom of the y-range a sampled column must be ground-filled to.
+    /// Default y=-60 per CTO note (one block above the typical world
+    /// floor of y=-64; gives a small bedrock margin).
+    #[serde(default = "default_ground_y_min")]
+    pub ground_y_min: i32,
+
+    /// Maximum air gaps tolerated below the surface in a sampled column.
+    /// Caves are real, so a small number of air blocks is fine; a column
+    /// that is mostly air below the surface is the floating-buildings
+    /// failure we are trying to catch.
+    #[serde(default = "default_ground_max_air_gap_blocks")]
+    pub ground_max_air_gap_blocks: usize,
+
+    // ---- Interior populated (MIN-43 #2) ----
+    /// Number of chunks sampled across the map for the interior check.
+    #[serde(default = "default_interior_sample_chunks")]
+    pub interior_sample_chunks: usize,
+
+    // ---- Surface diversity (MIN-43 #4) ----
+    /// Minimum distinct surface block types required across sampled
+    /// chunks. A road-stripe-only map has 1–2 (asphalt + air); a real
+    /// map mixes grass/dirt/stone/water/sand and lands well above this.
+    #[serde(default = "default_surface_diversity_min_distinct")]
+    pub surface_diversity_min_distinct: usize,
+
+    /// Number of chunks sampled across the map for the surface-diversity
+    /// check.
+    #[serde(default = "default_surface_diversity_sample_chunks")]
+    pub surface_diversity_sample_chunks: usize,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -192,6 +254,14 @@ impl Default for ValidationConfig {
             min_region_files: default_min_region_files(),
             min_map_size_bytes: default_min_map_size_bytes(),
             validate_structure: true,
+            region_empty_signature_bytes: default_region_empty_signature_bytes(),
+            region_min_bytes_per_chunk: default_region_min_bytes_per_chunk(),
+            ground_sample_columns_per_region: default_ground_sample_columns_per_region(),
+            ground_y_min: default_ground_y_min(),
+            ground_max_air_gap_blocks: default_ground_max_air_gap_blocks(),
+            interior_sample_chunks: default_interior_sample_chunks(),
+            surface_diversity_min_distinct: default_surface_diversity_min_distinct(),
+            surface_diversity_sample_chunks: default_surface_diversity_sample_chunks(),
         }
     }
 }
@@ -253,6 +323,60 @@ fn default_min_region_files() -> usize {
 
 fn default_min_map_size_bytes() -> u64 {
     1024
+}
+
+fn default_region_empty_signature_bytes() -> u64 {
+    // Empirical signature observed across the 20 floating maps on the
+    // mini PC: a region file with mostly empty chunks (just enough
+    // non-air blocks for road/building outlines to allocate the chunks
+    // but no terrain volume below) lands at exactly 4,202,496 B.
+    4_202_496
+}
+
+fn default_region_min_bytes_per_chunk() -> u64 {
+    // 4,202,496 / 1024 chunks = ~4,104 B/chunk. Anything at or below
+    // that floor implies the chunk has no terrain. Default 4,200 B
+    // to leave a little headroom; tighten once we have a fleet of
+    // known-good (terrain-fixed) maps to calibrate against.
+    4_200
+}
+
+fn default_ground_sample_columns_per_region() -> usize {
+    // 64 columns on a deterministic stride covers the region cheaply.
+    // 32×32 chunks × 16×16 columns/chunk = 262,144 columns; 64
+    // samples is a 0.024% sample — cheap enough to run on every map
+    // and dense enough to catch a region-wide ground gap.
+    64
+}
+
+fn default_ground_y_min() -> i32 {
+    // CTO spec: scan from y=-60 up to surface. World floor is y=-64
+    // in 1.18+; the 4-block margin avoids treating bedrock as a
+    // ground gap.
+    -60
+}
+
+fn default_ground_max_air_gap_blocks() -> usize {
+    // Caves and OSM-driven basements are legitimate; a column with a
+    // handful of air blocks between bedrock and surface is fine. The
+    // floating-buildings failure mode is hundreds of blocks of air,
+    // so a generous tolerance here still catches it.
+    16
+}
+
+fn default_interior_sample_chunks() -> usize {
+    32
+}
+
+fn default_surface_diversity_min_distinct() -> usize {
+    // 4 picked as a starting floor: a real map mixes grass/dirt/
+    // stone/water at minimum. Tune empirically once MIN-41 lands a
+    // known-good map and we can sample it.
+    4
+}
+
+fn default_surface_diversity_sample_chunks() -> usize {
+    16
 }
 
 fn default_summary_interval() -> usize {
