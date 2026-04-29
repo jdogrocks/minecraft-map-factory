@@ -27,6 +27,9 @@ mod region_size;
 mod structure;
 mod surface_diversity;
 
+#[cfg(test)]
+mod regression_fixtures;
+
 use crate::config::ValidationConfig;
 use std::path::{Path, PathBuf};
 use tracing::{debug, info, warn};
