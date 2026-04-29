@@ -37,7 +37,7 @@ pub fn check(
     let target_samples = config.interior_sample_chunks.max(1);
     // Spread the sample budget evenly across regions; round up so we
     // always touch every region at least once when sample > 0.
-    let per_region = (target_samples + region_files.len() - 1) / region_files.len();
+    let per_region = target_samples.div_ceil(region_files.len());
     let stride = (1024 / per_region.max(1)).max(1);
 
     let mut sampled_chunks = 0usize;
