@@ -25,7 +25,7 @@ pub fn check(
     }
 
     let target_samples = config.surface_diversity_sample_chunks.max(1);
-    let per_region = (target_samples + region_files.len() - 1) / region_files.len();
+    let per_region = target_samples.div_ceil(region_files.len());
     let stride = (1024 / per_region.max(1)).max(1);
 
     let mut distinct: HashSet<String> = HashSet::new();
