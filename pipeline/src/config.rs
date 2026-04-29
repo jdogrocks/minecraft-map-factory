@@ -33,6 +33,60 @@ pub struct PipelineConfig {
     /// Self-tuning configuration.
     #[serde(default)]
     pub tuning: TuningConfig,
+
+    /// Generator CLI flags.
+    #[serde(default)]
+    pub generator: GeneratorConfig,
+}
+
+/// Flags forwarded to the map generator binary on every invocation.
+///
+/// Keep this in sync with the generator's CLI surface in `src/args.rs`. The
+/// pipeline passes each one explicitly so the generator's own defaults can
+/// never silently change pipeline output (the MIN-40 regression).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GeneratorConfig {
+    /// Enable terrain (DEM-driven elevation).
+    #[serde(default = "default_true")]
+    pub terrain: bool,
+
+    /// Enable ESA WorldCover land-cover classification (forests, water, etc.).
+    /// Requires `terrain = true` to take effect.
+    #[serde(default = "default_true")]
+    pub land_cover: bool,
+
+    /// Enable interior generation for buildings.
+    #[serde(default = "default_true")]
+    pub interior: bool,
+
+    /// Enable entity placement inside buildings.
+    #[serde(default = "default_true")]
+    pub entities: bool,
+
+    /// Entity theme pack (e.g. "default", "fantasy").
+    #[serde(default = "default_entity_theme")]
+    pub entity_theme: String,
+
+    /// Enable roof generation.
+    #[serde(default = "default_true")]
+    pub roof: bool,
+}
+
+impl Default for GeneratorConfig {
+    fn default() -> Self {
+        Self {
+            terrain: true,
+            land_cover: true,
+            interior: true,
+            entities: true,
+            entity_theme: default_entity_theme(),
+            roof: true,
+        }
+    }
+}
+
+fn default_entity_theme() -> String {
+    "default".to_string()
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
