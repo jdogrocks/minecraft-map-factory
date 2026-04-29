@@ -2,7 +2,7 @@ mod retry;
 
 pub use retry::RetryStrategy;
 
-use crate::config::PipelineConfig;
+use crate::config::{GeneratorConfig, PipelineConfig};
 use crate::locations::{Location, LocationDatabase};
 use std::path::PathBuf;
 use std::process::Stdio;
@@ -14,6 +14,7 @@ pub struct Generator {
     arnis_binary: PathBuf,
     retry_strategy: RetryStrategy,
     output_base: PathBuf,
+    flags: GeneratorConfig,
 }
 
 impl Generator {
@@ -22,6 +23,7 @@ impl Generator {
             arnis_binary: config.arnis_binary.clone(),
             retry_strategy: RetryStrategy::new(&config.retry),
             output_base: config.output_dir.clone(),
+            flags: config.generator.clone(),
         }
     }
 
@@ -109,14 +111,36 @@ impl Generator {
         bbox: &str,
         output_dir: &std::path::Path,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let output = Command::new(&self.arnis_binary)
+        let mut command = Command::new(&self.arnis_binary);
+        command
             .arg("--bbox")
             .arg(bbox)
             .arg("--output-dir")
-            .arg(output_dir)
-            .arg("--interior")
-            .arg("--entities")
-            .arg("--terrain")
+            .arg(output_dir);
+
+        // Pass every generator flag explicitly so the generator's own defaults
+        // can't silently change pipeline output (the MIN-40 regression where
+        // bare `--terrain` left land_cover and ground-fill at whatever the
+        // generator's defaults happened to be).
+        //
+        // `--terrain` is a SetTrue flag (no `=value` form), so emit it bare
+        // when enabled and omit otherwise. The remaining flags accept the
+        // explicit `--flag=true|false` form per `args.rs`.
+        if self.flags.terrain {
+            command.arg("--terrain");
+        }
+        let bool_flags: [(&str, bool); 4] = [
+            ("--land-cover", self.flags.land_cover),
+            ("--interior", self.flags.interior),
+            ("--entities", self.flags.entities),
+            ("--roof", self.flags.roof),
+        ];
+        for (flag, value) in bool_flags {
+            command.arg(format!("{flag}={value}"));
+        }
+        command.arg("--entity-theme").arg(&self.flags.entity_theme);
+
+        let output = command
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()?
