@@ -29,3 +29,15 @@ summary_interval = 10
 enabled = true
 min_success_rate = 0.5
 memory_threshold = 0.8
+
+# Flags forwarded to the map generator binary for every pipeline invocation.
+# Keep this in sync with src/args.rs. Values here are forwarded as
+# `--flag=value` (or bare `--terrain`) so the generator's defaults can never
+# silently change pipeline output.
+[generator]
+terrain = true
+land_cover = true
+interior = true
+entities = true
+entity_theme = "default"
+roof = true
