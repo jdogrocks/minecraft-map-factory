@@ -42,9 +42,6 @@ impl Rect {
     pub fn center(&self) -> (i32, i32) {
         ((self.x0 + self.x1) / 2, (self.z0 + self.z1) / 2)
     }
-    pub fn contains(&self, x: i32, z: i32) -> bool {
-        x >= self.x0 && x <= self.x1 && z >= self.z0 && z <= self.z1
-    }
 }
 
 /// Orientation of an interior wall.
@@ -315,11 +312,7 @@ mod tests {
         assert!(plan.rooms.len() >= 2, "expected splits, got {plan:?}");
         let total_cells = bbox.area();
         let room_area: i32 = plan.rooms.iter().map(|r| r.area()).sum();
-        let wall_cells: i32 = plan
-            .walls
-            .iter()
-            .map(|w| (w.end - w.start + 1) as i32)
-            .sum();
+        let wall_cells: i32 = plan.walls.iter().map(|w| w.end - w.start + 1).sum();
         assert_eq!(room_area + wall_cells, total_cells);
     }
 
