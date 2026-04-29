@@ -394,10 +394,7 @@ mod tests {
                             x == w.fixed && z >= w.start && z <= w.end && !w.is_door_at(x, z)
                         }
                     };
-                    assert!(
-                        !on_wall_proper,
-                        "interior cell ({x},{z}) is on wall {w:?}"
-                    );
+                    assert!(!on_wall_proper, "interior cell ({x},{z}) is on wall {w:?}");
                 }
             }
         }

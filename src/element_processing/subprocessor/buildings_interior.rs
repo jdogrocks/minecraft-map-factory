@@ -413,11 +413,7 @@ fn place_exterior_doors(
     }
 }
 
-fn nearest_wall_cell(
-    p: (i32, i32),
-    wall_set: &HashSet<(i32, i32)>,
-    r: i32,
-) -> Option<(i32, i32)> {
+fn nearest_wall_cell(p: (i32, i32), wall_set: &HashSet<(i32, i32)>, r: i32) -> Option<(i32, i32)> {
     let mut best: Option<((i32, i32), i32)> = None;
     for dz in -r..=r {
         for dx in -r..=r {
