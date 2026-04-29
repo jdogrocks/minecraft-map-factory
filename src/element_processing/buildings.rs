@@ -3790,7 +3790,10 @@ pub fn generate_buildings(
             generate_building_interior(
                 editor,
                 &cached_floor_area,
-                &wall_outline,
+                bounds.min_x,
+                bounds.min_z,
+                bounds.max_x,
+                bounds.max_z,
                 start_y_offset,
                 building_height,
                 style.wall_block,
