@@ -32,8 +32,7 @@ mod tests {
         // isn't fully cloned.
         let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let repo_root = manifest_dir.parent()?;
-        let p = repo_root
-            .join("pipeline/output/published/Times_Square__NYC/MMF World 1");
+        let p = repo_root.join("pipeline/output/published/Times_Square__NYC/MMF World 1");
         if p.is_dir() {
             Some(p)
         } else {
