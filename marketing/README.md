@@ -1,33 +1,40 @@
 # Marketing Interface
 
-This directory contains documentation for requesting and receiving generated Minecraft maps. No code or build artifacts belong here.
+This directory is the contract between Minecraft Map Factory (the dev shop) and the marketing partner. It contains everything needed to request, receive, and monetize generated Minecraft maps. No code or build artifacts belong here.
+
+For the full automation contract — schedule, delivery channels, and failure handling — see **[WORKFLOW.md](WORKFLOW.md)**.
 
 ## How Map Generation Works
 
-Minecraft Map Factory converts real-world locations into playable Minecraft worlds. You provide a location and bounding box, the pipeline generates the map, and you receive a ready-to-use Minecraft world folder.
+Minecraft Map Factory converts real-world locations into playable Minecraft worlds. You provide a location and bounding box, the pipeline generates the map twice a day on GitHub Actions, and you receive a ready-to-use Minecraft world folder either as a CI artifact or committed to the repo.
 
 ## Request-to-Delivery Workflow
 
 ### 1. Submit a Map Request
 
-Fill out the [Map Request Template](MAP_REQUEST_TEMPLATE.md) with your desired location, bounding box coordinates, priority tier, and any special notes. Submit the completed request to the engineering team.
+Open a GitHub issue against this repo using the [Map Request Template](MAP_REQUEST_TEMPLATE.md): desired location, bounding box, priority tier, and any special notes.
 
 ### 2. Location Added to Database
 
-Engineering adds your location to the pipeline's locations database. Each location gets a name, geographic bounding box, and a size tier (small, medium, or large) that determines processing priority.
+Engineering merges a PR that appends your location to `pipeline/data/locations.toml`. Each location gets a name, bounding box, and tier (small, medium, or large) that determines processing priority.
 
 ### 3. Pipeline Processes the Request
 
-The automated pipeline handles everything from here:
+The pipeline runs on a fixed schedule — **00:01 UTC and 12:01 UTC daily** — via the `Scheduled Pipeline` GitHub Actions workflow. Each run:
 
-- **Scheduling** -- your location is queued by tier (small locations process first)
-- **Generation** -- real-world geographic data is fetched and converted into Minecraft blocks, terrain, and entities
-- **Validation** -- the generated world is checked for completeness and structural integrity
-- **Publishing** -- validated maps are placed in the published output directory
+- **Schedules** locations by tier (small first, then medium, then large)
+- **Generates** worlds from OpenStreetMap data with terrain, buildings, and entities
+- **Validates** completeness and structural integrity
+- **Publishes** validated maps to `pipeline/output/published/{name}/`
 
 ### 4. Receive Your Map
 
-Once published, your map is available as a standard Minecraft world folder. See [Output Format](OUTPUT_FORMAT.md) for details on the file structure and how to use the generated maps.
+Two delivery channels are available:
+
+- **CI artifact** — every scheduled run uploads `pipeline-output` to GitHub Actions (30-day retention). Best for previewing a single run.
+- **Repo (canonical for monetization)** — after the `Commit Output Artifacts` workflow runs, the published maps are committed to `main`. `git pull` to retrieve them.
+
+See [OUTPUT_FORMAT.md](OUTPUT_FORMAT.md) for the file structure and how to use the worlds.
 
 ## Turnaround
 
@@ -45,5 +52,6 @@ The pipeline processes multiple locations concurrently. Actual times depend on s
 
 | File | Purpose |
 |------|---------|
+| [WORKFLOW.md](WORKFLOW.md) | Full dev ↔ marketing contract: schedule, delivery, failure handling |
 | [MAP_REQUEST_TEMPLATE.md](MAP_REQUEST_TEMPLATE.md) | Template for submitting new map requests |
 | [OUTPUT_FORMAT.md](OUTPUT_FORMAT.md) | Description of published map file structure and usage |

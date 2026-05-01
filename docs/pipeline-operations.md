@@ -144,6 +144,29 @@ When enabled, the self-tuner monitors success rate and resource usage between jo
 - If memory usage exceeds `memory_threshold` (default: 80%), concurrency is reduced
 - Concurrency never drops below 1
 
+## Scheduled Runs (CI)
+
+In production, the pipeline runs unattended on GitHub Actions. The `Scheduled Pipeline` workflow (`.github/workflows/scheduled-pipeline.yml`) fires on two cron triggers:
+
+| Cron | UTC | Description |
+|------|-----|-------------|
+| `1 0 * * *` | 00:01 | Nightly run |
+| `1 12 * * *` | 12:01 | Mid-day run |
+
+Each run executes:
+
+```bash
+cargo build --release -p minecraft-map-factory-pipeline
+./target/release/minecraft-map-factory-pipeline \
+  --config pipeline/pipeline.toml \
+  --output-dir pipeline/output \
+  --json-logs
+```
+
+Outputs are uploaded as the `pipeline-output` artifact (30-day retention). To persist published maps in the repo, dispatch the `Commit Output Artifacts` workflow with `output-path: pipeline/output/published`. That workflow stages new files, generates a metadata-aware commit message, and pushes to `main`.
+
+You can trigger an off-schedule run any time from the Actions tab using `workflow_dispatch`. Concurrency is constrained so two scheduled runs never overlap.
+
 ## Running End-to-End
 
 1. **Prepare locations** -- create a `locations.toml` with your target areas
