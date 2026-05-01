@@ -12,7 +12,7 @@
 # IDE/editor files
 .idea/
 /.vscode/
-.claude/
+# AI tool configs
 /*.swp
 *.iml
 *.suo
