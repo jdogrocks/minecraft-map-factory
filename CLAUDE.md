@@ -17,7 +17,7 @@ All changes go through pull requests. Never commit directly to `main`.
 ### Pull Request Creation
 
 ```bash
-gh pr create --title "{ISSUE-ID}: {title}" --body "Resolves [{ISSUE-ID}](https://paperclip.ing/MIN/issues/{ISSUE-ID})"
+gh pr create --title "{ISSUE-ID}: {title}" --body "Resolves [{ISSUE-ID}](https://cirruslycloudy.com/MIN/issues/{ISSUE-ID})"
 ```
 
 ### CI Monitoring
@@ -34,7 +34,7 @@ On failure, read logs and fix:
 gh run view --log-failed
 ```
 
-Fix the issue and re-push. Cap at 3 attempts before marking the Paperclip issue as `blocked`.
+Fix the issue and re-push. Cap at 3 attempts before marking the issue as `blocked`.
 
 ### Merge
 
@@ -42,12 +42,4 @@ When the issue is complete and CI passes, squash-merge:
 
 ```bash
 gh pr merge --squash --delete-branch
-```
-
-### Commit Co-Author
-
-All commits must include:
-
-```
-Co-Authored-By: Paperclip <noreply@paperclip.ing>
 ```
