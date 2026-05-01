@@ -103,12 +103,41 @@ locations.toml
 
 ## Output Locations
 
-All paths are relative to the `output_dir` setting in `pipeline.toml`:
+All paths are relative to the `output_dir` setting in `pipeline.toml`. In the scheduled CI run, `output_dir` is `pipeline/output/`, so the canonical, repo-relative paths are:
 
 | Path | Contents |
 |------|----------|
-| `jobs/{name}_attempt{N}/` | Raw generator output per attempt |
-| `published/{name}/` | Validated, ready-to-use Minecraft worlds |
+| `pipeline/output/jobs/{name}_attempt{N}/` | Raw generator output per attempt |
+| `pipeline/output/published/{name}/` | Validated, ready-to-use Minecraft worlds |
+
+Validated, published worlds are auto-committed back to `main` by the commit-output workflow (see Automation & Scheduling), so anyone with repo access can `git pull` to retrieve the latest map set.
+
+## Automation & Scheduling
+
+The pipeline does not need to be invoked by hand. GitHub Actions drives the full cycle:
+
+| Workflow | File | Trigger | Purpose |
+|----------|------|---------|---------|
+| **Scheduled Pipeline** | `.github/workflows/scheduled-pipeline.yml` | Cron `1 0 * * *` and `1 12 * * *` (UTC) — twice daily at 00:01 and 12:01 UTC; also `workflow_dispatch` | Build the pipeline in release mode, run it against `pipeline/data/locations.toml`, and upload `pipeline/output/` as a 30-day artifact |
+| **Commit Output Artifacts** | `.github/workflows/commit-output.yml` | `workflow_dispatch` (input: `output-path`) | Stage and commit any new files under the given output path with a metadata-aware message, then push to `main` |
+| **CI Build** | `.github/workflows/ci-build.yml` | Pull requests touching code/docs/marketing, plus push to `main` | Lint, test, and validate changes before merge |
+
+End-to-end automated flow:
+
+```
+00:01 UTC / 12:01 UTC          (cron)
+  └─► scheduled-pipeline.yml
+        └─► cargo build --release -p minecraft-map-factory-pipeline
+        └─► run pipeline → pipeline/output/published/{location}/
+        └─► upload-artifact (pipeline-output, 30d retention)
+
+manual / follow-up
+  └─► commit-output.yml  (workflow_dispatch with output-path)
+        └─► git add pipeline/output/...
+        └─► git commit && git push   → main
+```
+
+Concurrency is gated by `concurrency: scheduled-pipeline` so two scheduled runs never overlap. If you need an off-schedule run, dispatch the workflow manually from the GitHub Actions tab.
 
 ## Configuration
 

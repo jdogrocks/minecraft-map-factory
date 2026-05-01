@@ -46,7 +46,7 @@ minecraft-map-factory-pipeline --config pipeline.toml --dry-run
 minecraft-map-factory-pipeline --config pipeline.toml --json-logs
 ```
 
-See [docs/pipeline-operations.md](docs/pipeline-operations.md) for full pipeline operations documentation and [docs/architecture.md](docs/architecture.md) for the system architecture overview.
+See [docs/pipeline-operations.md](docs/pipeline-operations.md) for full pipeline operations documentation, [docs/architecture.md](docs/architecture.md) for the system architecture overview (including the twice-daily CI schedule and auto-commit flow), and [marketing/WORKFLOW.md](marketing/WORKFLOW.md) for the dev ↔ marketing handoff contract.
 
 ### Run the GUI (Arnis)
 
