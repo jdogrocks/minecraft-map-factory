@@ -38,8 +38,9 @@ pub const PACK_FORMAT_MAX: u32 = 124; // MC 1.26.1.2
 
 /// Generate the JSON content for `pack.mcmeta`.
 ///
-/// Derives the `supported_formats` range from `DATAPACK_FORMAT_TABLE` so the
-/// output stays in sync with the table automatically.  Falls back to
+/// Uses the flat `min_format`/`max_format` schema introduced in MC 26.1.2,
+/// which replaces the old `pack_format`/`supported_formats` fields.
+/// Derives the range from `DATAPACK_FORMAT_TABLE` automatically. Falls back to
 /// `PACK_FORMAT_MIN` / `PACK_FORMAT_MAX` if the table is somehow empty.
 pub fn generate_pack_mcmeta(description: &str) -> String {
     let min = DATAPACK_FORMAT_TABLE
@@ -53,12 +54,9 @@ pub fn generate_pack_mcmeta(description: &str) -> String {
     format!(
         r#"{{
   "pack": {{
-    "pack_format": {max},
     "description": "{description}",
-    "supported_formats": {{
-      "min_inclusive": {min},
-      "max_inclusive": {max}
-    }}
+    "min_format": {min},
+    "max_format": {max}
   }}
 }}"#,
         min = min,
@@ -99,10 +97,11 @@ mod tests {
     #[test]
     fn test_generate_pack_mcmeta_contains_correct_range() {
         let json = generate_pack_mcmeta("test pack");
-        assert!(json.contains(&format!("\"pack_format\": {}", PACK_FORMAT_MAX)));
-        assert!(json.contains(&format!("\"min_inclusive\": {}", PACK_FORMAT_MIN)));
-        assert!(json.contains(&format!("\"max_inclusive\": {}", PACK_FORMAT_MAX)));
+        assert!(json.contains(&format!("\"min_format\": {}", PACK_FORMAT_MIN)));
+        assert!(json.contains(&format!("\"max_format\": {}", PACK_FORMAT_MAX)));
         assert!(json.contains("\"test pack\""));
+        assert!(!json.contains("pack_format"), "old pack_format key must not appear");
+        assert!(!json.contains("supported_formats"), "old supported_formats key must not appear");
     }
 
     #[test]

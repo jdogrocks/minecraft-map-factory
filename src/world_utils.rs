@@ -214,9 +214,9 @@ pub const TALL_DATAPACK_NAME: &str = "mmf_tall";
 /// in `level.dat`'s `Data.DataPacks.Enabled` so it auto-activates on first
 /// load.
 ///
-/// The generated `pack.mcmeta` declares the full `supported_formats` range from
-/// MC 1.21.4 through MC 1.26.1.2, so Minecraft will not reject the pack with a
-/// "pack_format mismatch" warning on any version in that range.
+/// The generated `pack.mcmeta` uses the flat `min_format`/`max_format` schema
+/// (MC 26.1.2+) spanning MC 1.21.4 through MC 1.26.1.2, so Minecraft will not
+/// reject the pack with a format mismatch warning on any version in that range.
 pub fn install_tall_datapack(world_path: &Path) -> Result<(), String> {
     const OVERWORLD_JSON: &[u8] = include_bytes!(
         "../assets/minecraft/datapack_tall/data/minecraft/dimension_type/overworld.json"
