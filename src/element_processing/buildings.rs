@@ -3,7 +3,6 @@ use crate::block_definitions::*;
 use crate::bresenham::bresenham_line;
 use crate::clipping::clip_way_to_bbox;
 use crate::colors::color_text_to_rgb_tuple;
-use crate::coordinate_system::cartesian::XZPoint;
 use crate::deterministic_rng::{coord_rng, element_rng};
 use crate::element_processing::historic;
 use crate::element_processing::subprocessor::buildings_interior::generate_building_interior;
@@ -1086,36 +1085,76 @@ fn should_skip_underground_building(element: &ProcessedWay) -> bool {
     false
 }
 
-/// Calculates the starting Y offset based on terrain and min_level
+/// Calculates the starting Y offset based on terrain and min_level.
+///
+/// When terrain is enabled, anchors the building to the *lowest* sampled ground
+/// elevation across its flood-filled floor footprint. Two earlier mistakes had
+/// to be fixed here (see MIN-49):
+///
+/// 1. The previous code seeded the running max with `args.ground_level` (the
+///    world-default −62). That seed only matters when terrain is missing, but
+///    it conflated "no elevation data" with "rural map at sea level" and was
+///    out of step with `ground_generation`'s path, which never falls back to
+///    `args.ground_level` once `terrain_enabled`.
+///
+/// 2. The previous code took `max` across polygon **vertices** (4 corners on
+///    a typical building). A single high vertex — common when an OSM polygon
+///    brushes a DEM peak, e.g. around the Pyramids of Giza — hoisted the
+///    entire floor plane, leaving most of the footprint floating tens of
+///    blocks above the natural sand surface.
+///
+/// The fix is twofold:
+///
+/// - Take `min` instead of `max` so the floor anchors at the lowest sampled
+///   column. Columns where local terrain rises above the floor are filled by
+///   the existing foundation-pillar logic on the wall outline.
+/// - Sample the **flood-filled floor footprint** instead of just the polygon
+///   vertices when it is available. Vertices are sparse and easily land on
+///   sloped DEM cells; the floor cells span the polygon interior, so their
+///   `min` is a much more robust estimate of the building's natural ground.
+///   Falls back to the polygon nodes (and finally `args.ground_level`) when
+///   the footprint is empty (degenerate or roof-only paths).
+///
+/// Lookups always go through `editor.get_ground_level` so anchor queries take
+/// the same path — including road-surface overrides — that
+/// `ground_generation` uses to fill the column.
 fn calculate_start_y_offset(
     editor: &WorldEditor,
     element: &ProcessedWay,
+    floor_area: &[(i32, i32)],
     args: &Args,
     min_level_offset: i32,
 ) -> i32 {
-    if args.terrain {
-        let building_points: Vec<XZPoint> = element
-            .nodes
-            .iter()
-            .map(|n| {
-                XZPoint::new(
-                    n.x - editor.get_min_coords().0,
-                    n.z - editor.get_min_coords().1,
-                )
-            })
-            .collect();
-
-        let mut max_ground_level = args.ground_level;
-        for point in &building_points {
-            if let Some(ground) = editor.get_ground() {
-                let level = ground.level(*point);
-                max_ground_level = max_ground_level.max(level);
-            }
-        }
-        max_ground_level + min_level_offset
-    } else {
-        min_level_offset
+    if !args.terrain {
+        return min_level_offset;
     }
+
+    let lookup = |x: i32, z: i32| editor.get_ground_level(x, z);
+    let anchor = min_terrain_anchor_over_cells(floor_area, lookup)
+        .or_else(|| min_terrain_anchor_over_nodes(&element.nodes, lookup))
+        .unwrap_or(args.ground_level);
+    anchor + min_level_offset
+}
+
+/// Returns the minimum ground elevation sampled across the building's
+/// flood-filled floor cells, or `None` if `floor_area` is empty. Pure helper
+/// extracted from `calculate_start_y_offset` so the anchor logic can be
+/// exercised without constructing a full `WorldEditor`.
+fn min_terrain_anchor_over_cells<F>(floor_area: &[(i32, i32)], mut lookup: F) -> Option<i32>
+where
+    F: FnMut(i32, i32) -> i32,
+{
+    floor_area.iter().map(|&(x, z)| lookup(x, z)).min()
+}
+
+/// Vertex-only fallback: returns the minimum ground elevation sampled at the
+/// polygon's nodes, or `None` if `nodes` is empty. Used when the flood-filled
+/// floor footprint is unavailable (degenerate / roof-only paths).
+fn min_terrain_anchor_over_nodes<F>(nodes: &[ProcessedNode], mut lookup: F) -> Option<i32>
+where
+    F: FnMut(i32, i32) -> i32,
+{
+    nodes.iter().map(|n| lookup(n.x, n.z)).min()
 }
 
 /// Determines the wall block based on building tags
@@ -1451,7 +1490,8 @@ fn generate_roof_only_structure(
         0
     };
 
-    let start_y_offset = calculate_start_y_offset(editor, element, args, min_level_offset);
+    let start_y_offset =
+        calculate_start_y_offset(editor, element, cached_floor_area, args, min_level_offset);
 
     // Determine roof thickness / height.
     let roof_thickness: i32 = if let Some(h) = element.tags.get("height") {
@@ -1635,18 +1675,25 @@ fn build_wall_ring(
                 // via effective_passages, so this is always false for them.
                 let is_passage = building_passages.contains(bx, bz);
 
-                // Create foundation pillars when using terrain
-                // Skip in passage zones so the road can pass through.
-                if args.terrain && config.is_ground_level && !is_passage {
-                    let local_ground_level = if let Some(ground) = editor.get_ground() {
-                        ground.level(XZPoint::new(
-                            bx - editor.get_min_coords().0,
-                            bz - editor.get_min_coords().1,
-                        ))
-                    } else {
-                        args.ground_level
-                    };
+                // Compute the local terrain height at this wall pillar so that
+                // both the foundation fill below and the wall placement above
+                // can react to it. With the MIN-49 anchor change, floors are
+                // anchored at the *lowest* footprint cell — so the wall at a
+                // pillar may sit either above or below local terrain.
+                let local_ground_level = if args.terrain {
+                    editor.get_ground_level(bx, bz)
+                } else {
+                    args.ground_level
+                };
 
+                // Create foundation pillars when using terrain.
+                // Skip in passage zones so the road can pass through.
+                // The fill range is empty when start_y_offset <= local_ground
+                // (the wall is buried, not elevated); in that case the
+                // wall_start clamp below pushes wall placement up to terrain
+                // level so the buried portion is left for ground generation
+                // to fill with terrain blocks.
+                if args.terrain && config.is_ground_level && !is_passage {
                     for y in local_ground_level..config.start_y_offset + 1 {
                         editor.set_block_absolute(
                             config.wall_block,
@@ -1663,8 +1710,20 @@ fn build_wall_ring(
                 // In passage zones, skip below passage ceiling so the road
                 // can pass through; place a floor-block lintel at the top of
                 // the opening and continue the wall above.
+                //
+                // When terrain rises above the building floor at this wall
+                // pillar (start_y_offset < local_ground_level — the buried-
+                // wall case introduced by the MIN-49 anchor switch), clamp
+                // wall_start up to `local_ground_level + 1`. Without this
+                // clamp the buried wall blocks short-circuit the
+                // terrain-underfill (skip-existing), leaving a column of
+                // void from bedrock up to the wall — which the floating-
+                // building check flags as a hovering structure even though
+                // the building is correctly anchored.
                 let wall_start = if is_passage {
                     config.start_y_offset + passage_height + 1
+                } else if args.terrain {
+                    (config.start_y_offset + 1).max(local_ground_level + 1)
                 } else {
                     config.start_y_offset + 1
                 };
@@ -2379,6 +2438,25 @@ fn generate_residential_window_decorations(
 // Wall Depth Features (Facade Protrusions)
 // ============================================================================
 
+/// Lowest Y at which a wall-decoration column should place blocks.
+///
+/// Mirrors the `wall_start` clamp in `process_building_walls`: when the
+/// building floor (`start_y_offset`) sits below local terrain — the
+/// buried-wall case introduced by the MIN-49 anchor switch (anchor at the
+/// *lowest* footprint cell, so perimeter cells can sit above the floor) —
+/// push placement up to `local_ground + 1`. Without this clamp the buried
+/// decoration blocks short-circuit the terrain-underfill (skip-existing)
+/// and leave a column of void from bedrock up to the decoration, which the
+/// floating-building check flags as a hovering structure even though the
+/// building is correctly anchored.
+///
+/// In non-terrain mode `editor.get_ground_level` returns `args.ground_level`
+/// (the seed for `start_y_offset`), so the clamp is a no-op there.
+#[inline]
+fn clamp_decoration_pillar_start(start_y_offset: i32, local_ground: i32) -> i32 {
+    (start_y_offset + 1).max(local_ground + 1)
+}
+
 /// Creates a `BlockWithProperties` for an upside-down stair used for
 /// cornices and arched window headers. The `facing` parameter is the
 /// **outward** wall direction; the stair is flipped to face **inward**
@@ -2688,8 +2766,15 @@ fn place_subtle_pilasters(
     let lz = bz + out_nz;
     let top_h = config.start_y_offset + config.building_height - height_reduction;
 
-    for h in (config.start_y_offset + 1)..=top_h {
-        let block = if h == config.start_y_offset + 1 {
+    let pillar_start =
+        clamp_decoration_pillar_start(config.start_y_offset, editor.get_ground_level(lx, lz));
+    for h in pillar_start..=top_h {
+        // The accent foundation course lives on whichever row is the lowest
+        // visible course (start_y_offset + 1 normally; bumped up to
+        // local_ground + 1 when the floor is buried). Either way, the lowest
+        // placed row gets the accent so the visible base of the pilaster
+        // reads as a foundation.
+        let block = if h == pillar_start {
             config.accent_block // Foundation course
         } else {
             config.wall_block
@@ -2723,9 +2808,12 @@ fn place_modern_pillars(
     let lz = bz + out_nz;
     let top_h = config.start_y_offset + config.building_height - height_reduction;
 
+    let local_ground = editor.get_ground_level(lx, lz);
+    let pillar_start = clamp_decoration_pillar_start(config.start_y_offset, local_ground);
+
     // Pillar columns at edges of window bays
     if mod6 == 3 || mod6 == 5 {
-        for h in (config.start_y_offset + 1)..=top_h {
+        for h in pillar_start..=top_h {
             editor.set_block_absolute(
                 config.accent_block,
                 lx,
@@ -2744,18 +2832,21 @@ fn place_modern_pillars(
         return;
     }
 
-    // Foundation course at ground level
+    // Foundation course at ground level (or at terrain level when buried)
     editor.set_block_absolute(
         config.accent_block,
         lx,
-        config.start_y_offset + 1 + config.abs_terrain_offset,
+        pillar_start + config.abs_terrain_offset,
         lz,
         Some(&[AIR]),
         None,
     );
 
-    // Floor-level slab bands (skip the window center at mod6==1 for cleaner look)
-    for h in (config.start_y_offset + 2)..=top_h {
+    // Floor-level slab bands (skip the window center at mod6==1 for cleaner look).
+    // Skip rows below `pillar_start` so buried slab blocks don't short-circuit
+    // the terrain underfill at this exterior column.
+    let band_start = (config.start_y_offset + 2).max(pillar_start);
+    for h in band_start..=top_h {
         if config.floor_row(h) == 0 {
             editor.set_block_with_properties_absolute(
                 sill_block.clone(),
@@ -2787,9 +2878,12 @@ fn place_institutional_bands(
     let lz = bz + out_nz;
     let top_h = config.start_y_offset + config.building_height - height_reduction;
 
+    let pillar_start =
+        clamp_decoration_pillar_start(config.start_y_offset, editor.get_ground_level(lx, lz));
+
     // Pillar columns
     if mod6 == 3 {
-        for h in (config.start_y_offset + 1)..=top_h {
+        for h in pillar_start..=top_h {
             editor.set_block_absolute(
                 config.accent_block,
                 lx,
@@ -2806,17 +2900,18 @@ fn place_institutional_bands(
     editor.set_block_absolute(
         config.accent_block,
         lx,
-        config.start_y_offset + 1 + config.abs_terrain_offset,
+        pillar_start + config.abs_terrain_offset,
         lz,
         Some(&[AIR]),
         None,
     );
 
-    // Stair ledges at floor-separation rows (non-window positions only)
+    // Stair ledges at floor-separation rows (non-window positions only).
     if mod6 >= 3 {
         return;
     }
-    for h in (config.start_y_offset + 2)..=top_h {
+    let band_start = (config.start_y_offset + 2).max(pillar_start);
+    for h in band_start..=top_h {
         if config.floor_row(h) == 0 {
             let stair_bwp = make_upside_down_stair(config.wall_block, facing);
             editor.set_block_with_properties_absolute(
@@ -2847,7 +2942,9 @@ fn place_industrial_beams(
     let lz = bz + out_nz;
     let top_h = config.start_y_offset + config.building_height - height_reduction;
 
-    for h in (config.start_y_offset + 1)..=top_h {
+    let pillar_start =
+        clamp_decoration_pillar_start(config.start_y_offset, editor.get_ground_level(lx, lz));
+    for h in pillar_start..=top_h {
         editor.set_block_absolute(
             config.wall_block,
             lx,
@@ -2879,9 +2976,17 @@ fn place_historic_ornate(
 
     let top_h = config.start_y_offset + config.building_height - height_reduction;
 
+    // Local terrain at this decoration column. `pillar_start` gives the
+    // lowest Y at which a placement avoids the buried-wall void described
+    // in `clamp_decoration_pillar_start`. The cornice at `top_h + 1` is
+    // checked separately because it sits at roof level, not at the pillar
+    // base.
+    let local_ground = editor.get_ground_level(lx, lz);
+    let pillar_start = clamp_decoration_pillar_start(config.start_y_offset, local_ground);
+
     // Full-height pillar columns between window groups
     if mod6 == 3 {
-        for h in (config.start_y_offset + 1)..=top_h {
+        for h in pillar_start..=top_h {
             editor.set_block_absolute(
                 config.wall_block,
                 lx,
@@ -2891,8 +2996,11 @@ fn place_historic_ornate(
                 None,
             );
         }
-        // Cornice at top (skip for sloped roofs - would conflict with roof)
-        if height_reduction == 0 {
+        // Cornice at top (skip for sloped roofs - would conflict with roof).
+        // Also skip if the cornice would land at or below local terrain at
+        // this column — a buried cornice cap would short-circuit the
+        // underfill the same way buried walls do.
+        if height_reduction == 0 && top_h + 1 > local_ground {
             let stair_bwp = make_upside_down_stair(config.wall_block, facing);
             editor.set_block_with_properties_absolute(
                 stair_bwp,
@@ -2906,19 +3014,26 @@ fn place_historic_ornate(
         return;
     }
 
-    // Foundation course for all positions
+    // Foundation course for all positions. Anchor it to `pillar_start` so it
+    // sits at the visible base of the wall (start_y_offset + 1 normally,
+    // local_ground + 1 when the floor is buried at this column). Otherwise
+    // a buried foundation block would float-trap the column.
     editor.set_block_absolute(
         config.accent_block,
         lx,
-        config.start_y_offset + 1 + config.abs_terrain_offset,
+        pillar_start + config.abs_terrain_offset,
         lz,
         Some(&[AIR]),
         None,
     );
 
-    // Arched window headers at window-top rows (floor_row == 3) for window-edge positions
+    // Arched window headers at window-top rows (floor_row == 3) for window-edge positions.
+    // Skip rows that would be buried so the same underfill short-circuit
+    // doesn't bite at the window-header level on tall, partially-buried
+    // facades.
     if mod6 == 0 || mod6 == 2 {
-        for h in (config.start_y_offset + 2)..=top_h {
+        let header_start = (config.start_y_offset + 2).max(pillar_start);
+        for h in header_start..=top_h {
             if config.floor_row(h) == 3 {
                 let stair_bwp = make_upside_down_stair(config.wall_block, facing);
                 editor.set_block_with_properties_absolute(
@@ -2933,8 +3048,9 @@ fn place_historic_ornate(
         }
     }
 
-    // Cornice along the full roofline (skip for sloped roofs)
-    if height_reduction == 0 {
+    // Cornice along the full roofline (skip for sloped roofs). Same buried-
+    // cornice guard as the mod6==3 branch.
+    if height_reduction == 0 && top_h + 1 > local_ground {
         let stair_bwp = make_upside_down_stair(config.wall_block, facing);
         editor.set_block_with_properties_absolute(
             stair_bwp,
@@ -2966,13 +3082,19 @@ fn place_religious_buttress(
     let lz = bz + out_nz;
     let top_h = config.start_y_offset + config.building_height - height_reduction;
 
+    // Local terrain at the inner buttress column. The cornice at top_h + 1
+    // is checked separately because it sits at roof level, not at the
+    // pillar base.
+    let local_ground = editor.get_ground_level(lx, lz);
+    let pillar_start = clamp_decoration_pillar_start(config.start_y_offset, local_ground);
+
     // Buttress at every other window group center (mod6==0)
     let window_group = ((bx + bz) / 6).rem_euclid(2);
     if mod6 == 0 && window_group == 0 {
         let buttress_cutoff = config.start_y_offset + (config.building_height * 3 / 5);
 
         // Inner layer (outward+1): full height
-        for h in (config.start_y_offset + 1)..=top_h {
+        for h in pillar_start..=top_h {
             editor.set_block_absolute(
                 config.wall_block,
                 lx,
@@ -2983,10 +3105,13 @@ fn place_religious_buttress(
             );
         }
 
-        // Outer layer (outward+2): lower 60% of height
+        // Outer layer (outward+2): lower 60% of height. Sample local terrain
+        // separately because the outer column may sit on different terrain.
         let lx2 = bx + out_nx * 2;
         let lz2 = bz + out_nz * 2;
-        for h in (config.start_y_offset + 1)..=buttress_cutoff {
+        let outer_pillar_start =
+            clamp_decoration_pillar_start(config.start_y_offset, editor.get_ground_level(lx2, lz2));
+        for h in outer_pillar_start..=buttress_cutoff {
             editor.set_block_absolute(
                 config.wall_block,
                 lx2,
@@ -2999,8 +3124,11 @@ fn place_religious_buttress(
         return;
     }
 
-    // Cornice along the full roofline (skip for sloped roofs)
-    if height_reduction == 0 {
+    // Cornice along the full roofline (skip for sloped roofs). Same buried-
+    // cornice guard as `place_historic_ornate`: a cornice cap landing at or
+    // below local terrain creates a floating-cap-with-no-wall-under-it
+    // failure that the floating-building check flags.
+    if height_reduction == 0 && top_h + 1 > local_ground {
         let stair_bwp = make_upside_down_stair(config.wall_block, facing);
         editor.set_block_with_properties_absolute(
             stair_bwp,
@@ -3032,11 +3160,14 @@ fn place_skyscraper_fins(
     let lz = bz + out_nz;
     let top_h = config.start_y_offset + config.building_height - height_reduction;
 
+    let pillar_start =
+        clamp_decoration_pillar_start(config.start_y_offset, editor.get_ground_level(lx, lz));
+
     // Foundation course at ground level (all positions)
     editor.set_block_absolute(
         config.accent_block,
         lx,
-        config.start_y_offset + 1 + config.abs_terrain_offset,
+        pillar_start + config.abs_terrain_offset,
         lz,
         Some(&[AIR]),
         None,
@@ -3044,7 +3175,7 @@ fn place_skyscraper_fins(
 
     if mod6 == 3 {
         // Vertical fin column (existing behavior)
-        for h in (config.start_y_offset + 1)..=top_h {
+        for h in pillar_start..=top_h {
             editor.set_block_absolute(
                 config.accent_block,
                 lx,
@@ -3058,7 +3189,8 @@ fn place_skyscraper_fins(
     }
 
     // Floor-level ledge bands at non-fin positions
-    for h in (config.start_y_offset + 2)..=top_h {
+    let band_start = (config.start_y_offset + 2).max(pillar_start);
+    for h in band_start..=top_h {
         if config.floor_row(h) == 0 {
             editor.set_block_with_properties_absolute(
                 sill_block.clone(),
@@ -3088,7 +3220,9 @@ fn place_glass_curtain_corners(
     let lz = bz + out_nz;
     let top_h = config.start_y_offset + config.building_height - height_reduction;
 
-    for h in (config.start_y_offset + 1)..=top_h {
+    let pillar_start =
+        clamp_decoration_pillar_start(config.start_y_offset, editor.get_ground_level(lx, lz));
+    for h in pillar_start..=top_h {
         editor.set_block_absolute(
             config.accent_block,
             lx,
@@ -3544,7 +3678,8 @@ pub fn generate_buildings(
     }
 
     // Calculate start Y offset
-    let start_y_offset = calculate_start_y_offset(editor, element, args, min_level_offset);
+    let start_y_offset =
+        calculate_start_y_offset(editor, element, &cached_floor_area, args, min_level_offset);
 
     // Calculate building bounds
     let bounds = BuildingBounds::from_nodes(&element.nodes);
@@ -5994,5 +6129,427 @@ mod tests {
         let bwp = make_top_slab(STONE_BRICK_SLAB);
         assert_eq!(bwp.block, STONE_BRICK_SLAB);
         assert!(bwp.properties.is_some());
+    }
+
+    // ── min_terrain_anchor (MIN-49 regression) ──────────────────────
+
+    #[test]
+    fn min_terrain_anchor_over_nodes_empty_returns_none() {
+        let result = min_terrain_anchor_over_nodes(&[], |_, _| 0);
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn min_terrain_anchor_over_cells_empty_returns_none() {
+        let result = min_terrain_anchor_over_cells(&[], |_, _| 0);
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn min_terrain_anchor_picks_minimum_not_maximum() {
+        // Pyramids regression: a single high-elevation vertex (e.g. a polygon
+        // edge brushing the pyramid's DEM peak) used to hoist the whole floor
+        // via `.max(...)`. The fix samples min across polygon nodes so the
+        // floor anchors at the lowest sampled ground level instead.
+        let nodes = vec![
+            node(1, 0, 0),   // sand level
+            node(2, 10, 0),  // sand level
+            node(3, 10, 10), // pyramid slope
+            node(4, 0, 10),  // sand level
+        ];
+        let lookup = |x: i32, z: i32| {
+            if (x, z) == (10, 10) {
+                17
+            } else {
+                -4
+            }
+        };
+        assert_eq!(min_terrain_anchor_over_nodes(&nodes, lookup), Some(-4));
+    }
+
+    #[test]
+    fn min_terrain_anchor_does_not_use_args_ground_level_seed() {
+        // Old code seeded `max_ground_level = args.ground_level` (−62),
+        // which is irrelevant once we have real elevation data. The current
+        // helper must not synthesise that seed: with all sampled nodes at
+        // strictly negative elevations, the anchor must be the minimum
+        // sampled elevation, not −62.
+        let nodes = vec![node(1, 0, 0), node(2, 5, 5)];
+        let lookup = |_: i32, _: i32| -10;
+        assert_eq!(min_terrain_anchor_over_nodes(&nodes, lookup), Some(-10));
+    }
+
+    #[test]
+    fn min_terrain_anchor_over_nodes_uses_world_coords() {
+        // Confirm the helper hands the lookup raw (n.x, n.z) without any
+        // bbox-relative conversion. World-coord conversion is the caller's
+        // responsibility (via `editor.get_ground_level`, which subtracts
+        // the bbox min internally).
+        let nodes = vec![node(1, 100, 200), node(2, 50, 50)];
+        let lookup = |x: i32, z: i32| x + z;
+        // (100, 200) → 300, (50, 50) → 100, min = 100.
+        assert_eq!(min_terrain_anchor_over_nodes(&nodes, lookup), Some(100));
+    }
+
+    // ── decoration pillar buried-wall clamp (MIN-49 follow-up) ─────
+
+    #[test]
+    fn clamp_decoration_pillar_no_op_when_floor_above_terrain() {
+        // Common case on flat ground: the building floor (start_y_offset)
+        // sits well above local terrain at this exterior column. The clamp
+        // must return start_y_offset + 1 unchanged so the foundation course
+        // and pilaster base land at the visible base of the wall.
+        assert_eq!(clamp_decoration_pillar_start(20, 5), 21);
+    }
+
+    #[test]
+    fn clamp_decoration_pillar_pushes_above_buried_terrain() {
+        // Pyramids regression: building anchored at the lowest footprint
+        // cell (start_y_offset = 0), but this exterior decoration column
+        // sits 8 blocks above on a sand bank. Without the clamp the
+        // decoration places blocks from y=1..=top, burying y=1..=8 below
+        // local terrain and short-circuiting the underfill so the column
+        // reads as floating.
+        assert_eq!(clamp_decoration_pillar_start(0, 8), 9);
+    }
+
+    #[test]
+    fn clamp_decoration_pillar_no_op_in_non_terrain_mode() {
+        // Without terrain enabled, `editor.get_ground_level` returns
+        // `args.ground_level` (the same value used to seed `start_y_offset`),
+        // so local_ground equals start_y_offset and the clamp is a no-op:
+        // start_y_offset + 1 == local_ground + 1.
+        assert_eq!(clamp_decoration_pillar_start(-62, -62), -61);
+    }
+
+    #[test]
+    fn decoration_functions_do_not_place_blocks_below_local_ground() {
+        // Integration test: each of the four wall-decoration functions
+        // touched by the MIN-49 follow-up (place_industrial_beams,
+        // place_subtle_pilasters, place_modern_pillars, and the cornice-
+        // only branch of place_historic_ornate) must skip any placement at
+        // or below local terrain at the decoration column. A future
+        // regression in any one of these functions trips this test, not
+        // just the floating-buildings smoke check.
+        use crate::coordinate_system::cartesian::XZBBox;
+        use crate::coordinate_system::geographic::LLBBox;
+        use crate::world_editor::WorldEditor;
+        use std::fs;
+        use tempfile::TempDir;
+
+        let xzbbox = XZBBox::rect_from_xz_lengths(64.0, 64.0).unwrap();
+        let llbbox = LLBBox::new(54.629, 9.928, 54.6315, 9.933).unwrap();
+        let tmp = TempDir::new().unwrap();
+        let world_dir = tmp.path().join("decoration_clamp");
+        fs::create_dir_all(&world_dir).unwrap();
+        let mut editor = WorldEditor::new(world_dir, &xzbbox, llbbox);
+
+        // Wall pillar at (bx, bz). Decoration sits one block outward at
+        // (lx, lz) = (bx + out_nx, bz + out_nz).
+        let bx = 5;
+        let bz = 5;
+        let out_nx = 1;
+        let out_nz = 0;
+        let lx = bx + out_nx;
+        let lz = bz + out_nz;
+
+        // Pyramids-style scenario: building anchored at y=0 (lowest footprint
+        // cell), but the exterior decoration column sits on terrain at y=8.
+        // Use the road-surface override to inject a synthetic terrain height
+        // at this column without standing up a full Ground / heightmap.
+        let local_ground: i32 = 8;
+        editor.register_road_surface_y(lx, lz, local_ground);
+        assert_eq!(editor.get_ground_level(lx, lz), local_ground);
+
+        // `block_at(x, y_offset, z)` checks the block at absolute y
+        // `get_ground_level(x, z) + y_offset`. For our column,
+        // get_ground_level == local_ground, so y_offset = y - local_ground.
+        let assert_no_buried_blocks = |editor: &WorldEditor, label: &str| {
+            for y in -64..=local_ground {
+                let y_offset = y - local_ground;
+                assert!(
+                    !editor.block_at(lx, y_offset, lz),
+                    "{label}: unexpected block placed at absolute y={y} \
+                     (local_ground={local_ground}); decoration must clamp \
+                     to local_ground + 1 to avoid void columns."
+                );
+            }
+        };
+
+        let make_config = |style: WallDepthStyle| BuildingConfig {
+            is_ground_level: true,
+            building_height: 20,
+            is_tall_building: false,
+            start_y_offset: 0,
+            abs_terrain_offset: 0,
+            wall_block: STONE_BRICKS,
+            floor_block: STONE,
+            window_block: GLASS,
+            accent_block: POLISHED_ANDESITE,
+            roof_block: None,
+            use_vertical_windows: false,
+            use_horizontal_windows: false,
+            use_accent_roof_line: false,
+            use_accent_lines: false,
+            use_vertical_accent: false,
+            is_abandoned_building: false,
+            has_windows: false,
+            has_garage_door: false,
+            has_single_door: false,
+            category: BuildingCategory::Industrial,
+            wall_depth_style: style,
+            has_parapet: false,
+            has_lobby_base: false,
+        };
+
+        // place_industrial_beams: full-height column at corners.
+        let config = make_config(WallDepthStyle::IndustrialBeams);
+        place_industrial_beams(&mut editor, &config, bx, bz, out_nx, out_nz, 0);
+        assert_no_buried_blocks(&editor, "place_industrial_beams");
+
+        // place_subtle_pilasters: only emits at mod6 == 3.
+        let config = make_config(WallDepthStyle::SubtlePilasters);
+        place_subtle_pilasters(
+            &mut editor,
+            &config,
+            bx,
+            bz,
+            /* mod6 */ 3,
+            out_nx,
+            out_nz,
+            0,
+        );
+        assert_no_buried_blocks(&editor, "place_subtle_pilasters");
+
+        // place_modern_pillars: pillar branch (mod6 == 3 || 5) and
+        // foundation/slab branch (mod6 < 3) — drive both.
+        let slab_block = make_top_slab(get_slab_block_for_material(STONE_BRICKS));
+        let config = make_config(WallDepthStyle::ModernPillars);
+        place_modern_pillars(
+            &mut editor,
+            &config,
+            bx,
+            bz,
+            /* mod6 */ 3,
+            out_nx,
+            out_nz,
+            &slab_block,
+            0,
+        );
+        assert_no_buried_blocks(&editor, "place_modern_pillars (pillar branch)");
+        place_modern_pillars(
+            &mut editor,
+            &config,
+            bx,
+            bz,
+            /* mod6 */ 0,
+            out_nx,
+            out_nz,
+            &slab_block,
+            0,
+        );
+        assert_no_buried_blocks(&editor, "place_modern_pillars (foundation/slab branch)");
+
+        // place_historic_ornate cornice-only branch (mod6 != 3): foundation
+        // course + window header + cornice. mod6==0 hits the window-header
+        // path; mod6==1 doesn't.
+        let config = make_config(WallDepthStyle::HistoricOrnate);
+        place_historic_ornate(
+            &mut editor,
+            &config,
+            bx,
+            bz,
+            /* mod6 */ 0,
+            out_nx,
+            out_nz,
+            "north",
+            0,
+        );
+        assert_no_buried_blocks(&editor, "place_historic_ornate cornice branch (mod6=0)");
+        place_historic_ornate(
+            &mut editor,
+            &config,
+            bx,
+            bz,
+            /* mod6 */ 1,
+            out_nx,
+            out_nz,
+            "north",
+            0,
+        );
+        assert_no_buried_blocks(&editor, "place_historic_ornate cornice branch (mod6=1)");
+
+        // And the previously-patched mod6==3 full-pillar branch, refactored
+        // onto the same helper — guard against an accidental revert.
+        place_historic_ornate(
+            &mut editor,
+            &config,
+            bx,
+            bz,
+            /* mod6 */ 3,
+            out_nx,
+            out_nz,
+            "north",
+            0,
+        );
+        assert_no_buried_blocks(&editor, "place_historic_ornate full-pillar branch (mod6=3)");
+
+        // place_religious_buttress: extension to the lead's four-function
+        // list. Post-fix on the named four, the floating-check residual on
+        // Pyramids was 1.03% truly-floating (76 cornice stairs from this
+        // function — `WallDepthStyle::ReligiousButtress` — sitting on
+        // buried walls). Same `local_ground + 1` clamp pattern, same test
+        // shape; surfaced rather than worked around silently.
+        let config = make_config(WallDepthStyle::ReligiousButtress);
+        // Cornice-only branch (mod6 != 0 || window_group != 0).
+        place_religious_buttress(
+            &mut editor,
+            &config,
+            bx,
+            bz,
+            /* mod6 */ 1,
+            out_nx,
+            out_nz,
+            "north",
+            0,
+        );
+        assert_no_buried_blocks(&editor, "place_religious_buttress cornice branch");
+        // Buttress branch — pillar inner column at (lx, lz). For the outer
+        // column we pick a (bx, bz) where (bx + bz) / 6 puts window_group ==
+        // 0 with mod6 == 0 so the buttress branch fires. Use the world
+        // coords (12, 0): mod6 == 0, window_group == ((12+0)/6).rem_euclid(2)
+        // == 0. Outer column lands at lx2 = 14, lz2 = 0.
+        let bx2 = 12;
+        let bz2 = 0;
+        let lx_inner = bx2 + out_nx;
+        let lz_inner = bz2 + out_nz;
+        let lx_outer = bx2 + out_nx * 2;
+        let lz_outer = bz2 + out_nz * 2;
+        editor.register_road_surface_y(lx_inner, lz_inner, local_ground);
+        editor.register_road_surface_y(lx_outer, lz_outer, local_ground);
+        assert_eq!(((bx2 + bz2) % 6 + 6) % 6, 0);
+        assert_eq!(((bx2 + bz2) / 6).rem_euclid(2), 0);
+        place_religious_buttress(
+            &mut editor,
+            &config,
+            bx2,
+            bz2,
+            /* mod6 */ 0,
+            out_nx,
+            out_nz,
+            "north",
+            0,
+        );
+        for (x_check, z_check, label) in [
+            (
+                lx_inner,
+                lz_inner,
+                "place_religious_buttress inner buttress",
+            ),
+            (
+                lx_outer,
+                lz_outer,
+                "place_religious_buttress outer buttress",
+            ),
+        ] {
+            for y in -64..=local_ground {
+                let y_offset = y - local_ground;
+                assert!(
+                    !editor.block_at(x_check, y_offset, z_check),
+                    "{label}: unexpected block placed at absolute y={y} \
+                     (local_ground={local_ground})."
+                );
+            }
+        }
+
+        // place_institutional_bands: exhaust both branches (mod6 == 3 pillar
+        // and mod6 < 3 foundation + stair-ledge).
+        let config = make_config(WallDepthStyle::InstitutionalBands);
+        place_institutional_bands(
+            &mut editor,
+            &config,
+            bx,
+            bz,
+            /* mod6 */ 3,
+            out_nx,
+            out_nz,
+            "north",
+            0,
+        );
+        assert_no_buried_blocks(&editor, "place_institutional_bands (pillar branch)");
+        place_institutional_bands(
+            &mut editor,
+            &config,
+            bx,
+            bz,
+            /* mod6 */ 0,
+            out_nx,
+            out_nz,
+            "north",
+            0,
+        );
+        assert_no_buried_blocks(
+            &editor,
+            "place_institutional_bands (foundation/stair branch)",
+        );
+
+        // place_skyscraper_fins: pillar (mod6 == 3) and foundation/slab branch.
+        let config = make_config(WallDepthStyle::SkyscraperFins);
+        place_skyscraper_fins(
+            &mut editor,
+            &config,
+            bx,
+            bz,
+            /* mod6 */ 3,
+            out_nx,
+            out_nz,
+            &slab_block,
+            0,
+        );
+        assert_no_buried_blocks(&editor, "place_skyscraper_fins (fin branch)");
+        place_skyscraper_fins(
+            &mut editor,
+            &config,
+            bx,
+            bz,
+            /* mod6 */ 0,
+            out_nx,
+            out_nz,
+            &slab_block,
+            0,
+        );
+        assert_no_buried_blocks(&editor, "place_skyscraper_fins (foundation/slab branch)");
+
+        // place_glass_curtain_corners: minimal corner column.
+        let config = make_config(WallDepthStyle::GlassCurtain);
+        place_glass_curtain_corners(&mut editor, &config, bx, bz, out_nx, out_nz, 0);
+        assert_no_buried_blocks(&editor, "place_glass_curtain_corners");
+    }
+
+    #[test]
+    fn min_terrain_anchor_over_cells_beats_vertices_when_interior_is_lower() {
+        // Pyramids regression part 2: even after switching to `min`, four
+        // polygon vertices can all sit on a sloped DEM cell while the flooded
+        // *interior* of the polygon includes lower terrain. Sampling the
+        // floor cells (instead of the four vertices) catches the natural
+        // sand surface inside the polygon and keeps the floor on the ground.
+        let nodes = vec![
+            node(1, 0, 0),   // DEM peak ridge
+            node(2, 10, 0),  // DEM peak ridge
+            node(3, 10, 10), // DEM peak ridge
+            node(4, 0, 10),  // DEM peak ridge
+        ];
+        let floor_area = vec![(5, 5), (5, 6), (6, 5), (6, 6)]; // interior cells
+        let lookup = |x: i32, z: i32| {
+            // Interior cells are at sand level (-4); polygon perimeter sits
+            // on a DEM slope reading +20.
+            if (5..=6).contains(&x) && (5..=6).contains(&z) {
+                -4
+            } else {
+                20
+            }
+        };
+        assert_eq!(min_terrain_anchor_over_nodes(&nodes, lookup), Some(20));
+        assert_eq!(min_terrain_anchor_over_cells(&floor_area, lookup), Some(-4));
     }
 }
