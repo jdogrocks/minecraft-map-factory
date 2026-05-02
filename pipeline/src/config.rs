@@ -186,6 +186,20 @@ pub struct ValidationConfig {
     #[serde(default = "default_ground_max_air_gap_blocks")]
     pub ground_max_air_gap_blocks: usize,
 
+    /// Upper y-bound for the ground-continuity scan. The check walks from
+    /// `ground_y_min` up to `min(surface_height, ground_y_scan_cap)` rather
+    /// than all the way to the topmost block. Capping the scan just above
+    /// the expected terrain level (e.g. ground_level + 16) avoids counting
+    /// building-interior air as a ground discontinuity — buildings can be
+    /// hundreds of blocks tall, each floor adding legitimate air gaps that
+    /// would otherwise exceed `ground_max_air_gap_blocks`.
+    ///
+    /// Set this to roughly `ground_level + 16` in pipeline.toml whenever
+    /// the generator's `--ground-level` is changed from the Minecraft
+    /// default of y=64.
+    #[serde(default = "default_ground_y_scan_cap")]
+    pub ground_y_scan_cap: i32,
+
     // ---- Interior populated (MIN-43 #2) ----
     /// Number of chunks sampled across the map for the interior check.
     #[serde(default = "default_interior_sample_chunks")]
@@ -259,6 +273,7 @@ impl Default for ValidationConfig {
             ground_sample_columns_per_region: default_ground_sample_columns_per_region(),
             ground_y_min: default_ground_y_min(),
             ground_max_air_gap_blocks: default_ground_max_air_gap_blocks(),
+            ground_y_scan_cap: default_ground_y_scan_cap(),
             interior_sample_chunks: default_interior_sample_chunks(),
             surface_diversity_min_distinct: default_surface_diversity_min_distinct(),
             surface_diversity_sample_chunks: default_surface_diversity_sample_chunks(),
@@ -362,6 +377,14 @@ fn default_ground_max_air_gap_blocks() -> usize {
     // floating-buildings failure mode is hundreds of blocks of air,
     // so a generous tolerance here still catches it.
     16
+}
+
+fn default_ground_y_scan_cap() -> i32 {
+    // Cap the ground-continuity scan at 16 blocks above the default
+    // ground_level (64), so building interiors above y=80 are not counted
+    // as air gaps. For the floating-buildings failure mode, the air gap
+    // starts below y=64 and the scan catches it well within this cap.
+    80
 }
 
 fn default_interior_sample_chunks() -> usize {
