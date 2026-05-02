@@ -178,15 +178,6 @@ pub fn generate_ground_layer(
 
             for x in chunk_min_x..=chunk_max_x {
                 for z in chunk_min_z..=chunk_max_z {
-                    // Skip blocks outside the rotated original bounding box
-                    if !ground.is_in_rotated_bounds(x, z) {
-                        block_counter += 1;
-                        if block_counter.is_multiple_of(batch_size) {
-                            ground_pb.set_position(block_counter);
-                        }
-                        continue;
-                    }
-
                     // Get ground level. When terrain is enabled, pull from the
                     // per-chunk cache (one populated lookup, no bilinear); when
                     // disabled, use the constant ground_level.
@@ -195,6 +186,26 @@ pub fn generate_ground_layer(
                     } else {
                         args.ground_level
                     };
+
+                    // Bedrock and stone fill runs for every column in the chunk,
+                    // including columns outside the rotated original bounding box.
+                    // Without this, periphery chunks have void columns outside the
+                    // rotated bounds, causing players to fall through and .mca files
+                    // to compress to a pathological 1-sector-per-chunk size.
+                    let fill_y_max = ground_y - 3;
+                    if fill_y_max > MIN_Y {
+                        editor.fill_column_absolute(STONE, x, z, MIN_Y + 1, fill_y_max, true);
+                    }
+                    editor.set_block_absolute(BEDROCK, x, MIN_Y, z, None, Some(&[BEDROCK]));
+
+                    // Skip surface/vegetation processing outside the rotated original bounding box
+                    if !ground.is_in_rotated_bounds(x, z) {
+                        block_counter += 1;
+                        if block_counter.is_multiple_of(batch_size) {
+                            ground_pb.set_position(block_counter);
+                        }
+                        continue;
+                    }
 
                     let coord = XZPoint::new(x - xzbbox.min_x(), z - xzbbox.min_z());
 
@@ -1082,20 +1093,6 @@ pub fn generate_ground_layer(
                             );
                         }
                     }
-
-                    // Fill underground with stone from world floor up to just below
-                    // the dirt under-layer. Unconditional: every column must have
-                    // continuous ground from MIN_Y to the surface, otherwise
-                    // unbuilt-up areas (desert, alpine) compress to a 4,202,496 B
-                    // 1-sector-per-chunk .mca and players fall through the void.
-                    // skip_existing=true keeps OSM-placed blocks (caves, basements)
-                    // intact.
-                    let fill_y_max = ground_y - 3;
-                    if fill_y_max > MIN_Y {
-                        editor.fill_column_absolute(STONE, x, z, MIN_Y + 1, fill_y_max, true);
-                    }
-                    // Generate a bedrock level at MIN_Y
-                    editor.set_block_absolute(BEDROCK, x, MIN_Y, z, None, Some(&[BEDROCK]));
 
                     block_counter += 1;
                     #[allow(clippy::manual_is_multiple_of)]
