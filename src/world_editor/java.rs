@@ -4,8 +4,10 @@
 
 use super::common::{Chunk, ChunkToModify, Section};
 use super::{WorldEditor, MIN_Y};
-use crate::block_definitions::{ANDESITE, BEDROCK, COBBLED_DEEPSLATE, COBBLESTONE, GRASS_BLOCK, STONE};
 use crate::block_definitions::Block;
+use crate::block_definitions::{
+    ANDESITE, BEDROCK, COBBLED_DEEPSLATE, COBBLESTONE, GRASS_BLOCK, STONE,
+};
 use crate::progress::emit_gui_progress_update;
 use colored::Colorize;
 use fastanvil::Region;
