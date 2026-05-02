@@ -27,6 +27,7 @@ mod map_transformation;
 mod map_validation_tests;
 mod osm_parser;
 mod overture;
+mod pack_format;
 #[cfg(test)]
 mod pipeline_smoke_tests;
 #[cfg(feature = "gui")]

@@ -1,4 +1,5 @@
 use crate::coordinate_system::geographic::LLBBox;
+use crate::pack_format;
 use crate::retrieve_data;
 use fastnbt::Value;
 use flate2::read::GzDecoder;
@@ -211,10 +212,12 @@ pub const TALL_DATAPACK_NAME: &str = "mmf_tall";
 
 /// Install the bundled tall-world datapack into a Java world and register it
 /// in `level.dat`'s `Data.DataPacks.Enabled` so it auto-activates on first
-/// load. Pack assets target Minecraft 1.21.4 (matching the bundled level.dat
-/// template) — older clients will refuse to load the world.
+/// load.
+///
+/// The generated `pack.mcmeta` declares the full `supported_formats` range from
+/// MC 1.21.4 through MC 1.26.1.2, so Minecraft will not reject the pack with a
+/// "pack_format mismatch" warning on any version in that range.
 pub fn install_tall_datapack(world_path: &Path) -> Result<(), String> {
-    const PACK_MCMETA: &[u8] = include_bytes!("../assets/minecraft/datapack_tall/pack.mcmeta");
     const OVERWORLD_JSON: &[u8] = include_bytes!(
         "../assets/minecraft/datapack_tall/data/minecraft/dimension_type/overworld.json"
     );
@@ -227,7 +230,9 @@ pub fn install_tall_datapack(world_path: &Path) -> Result<(), String> {
     fs::create_dir_all(&dim_dir)
         .map_err(|e| format!("Failed to create datapack directories: {e}"))?;
 
-    fs::write(dp_root.join("pack.mcmeta"), PACK_MCMETA)
+    let pack_mcmeta =
+        pack_format::generate_pack_mcmeta("MMF extended build height (1.21.4\u{2013}1.26.1.2)");
+    fs::write(dp_root.join("pack.mcmeta"), pack_mcmeta.as_bytes())
         .map_err(|e| format!("Failed to write pack.mcmeta: {e}"))?;
     fs::write(dim_dir.join("overworld.json"), OVERWORLD_JSON)
         .map_err(|e| format!("Failed to write overworld.json: {e}"))?;
