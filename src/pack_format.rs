@@ -38,10 +38,18 @@ pub const PACK_FORMAT_MAX: u32 = 124; // MC 1.26.1.2
 
 /// Generate the JSON content for `pack.mcmeta`.
 ///
-/// Declares both the primary `pack_format` and the `supported_formats` range so
-/// Minecraft 1.26.1.2 (and every version back to 1.21.4) can load the datapack
-/// without a "pack_format mismatch" warning.
+/// Derives the `supported_formats` range from `DATAPACK_FORMAT_TABLE` so the
+/// output stays in sync with the table automatically.  Falls back to
+/// `PACK_FORMAT_MIN` / `PACK_FORMAT_MAX` if the table is somehow empty.
 pub fn generate_pack_mcmeta(description: &str) -> String {
+    let min = DATAPACK_FORMAT_TABLE
+        .first()
+        .and_then(|&(v, _)| datapack_format_for(v))
+        .unwrap_or(PACK_FORMAT_MIN);
+    let max = DATAPACK_FORMAT_TABLE
+        .last()
+        .and_then(|&(v, _)| datapack_format_for(v))
+        .unwrap_or(PACK_FORMAT_MAX);
     format!(
         r#"{{
   "pack": {{
@@ -53,8 +61,8 @@ pub fn generate_pack_mcmeta(description: &str) -> String {
     }}
   }}
 }}"#,
-        min = PACK_FORMAT_MIN,
-        max = PACK_FORMAT_MAX,
+        min = min,
+        max = max,
     )
 }
 
