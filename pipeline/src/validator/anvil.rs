@@ -139,13 +139,14 @@ pub fn column_block_names(
     out
 }
 
-/// Surface height for `(x, z)` in chunk-local coords, using fastanvil's
-/// motion-blocking heightmap. The result is the y-coordinate of the
-/// topmost solid block (or the heightmap's best estimate). Returns
-/// `None` if the heightmap can't be resolved.
+/// Surface height for `(x, z)` in chunk-local coords. Returns the y of the
+/// topmost solid (non-air) block. fastanvil's `surface_height` follows
+/// Minecraft's WORLD_SURFACE convention and returns the first *air* block
+/// above the surface, so we subtract 1 to get the solid block y.
+/// Returns `None` if the chunk cannot be resolved.
 pub fn surface_height(chunk: &JavaChunk, x: usize, z: usize) -> Option<i32> {
     let h = chunk.surface_height(x, z, fastanvil::HeightMode::Calculate);
-    Some(h as i32)
+    Some(h as i32 - 1)
 }
 
 #[cfg(test)]
