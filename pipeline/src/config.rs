@@ -205,6 +205,14 @@ pub struct ValidationConfig {
     #[serde(default = "default_interior_sample_chunks")]
     pub interior_sample_chunks: usize,
 
+    /// Minimum number of door-containing chunks that must fail the
+    /// furniture+floor check before the interior_unpopulated reason is
+    /// emitted. A threshold of 2 avoids false positives from buildings
+    /// that straddle chunk boundaries (the door lands in the edge chunk
+    /// while all furniture is in the adjacent chunk).
+    #[serde(default = "default_interior_min_failing_chunks")]
+    pub interior_min_failing_chunks: usize,
+
     // ---- Surface diversity (MIN-43 #4) ----
     /// Minimum distinct surface block types required across sampled
     /// chunks. A road-stripe-only map has 1–2 (asphalt + air); a real
@@ -275,6 +283,7 @@ impl Default for ValidationConfig {
             ground_max_air_gap_blocks: default_ground_max_air_gap_blocks(),
             ground_y_scan_cap: default_ground_y_scan_cap(),
             interior_sample_chunks: default_interior_sample_chunks(),
+            interior_min_failing_chunks: default_interior_min_failing_chunks(),
             surface_diversity_min_distinct: default_surface_diversity_min_distinct(),
             surface_diversity_sample_chunks: default_surface_diversity_sample_chunks(),
         }
@@ -389,6 +398,10 @@ fn default_ground_y_scan_cap() -> i32 {
 
 fn default_interior_sample_chunks() -> usize {
     32
+}
+
+fn default_interior_min_failing_chunks() -> usize {
+    2
 }
 
 fn default_surface_diversity_min_distinct() -> usize {

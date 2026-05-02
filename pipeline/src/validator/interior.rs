@@ -95,7 +95,12 @@ pub fn check(
         chunks_with_doors, chunks_failing, "Interior-populated sampling complete"
     );
 
-    if chunks_failing > 0 {
+    // Require at least 2 failing chunks before reporting. A single failing
+    // chunk is a common false positive: a building straddles a chunk
+    // boundary and the door lands in the edge chunk while furniture is in
+    // the adjacent chunk. Systematic interior generation failures affect
+    // many chunks and easily exceed this threshold.
+    if chunks_failing >= config.interior_min_failing_chunks {
         reasons.push(format!(
             "interior_unpopulated: {}/{} sampled chunks contain a door but \
              no furniture/floor — buildings present without interior content. \
