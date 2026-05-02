@@ -165,7 +165,10 @@ impl Validator {
 
 /// Find the `region/` directory under `map_path`. The generator wraps the
 /// world in a sub-directory (`<world_name>/region/`), so we walk up to two
-/// levels deep before giving up.
+/// levels deep before giving up. When multiple world sub-directories exist
+/// (from repeated generation attempts into the same job dir), we pick the
+/// one with the most recent modification time so validation always reflects
+/// the latest generation, not a stale earlier attempt.
 fn locate_region_dir(
     map_path: &Path,
 ) -> Result<Option<PathBuf>, Box<dyn std::error::Error + Send + Sync>> {
@@ -176,6 +179,7 @@ fn locate_region_dir(
     if !map_path.is_dir() {
         return Ok(None);
     }
+    let mut candidates: Vec<(std::time::SystemTime, PathBuf)> = Vec::new();
     for entry in std::fs::read_dir(map_path)? {
         let entry = entry?;
         if !entry.file_type()?.is_dir() {
@@ -183,10 +187,16 @@ fn locate_region_dir(
         }
         let nested = entry.path().join("region");
         if nested.is_dir() {
-            return Ok(Some(nested));
+            let mtime = entry
+                .metadata()
+                .and_then(|m| m.modified())
+                .unwrap_or(std::time::SystemTime::UNIX_EPOCH);
+            candidates.push((mtime, nested));
         }
     }
-    Ok(None)
+    // Newest world dir first.
+    candidates.sort_by(|a, b| b.0.cmp(&a.0));
+    Ok(candidates.into_iter().next().map(|(_, path)| path))
 }
 
 #[cfg(test)]
