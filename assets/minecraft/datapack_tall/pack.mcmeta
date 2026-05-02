@@ -2,6 +2,6 @@
   "pack": {
     "description": "MMF extended build height (1.21.4–1.26.1.2)",
     "min_format": 61,
-    "max_format": 124
+    "max_format": 101
   }
 }
