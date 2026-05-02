@@ -94,10 +94,10 @@ pub fn check(
 }
 
 /// Returns `Some(reason)` if the column at chunk-local (bx, bz) violates
-/// the ground-continuity rule. The rule: walking from `y_min` up to the
-/// reported surface height, the total air-block count must not exceed
-/// `ground_max_air_gap_blocks`. Floating buildings (the failure mode we
-/// are catching) put hundreds of air blocks here.
+/// the ground-continuity rule. The rule: walking from `y_min` up to
+/// `min(surface_height, ground_y_scan_cap)`, the total air-block count
+/// must not exceed `ground_max_air_gap_blocks`. Capping the scan avoids
+/// counting building-interior air above the expected terrain level.
 fn column_failure(
     chunk: &JavaChunk,
     bx: usize,
@@ -122,7 +122,10 @@ fn column_failure(
         ));
     }
 
-    let names = anvil::column_block_names(chunk, bx, bz, config.ground_y_min, surface);
+    // Cap the scan at ground_y_scan_cap so building interiors above the
+    // expected ground level are not mistaken for air gaps.
+    let scan_top = surface.min(config.ground_y_scan_cap);
+    let names = anvil::column_block_names(chunk, bx, bz, config.ground_y_min, scan_top);
     let mut air_blocks = 0usize;
     for name in &names {
         let is_air = match name.as_deref() {
@@ -138,8 +141,8 @@ fn column_failure(
         let world_x = (rf.rx as i64) * 512 + (cx as i64) * 16 + bx as i64;
         let world_z = (rf.rz as i64) * 512 + (cz as i64) * 16 + bz as i64;
         return Some(format!(
-            "world=({},{}) air={} surface={}",
-            world_x, world_z, air_blocks, surface
+            "world=({},{}) air={} scan_top={} surface={}",
+            world_x, world_z, air_blocks, scan_top, surface
         ));
     }
 
