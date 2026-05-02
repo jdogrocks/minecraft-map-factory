@@ -109,6 +109,7 @@ mod tests {
     #[test]
     fn test_generate_pack_mcmeta_is_valid_json() {
         let json = generate_pack_mcmeta("MMF extended build height");
-        serde_json::from_str::<serde_json::Value>(&json).expect("generated pack.mcmeta is not valid JSON");
+        serde_json::from_str::<serde_json::Value>(&json)
+            .expect("generated pack.mcmeta is not valid JSON");
     }
 }

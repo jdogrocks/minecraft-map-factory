@@ -27,6 +27,7 @@ mod map_transformation;
 mod map_validation_tests;
 mod osm_parser;
 mod overture;
+mod pack_format;
 #[cfg(test)]
 mod pipeline_smoke_tests;
 #[cfg(feature = "gui")]
@@ -36,7 +37,6 @@ mod retrieve_data;
 mod telemetry;
 #[cfg(test)]
 mod test_utilities;
-mod pack_format;
 mod world_editor;
 mod world_utils;
 
