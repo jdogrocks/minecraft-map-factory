@@ -37,7 +37,7 @@ pub struct Args {
     pub scale: f64,
 
     /// Ground level to use in the Minecraft world
-    #[arg(long, default_value_t = -62)]
+    #[arg(long, default_value_t = 64)]
     pub ground_level: i32,
 
     /// Enable terrain (optional)
