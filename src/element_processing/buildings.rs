@@ -6309,7 +6309,16 @@ mod tests {
 
         // place_subtle_pilasters: only emits at mod6 == 3.
         let config = make_config(WallDepthStyle::SubtlePilasters);
-        place_subtle_pilasters(&mut editor, &config, bx, bz, /* mod6 */ 3, out_nx, out_nz, 0);
+        place_subtle_pilasters(
+            &mut editor,
+            &config,
+            bx,
+            bz,
+            /* mod6 */ 3,
+            out_nx,
+            out_nz,
+            0,
+        );
         assert_no_buried_blocks(&editor, "place_subtle_pilasters");
 
         // place_modern_pillars: pillar branch (mod6 == 3 || 5) and
@@ -6432,8 +6441,16 @@ mod tests {
             0,
         );
         for (x_check, z_check, label) in [
-            (lx_inner, lz_inner, "place_religious_buttress inner buttress"),
-            (lx_outer, lz_outer, "place_religious_buttress outer buttress"),
+            (
+                lx_inner,
+                lz_inner,
+                "place_religious_buttress inner buttress",
+            ),
+            (
+                lx_outer,
+                lz_outer,
+                "place_religious_buttress outer buttress",
+            ),
         ] {
             for y in -64..=local_ground {
                 let y_offset = y - local_ground;
@@ -6471,7 +6488,10 @@ mod tests {
             "north",
             0,
         );
-        assert_no_buried_blocks(&editor, "place_institutional_bands (foundation/stair branch)");
+        assert_no_buried_blocks(
+            &editor,
+            "place_institutional_bands (foundation/stair branch)",
+        );
 
         // place_skyscraper_fins: pillar (mod6 == 3) and foundation/slab branch.
         let config = make_config(WallDepthStyle::SkyscraperFins);
