@@ -1,7 +1,12 @@
-/// Minecraft Java Edition datapack format (pack_format) version table.
+/// Minecraft Java Edition datapack format version table.
 ///
-/// Each entry maps a Minecraft release string to its datapack pack_format.
+/// Each entry maps a Minecraft release string to its datapack format number.
 /// Source: <https://minecraft.wiki/w/Data_pack#Pack_format>
+///
+/// Note: MC 26.1.2 (snapshot 25w31a) introduced a new `min_format`/`max_format`
+/// schema and reset the format numbering to 101. Entries before 1.26.1.2 use the
+/// old system; 1.26.1.2 onward use the new system. The table is NOT monotonically
+/// non-decreasing at that boundary.
 ///
 /// When a new Minecraft version ships, append the new entry here and update
 /// `pack.mcmeta` via `generate_pack_mcmeta`.
@@ -15,7 +20,7 @@ const DATAPACK_FORMAT_TABLE: &[(&str, u32)] = &[
     ("1.25", 113),
     ("1.26", 122),
     ("1.26.1", 124),
-    ("1.26.1.2", 124),
+    ("1.26.1.2", 101), // new min_format/max_format numbering starts here
 ];
 
 /// Look up the datapack `pack_format` for the given Minecraft version string.
@@ -33,13 +38,16 @@ pub fn datapack_format_for(mc_version: &str) -> Option<u32> {
 /// Set to 61 (MC 1.21.4) — the version the datapack was first authored for.
 pub const PACK_FORMAT_MIN: u32 = 61;
 
-/// The newest pack_format the bundled tall-world datapack has been validated against.
-pub const PACK_FORMAT_MAX: u32 = 124; // MC 1.26.1.2
+/// The newest format number the bundled tall-world datapack has been validated against.
+///
+/// Uses the new `min_format`/`max_format` numbering introduced in MC 26.1.2.
+pub const PACK_FORMAT_MAX: u32 = 101; // MC 1.26.1.2 (new format numbering)
 
 /// Generate the JSON content for `pack.mcmeta`.
 ///
-/// Derives the `supported_formats` range from `DATAPACK_FORMAT_TABLE` so the
-/// output stays in sync with the table automatically.  Falls back to
+/// Uses the flat `min_format`/`max_format` schema introduced in MC 26.1.2,
+/// which replaces the old `pack_format`/`supported_formats` fields.
+/// Derives the range from `DATAPACK_FORMAT_TABLE` automatically. Falls back to
 /// `PACK_FORMAT_MIN` / `PACK_FORMAT_MAX` if the table is somehow empty.
 pub fn generate_pack_mcmeta(description: &str) -> String {
     let min = DATAPACK_FORMAT_TABLE
@@ -53,12 +61,9 @@ pub fn generate_pack_mcmeta(description: &str) -> String {
     format!(
         r#"{{
   "pack": {{
-    "pack_format": {max},
     "description": "{description}",
-    "supported_formats": {{
-      "min_inclusive": {min},
-      "max_inclusive": {max}
-    }}
+    "min_format": {min},
+    "max_format": {max}
   }}
 }}"#,
         min = min,
@@ -74,7 +79,9 @@ mod tests {
     fn test_known_versions() {
         assert_eq!(datapack_format_for("1.21.4"), Some(61));
         assert_eq!(datapack_format_for("1.21.5"), Some(71));
-        assert_eq!(datapack_format_for("1.26.1.2"), Some(124));
+        // 1.26.1.2 uses the new min_format/max_format numbering (101), not the
+        // old pack_format numbering (would have been 124+ in the old system).
+        assert_eq!(datapack_format_for("1.26.1.2"), Some(101));
     }
 
     #[test]
@@ -84,12 +91,18 @@ mod tests {
     }
 
     #[test]
-    fn test_table_is_ascending() {
-        let formats: Vec<u32> = DATAPACK_FORMAT_TABLE.iter().map(|(_, f)| *f).collect();
-        for window in formats.windows(2) {
+    fn test_table_pre_26_1_2_is_ascending() {
+        // The table is non-decreasing up to (but not including) 1.26.1.2, which
+        // resets the numbering to 101 under the new min_format/max_format schema.
+        let pre_reset: Vec<u32> = DATAPACK_FORMAT_TABLE
+            .iter()
+            .take_while(|(v, _)| *v != "1.26.1.2")
+            .map(|(_, f)| *f)
+            .collect();
+        for window in pre_reset.windows(2) {
             assert!(
                 window[0] <= window[1],
-                "pack_format table is not non-decreasing: {} > {}",
+                "format table is not non-decreasing before the 26.1.2 reset: {} > {}",
                 window[0],
                 window[1]
             );
@@ -99,10 +112,11 @@ mod tests {
     #[test]
     fn test_generate_pack_mcmeta_contains_correct_range() {
         let json = generate_pack_mcmeta("test pack");
-        assert!(json.contains(&format!("\"pack_format\": {}", PACK_FORMAT_MAX)));
-        assert!(json.contains(&format!("\"min_inclusive\": {}", PACK_FORMAT_MIN)));
-        assert!(json.contains(&format!("\"max_inclusive\": {}", PACK_FORMAT_MAX)));
+        assert!(json.contains(&format!("\"min_format\": {}", PACK_FORMAT_MIN)));
+        assert!(json.contains(&format!("\"max_format\": {}", PACK_FORMAT_MAX)));
         assert!(json.contains("\"test pack\""));
+        assert!(!json.contains("pack_format"), "old pack_format key must not appear");
+        assert!(!json.contains("supported_formats"), "old supported_formats key must not appear");
     }
 
     #[test]
