@@ -36,6 +36,7 @@ mod retrieve_data;
 mod telemetry;
 #[cfg(test)]
 mod test_utilities;
+mod pack_format;
 mod world_editor;
 mod world_utils;
 
