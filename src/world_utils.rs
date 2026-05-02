@@ -160,7 +160,7 @@ pub fn create_new_world(base_path: &Path) -> Result<String, String> {
                         *x = -5.0;
                     }
                     if let Value::Double(ref mut y) = pos[1] {
-                        *y = -61.0;
+                        *y = 65.0;
                     }
                     if let Value::Double(ref mut z) = pos[2] {
                         *z = -5.0;
