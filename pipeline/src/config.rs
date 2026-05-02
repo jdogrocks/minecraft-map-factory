@@ -406,7 +406,17 @@ impl PipelineConfig {
         path: &std::path::Path,
     ) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
         let content = std::fs::read_to_string(path)?;
-        let config: Self = toml::from_str(&content)?;
+        let mut config: Self = toml::from_str(&content)?;
+        // Resolve relative paths relative to the config file's directory so
+        // the pipeline can be invoked from any working directory.
+        if let Some(base) = path.parent() {
+            if config.locations_file.is_relative() {
+                config.locations_file = base.join(&config.locations_file);
+            }
+            if config.arnis_binary.is_relative() {
+                config.arnis_binary = base.join(&config.arnis_binary);
+            }
+        }
         Ok(config)
     }
 }
