@@ -7,7 +7,7 @@ arnis_binary = "../target/release/minecraft-map-factory"
 
 [scheduler]
 max_concurrency = 2
-max_memory_mb = 4096
+max_memory_mb = 28000
 max_cpu_percent = 0.8
 
 [retry]
