@@ -215,6 +215,9 @@ pub(super) fn is_furniture_block(name: &str) -> bool {
     let bare = name.strip_prefix("minecraft:").unwrap_or(name);
     // Whitelist matches what `src/block_definitions.rs` palette emits as
     // of MIN-43; coordinate any additions with MIN-42.
+    // IMPORTANT: glowstone is the primary ceiling-light block placed by
+    // buildings_interior.rs (ceiling_abs-1) — it must be here or any
+    // building that uses glowstone lighting will false-fail.
     let furniture_set: HashSet<&'static str> = [
         "crafting_table",
         "chest",
@@ -233,6 +236,7 @@ pub(super) fn is_furniture_block(name: &str) -> bool {
         "smoker",
         "campfire",
         "soul_campfire",
+        "glowstone",
         "sea_lantern",
         "lantern",
         "soul_lantern",
@@ -241,6 +245,8 @@ pub(super) fn is_furniture_block(name: &str) -> bool {
         "soul_torch",
         "redstone_torch",
         "ender_chest",
+        "cauldron",
+        "water_cauldron",
     ]
     .iter()
     .copied()
@@ -288,6 +294,9 @@ mod tests {
         assert!(is_furniture_block("minecraft:bookshelf"));
         assert!(is_furniture_block("minecraft:red_bed"));
         assert!(is_furniture_block("minecraft:white_carpet"));
+        assert!(is_furniture_block("minecraft:glowstone"));
+        assert!(is_furniture_block("minecraft:cauldron"));
+        assert!(is_furniture_block("minecraft:water_cauldron"));
         assert!(is_furniture_block("minecraft:sea_lantern"));
         assert!(is_furniture_block("minecraft:lantern"));
     }
