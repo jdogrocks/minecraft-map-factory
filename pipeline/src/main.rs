@@ -4,7 +4,7 @@ mod locations;
 mod metrics;
 mod publisher;
 mod scheduler;
-mod validation;
+mod validator;
 
 use clap::Parser;
 use config::PipelineConfig;

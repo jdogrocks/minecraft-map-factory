@@ -8,7 +8,7 @@ use crate::generator::Generator;
 use crate::locations::{LocationDatabase, LocationStatus};
 use crate::metrics::MetricsCollector;
 use crate::publisher::Publisher;
-use crate::validation::Validator;
+use crate::validator::Validator;
 use std::sync::Arc;
 use tokio::sync::{Mutex, Semaphore};
 use tracing::{error, info, warn};
@@ -167,10 +167,15 @@ impl Scheduler {
                         m.record_success(duration, report.total_size_bytes, &location);
                     }
                     Ok(report) => {
+                        // Failed maps stay in `output/jobs/<name>_attempt<N>/`
+                        // (where the generator wrote them) and are NOT copied
+                        // into `output/published/`. The artifact is kept in
+                        // place so operators can inspect the failing map.
                         warn!(
                             name = %location.name,
                             reasons = ?report.failure_reasons,
-                            "Validation failed"
+                            failed_artifact = %output_path.display(),
+                            "Validation failed — map kept in jobs/, not published"
                         );
                         let mut db = db.lock().await;
                         db.set_status(
