@@ -35,7 +35,7 @@ mod tests {
             bedrock: false,
             downloader: "requests".to_string(),
             scale: 1.0,
-            ground_level: -62,
+            ground_level: 64,
             terrain: false,
             interior: false,
             entities: false,

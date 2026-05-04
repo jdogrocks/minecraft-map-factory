@@ -4,6 +4,74 @@ use crate::element_processing::buildings::BuildingCategory;
 use crate::world_editor::WorldEditor;
 use theme::ThemePack;
 
+/// Context for outdoor entity placement, determining entity types and density.
+#[derive(Copy, Clone)]
+pub enum OutdoorContext {
+    /// Open park / garden / nature_reserve areas: wolves (w=40), cats (w=30), villagers (w=30).
+    Park,
+    /// Pedestrian footways and paths: villagers (w=60), wolves (w=40).
+    Footway,
+    /// Outdoor yards adjacent to detached / residential houses: cats (w=50), wolves (w=50).
+    ResidentialYard,
+}
+
+/// Place entities in outdoor areas using deterministic seeding.
+///
+/// Mirrors the seeding strategy of `place_building_entities` for cross-run reproducibility.
+pub fn place_outdoor_entities(
+    editor: &mut WorldEditor,
+    positions: &[(i32, i32)],
+    context: OutdoorContext,
+    seed: u64,
+) {
+    if positions.is_empty() {
+        return;
+    }
+
+    // Cumulative weight table: (entity_id, cumulative_weight) summing to 100
+    let entities: &[(&str, u64)] = match context {
+        OutdoorContext::Park => &[
+            ("minecraft:wolf", 40),
+            ("minecraft:cat", 70),       // 40+30
+            ("minecraft:villager", 100), // 40+30+30
+        ],
+        OutdoorContext::Footway => &[
+            ("minecraft:villager", 60),
+            ("minecraft:wolf", 100), // 60+40
+        ],
+        OutdoorContext::ResidentialYard => &[
+            ("minecraft:cat", 50),
+            ("minecraft:wolf", 100), // 50+50
+        ],
+    };
+
+    // How many entities to target for this area
+    let max_count: usize = match context {
+        OutdoorContext::Park => (positions.len() / 15).max(1),
+        OutdoorContext::Footway => (positions.len() / 8).max(1),
+        OutdoorContext::ResidentialYard => (seed.wrapping_mul(2654435761) % 3) as usize,
+    };
+
+    if max_count == 0 {
+        return;
+    }
+
+    let step = (positions.len() / (max_count + 1)).max(1);
+    for (i, &(x, z)) in positions.iter().enumerate() {
+        if i % step != step / 2 {
+            continue;
+        }
+        let entity_seed = seed.wrapping_mul(2654435761).wrapping_add(i as u64);
+        let roll = entity_seed % 100;
+        for &(entity_id, cum_weight) in entities {
+            if roll < cum_weight {
+                editor.add_entity(entity_id, x, 1, z, None);
+                break;
+            }
+        }
+    }
+}
+
 /// Maps a BuildingCategory to a theme context string.
 pub fn category_to_context(category: BuildingCategory) -> &'static str {
     match category {

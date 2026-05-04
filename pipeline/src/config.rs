@@ -70,6 +70,13 @@ pub struct GeneratorConfig {
     /// Enable roof generation.
     #[serde(default = "default_true")]
     pub roof: bool,
+
+    /// Ground level Y coordinate (Minecraft sea level) for terrain anchoring.
+    /// Must stay in sync with validation.ground_y_scan_cap in pipeline.toml.
+    /// Explicit forwarding prevents the MIN-129 regression where binary-default
+    /// changes silently shift the Y-anchor.
+    #[serde(default = "default_ground_level")]
+    pub ground_level: i32,
 }
 
 impl Default for GeneratorConfig {
@@ -81,12 +88,17 @@ impl Default for GeneratorConfig {
             entities: true,
             entity_theme: default_entity_theme(),
             roof: true,
+            ground_level: default_ground_level(),
         }
     }
 }
 
 fn default_entity_theme() -> String {
     "default".to_string()
+}
+
+fn default_ground_level() -> i32 {
+    64
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

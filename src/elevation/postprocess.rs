@@ -1409,12 +1409,12 @@ mod tests {
     #[test]
     fn scale_to_minecraft_flat_terrain() {
         let heights = vec![vec![100.0; 5]; 5];
-        let result = scale_to_minecraft(&heights, 1.0, -62, false, 319);
+        let result = scale_to_minecraft(&heights, 1.0, 64, false, 319);
         // All same height → all should be ground_level
         for row in &result {
             for &h in row {
                 assert!(
-                    (h - (-62.0)).abs() < 1.0,
+                    (h - 64.0).abs() < 1.0,
                     "Flat terrain should be at ground level: {h}"
                 );
             }
@@ -1427,11 +1427,11 @@ mod tests {
         let heights: Vec<Vec<f64>> = (0..10)
             .map(|z| (0..10).map(|x| (x + z) as f64 * 5.0).collect())
             .collect();
-        let result = scale_to_minecraft(&heights, 1.0, -62, false, 319);
+        let result = scale_to_minecraft(&heights, 1.0, 64, false, 319);
         // Check all values are within valid MC range
         for row in &result {
             for &h in row {
-                assert!(h >= -62.0, "Height below ground level: {h}");
+                assert!(h >= 64.0, "Height below ground level: {h}");
                 assert!(h <= 319.0, "Height above max Y: {h}");
             }
         }
@@ -1440,7 +1440,7 @@ mod tests {
     #[test]
     fn scale_to_minecraft_with_height_limit_disabled() {
         let heights = vec![vec![0.0, 500.0], vec![1000.0, 2000.0]];
-        let result = scale_to_minecraft(&heights, 1.0, -62, true, 2031);
+        let result = scale_to_minecraft(&heights, 1.0, 64, true, 2031);
         // With extended max, heights can go above 319
         let max_h = result
             .iter()
@@ -1454,8 +1454,26 @@ mod tests {
     #[test]
     fn scale_to_minecraft_empty_grid() {
         let heights: Vec<Vec<f64>> = vec![];
-        let result = scale_to_minecraft(&heights, 1.0, -62, false, 319);
+        let result = scale_to_minecraft(&heights, 1.0, 64, false, 319);
         assert!(result.is_empty());
+    }
+
+    /// MIN-129 regression guard: flat terrain at any absolute elevation must
+    /// anchor within ±4 blocks of ground_level=64 (Minecraft sea level).
+    /// Uses a Colorado-Springs-like altitude (1800 m) so the absolute value
+    /// is irrelevant — only the relative anchor matters.
+    #[test]
+    fn terrain_y_anchor_within_sea_level_band() {
+        let heights = vec![vec![1800.0; 10]; 10];
+        let result = scale_to_minecraft(&heights, 1.0, 64, false, 319);
+        for row in &result {
+            for &h in row {
+                assert!(
+                    (60.0..=70.0).contains(&h),
+                    "MIN-129: Y-anchor out of [60, 70] at ground_level=64: {h}"
+                );
+            }
+        }
     }
 
     // ── apply_land_cover_repair ─────────────────────────────────────
@@ -1703,7 +1721,7 @@ mod tests {
     #[test]
     fn scale_to_minecraft_nan_handling() {
         let heights = vec![vec![100.0, f64::NAN], vec![f64::NAN, 200.0]];
-        let result = scale_to_minecraft(&heights, 1.0, -62, false, 319);
+        let result = scale_to_minecraft(&heights, 1.0, 64, false, 319);
         // NaN inputs produce NaN-derived but clamped outputs
         assert_eq!(result.len(), 2);
     }
@@ -1711,18 +1729,18 @@ mod tests {
     #[test]
     fn scale_to_minecraft_single_value() {
         let heights = vec![vec![100.0]];
-        let result = scale_to_minecraft(&heights, 1.0, -62, false, 319);
-        assert!((result[0][0] - (-62.0)).abs() < 1.0);
+        let result = scale_to_minecraft(&heights, 1.0, 64, false, 319);
+        assert!((result[0][0] - 64.0).abs() < 1.0);
     }
 
     #[test]
     fn scale_to_minecraft_compression() {
         // Very large elevation range that exceeds available Y range
         let heights = vec![vec![0.0, 5000.0], vec![5000.0, 10000.0]];
-        let result = scale_to_minecraft(&heights, 1.0, -62, false, 319);
+        let result = scale_to_minecraft(&heights, 1.0, 64, false, 319);
         for row in &result {
             for &h in row {
-                assert!(h >= -62.0, "Height below ground: {h}");
+                assert!(h >= 64.0, "Height below ground: {h}");
                 assert!(h <= 304.0, "Height above max: {h}");
             }
         }
