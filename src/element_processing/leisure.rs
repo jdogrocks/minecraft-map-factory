@@ -136,10 +136,8 @@ pub fn generate_leisure(
                 }
 
                 // P3: Dog park wolf spawning (~1-in-6 per cell)
-                if args.entities && leisure_type == "dog_park" {
-                    if rng.random_range(0..6) == 0 {
-                        editor.add_entity("minecraft:wolf", x, 1, z, None);
-                    }
+                if args.entities && leisure_type == "dog_park" && rng.random_range(0..6) == 0 {
+                    editor.add_entity("minecraft:wolf", x, 1, z, None);
                 }
 
                 // Add playground or recreation ground features
