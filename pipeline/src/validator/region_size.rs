@@ -33,7 +33,10 @@ mod tests {
         // All of these previously false-positived on sparse-terrain maps.
         for size in [4_202_496, 4_200_000, 100, 7_753_728, 12_000_000] {
             let reasons = check(&cfg, &[rf("r.0.0.mca", size)]);
-            assert!(reasons.is_empty(), "size {size} produced reasons: {reasons:?}");
+            assert!(
+                reasons.is_empty(),
+                "size {size} produced reasons: {reasons:?}"
+            );
         }
     }
 }

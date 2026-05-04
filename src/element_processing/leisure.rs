@@ -84,10 +84,7 @@ pub fn generate_leisure(
 
             // P1: Outdoor entity placement for park areas (~1 per 15 cells)
             if args.entities
-                && matches!(
-                    leisure_type.as_str(),
-                    "park" | "garden" | "nature_reserve"
-                )
+                && matches!(leisure_type.as_str(), "park" | "garden" | "nature_reserve")
             {
                 crate::entity_placement::place_outdoor_entities(
                     editor,
