@@ -82,6 +82,18 @@ pub fn generate_leisure(
         if corner_addup != (0, 0, 0) {
             let filled_area = flood_fill_cache.get_or_compute(element, args.timeout.as_ref());
 
+            // P1: Outdoor entity placement for park areas (~1 per 15 cells)
+            if args.entities
+                && matches!(leisure_type.as_str(), "park" | "garden" | "nature_reserve")
+            {
+                crate::entity_placement::place_outdoor_entities(
+                    editor,
+                    &filled_area,
+                    crate::entity_placement::OutdoorContext::Park,
+                    element.id,
+                );
+            }
+
             // Use deterministic RNG seeded by element ID for consistent results across region boundaries
             let mut rng = element_rng(element.id);
 
@@ -121,6 +133,11 @@ pub fn generate_leisure(
                         }
                         _ => {}
                     }
+                }
+
+                // P3: Dog park wolf spawning (~1-in-6 per cell)
+                if args.entities && leisure_type == "dog_park" && rng.random_range(0..6) == 0 {
+                    editor.add_entity("minecraft:wolf", x, 1, z, None);
                 }
 
                 // Add playground or recreation ground features

@@ -1051,6 +1051,25 @@ fn generate_highways_internal(
                 }
                 previous_node = Some((node.x, node.z));
             }
+
+            // P1: Outdoor entity placement along footways and paths (~1 per 8 blocks)
+            if args.entities && matches!(highway_type.as_str(), "footway" | "path") {
+                let mut all_pts: Vec<(i32, i32)> = Vec::new();
+                let mut prev_fp: Option<(i32, i32)> = None;
+                for node in &way.nodes {
+                    if let Some((px, pz)) = prev_fp {
+                        let pts = bresenham_line(px, 0, pz, node.x, 0, node.z);
+                        all_pts.extend(pts.iter().map(|&(bx, _, bz)| (bx, bz)));
+                    }
+                    prev_fp = Some((node.x, node.z));
+                }
+                crate::entity_placement::place_outdoor_entities(
+                    editor,
+                    &all_pts,
+                    crate::entity_placement::OutdoorContext::Footway,
+                    way.id,
+                );
+            }
         }
     }
 }

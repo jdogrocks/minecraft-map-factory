@@ -3953,6 +3953,23 @@ pub fn generate_buildings(
                 );
             }
         }
+
+        // P1: Outdoor entity placement for residential yards (0–2 per house)
+        if args.entities
+            && matches!(
+                category,
+                BuildingCategory::House | BuildingCategory::Residential
+            )
+        {
+            let yard_positions: Vec<(i32, i32)> =
+                element.nodes.iter().map(|n| (n.x, n.z)).collect();
+            crate::entity_placement::place_outdoor_entities(
+                editor,
+                &yard_positions,
+                crate::entity_placement::OutdoorContext::ResidentialYard,
+                element.id,
+            );
+        }
     }
 
     // Process roof generation using style decisions
