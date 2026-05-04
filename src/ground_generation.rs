@@ -740,11 +740,18 @@ pub fn generate_ground_layer(
                                     land_cover::LC_TREE_COVER
                                         if slope <= 4 && ground_allows_trees =>
                                     {
-                                        let choice = rng.random_range(0..30);
+                                        // P2: 1-in-12 chance for a Colorado-appropriate tree
+                                        let choice = rng.random_range(0..12);
                                         if choice == 0 {
-                                            tree::Tree::create(
+                                            let tree_type = match rng.random_range(0..10) {
+                                                0..=5 => tree::TreeType::Spruce,
+                                                6..=8 => tree::TreeType::Oak,
+                                                _ => tree::TreeType::Birch,
+                                            };
+                                            tree::Tree::create_of_type(
                                                 editor,
                                                 (x, 1, z),
+                                                tree_type,
                                                 Some(building_footprints),
                                             );
                                         } else if ground_is_natural {
@@ -764,7 +771,7 @@ pub fn generate_ground_layer(
                                                     None,
                                                     None,
                                                 );
-                                            } else if choice <= 13 {
+                                            } else if choice <= 7 {
                                                 editor.set_block_absolute(
                                                     GRASS,
                                                     x,
@@ -777,8 +784,9 @@ pub fn generate_ground_layer(
                                         }
                                     }
                                     land_cover::LC_SHRUBLAND if ground_is_natural => {
+                                        // P2: 1-in-20 chance for a shrub (oak_leaves cluster)
                                         let choice = rng.random_range(0..100);
-                                        if choice < 2 {
+                                        if choice < 5 {
                                             editor.set_block_absolute(
                                                 OAK_LEAVES,
                                                 x,
