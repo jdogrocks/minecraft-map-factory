@@ -6,7 +6,7 @@ use super::common::{Chunk, ChunkToModify, Section};
 use super::{WorldEditor, MIN_Y};
 use crate::block_definitions::Block;
 use crate::block_definitions::{
-    ANDESITE, BEDROCK, COBBLED_DEEPSLATE, COBBLESTONE, GRASS_BLOCK, STONE,
+    ANDESITE, BEDROCK, COBBLED_DEEPSLATE, COBBLESTONE, DIRT, GRASS_BLOCK, STONE,
 };
 use crate::progress::emit_gui_progress_update;
 use colored::Colorize;
@@ -118,6 +118,13 @@ impl<'a> WorldEditor<'a> {
                 for y in 48..=(GROUND_LEVEL - 3) {
                     chunk.set_block(x, y, z, stone_variant(abs_x, y, abs_z));
                 }
+
+                // Dirt sub-surface at y = 62–63 (GROUND_LEVEL-2 to GROUND_LEVEL-1).
+                // Without these, peripheral chunks processed by ground_generation
+                // outside the rotated bounds have a 2-block air gap under the
+                // grass layer — exposed on cliff faces and visible when digging.
+                chunk.set_block(x, GROUND_LEVEL - 2, z, DIRT);
+                chunk.set_block(x, GROUND_LEVEL - 1, z, DIRT);
 
                 // Surface grass at GROUND_LEVEL (64)
                 chunk.set_block(x, GROUND_LEVEL, z, GRASS_BLOCK);

@@ -139,6 +139,9 @@ impl Generator {
             command.arg(format!("{flag}={value}"));
         }
         command.arg("--entity-theme").arg(&self.flags.entity_theme);
+        command
+            .arg("--ground-level")
+            .arg(self.flags.ground_level.to_string());
 
         let output = command
             .stdout(Stdio::piped())
