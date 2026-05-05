@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 
 /// A geographic location for map generation.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Location {
     /// Human-readable name.
     pub name: String,
@@ -20,6 +20,14 @@ pub struct Location {
     /// Tags for categorization.
     #[serde(default)]
     pub tags: Vec<String>,
+
+    /// Optional spawn point latitude (must be within bbox).
+    #[serde(default)]
+    pub spawn_lat: Option<f64>,
+
+    /// Optional spawn point longitude (must be within bbox).
+    #[serde(default)]
+    pub spawn_lng: Option<f64>,
 }
 
 /// Tracks generation status for a location.
@@ -155,21 +163,21 @@ mod tests {
                     state: "CA".into(),
                     bbox: [34.0, -118.3, 34.01, -118.29],
                     tier: "small".into(),
-                    tags: vec![],
+                    ..Default::default()
                 },
                 Location {
                     name: "Test Large".into(),
                     state: "NY".into(),
                     bbox: [40.7, -74.0, 40.8, -73.9],
                     tier: "large".into(),
-                    tags: vec![],
+                    ..Default::default()
                 },
                 Location {
                     name: "Test Medium".into(),
                     state: "TX".into(),
                     bbox: [29.7, -95.4, 29.75, -95.35],
                     tier: "medium".into(),
-                    tags: vec![],
+                    ..Default::default()
                 },
             ],
             statuses: vec![
@@ -217,7 +225,7 @@ mod tests {
             state: "CA".into(),
             bbox: [34.0, -118.3, 34.01, -118.29],
             tier: "small".into(),
-            tags: vec![],
+            ..Default::default()
         };
         assert_eq!(
             LocationDatabase::bbox_string(&loc),
@@ -232,7 +240,7 @@ mod tests {
             state: "CA".into(),
             bbox: [0.0, 0.0, 10.0, 10.0],
             tier: "small".into(),
-            tags: vec![],
+            ..Default::default()
         };
         let shrunk = LocationDatabase::shrink_bbox(&loc, 0.5);
         assert!((shrunk[0] - 2.5).abs() < 0.001);

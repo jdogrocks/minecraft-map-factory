@@ -89,7 +89,7 @@ mod tests {
             state: "CA".into(),
             bbox: [0.0, 0.0, 1.0, 1.0],
             tier: "small".into(),
-            tags: vec![],
+            ..Default::default()
         };
 
         let publisher = Publisher::new(&output);
