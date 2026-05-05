@@ -53,7 +53,12 @@ impl Generator {
             );
 
             match self
-                .invoke_generator(&bbox_str, &output_dir, location.spawn_lat, location.spawn_lng)
+                .invoke_generator(
+                    &bbox_str,
+                    &output_dir,
+                    location.spawn_lat,
+                    location.spawn_lng,
+                )
                 .await
             {
                 Ok(()) => {
