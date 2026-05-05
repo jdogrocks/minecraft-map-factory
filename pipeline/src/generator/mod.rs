@@ -53,7 +53,12 @@ impl Generator {
             );
 
             match self
-                .invoke_generator(&bbox_str, &output_dir, location.spawn_lat, location.spawn_lng)
+                .invoke_generator(
+                    &bbox_str,
+                    &output_dir,
+                    location.spawn_lat,
+                    location.spawn_lng,
+                )
                 .await
             {
                 Ok(()) => {
@@ -117,7 +122,11 @@ impl Generator {
         spawn_lng: Option<f64>,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut command = Command::new(&self.arnis_binary);
+        // Each job runs in its own output directory so concurrent subprocesses
+        // never share a working directory or write relative-path temporaries
+        // to the same location (identical-worlds isolation, MIN-137).
         command
+            .current_dir(output_dir)
             .arg("--bbox")
             .arg(bbox)
             .arg("--output-dir")

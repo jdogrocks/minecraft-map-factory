@@ -1164,24 +1164,29 @@ pub fn scale_to_minecraft(
     disable_height_limit: bool,
     extended_max_y: i32,
 ) -> Vec<Vec<f64>> {
-    // Derive min/max
-    let (min_height, max_height) = blurred_heights
-        .par_iter()
-        .map(|row| {
-            let mut lo = f64::MAX;
-            let mut hi = f64::MIN;
-            for &h in row {
-                if h.is_finite() {
-                    lo = lo.min(h);
-                    hi = hi.max(h);
-                }
-            }
-            (lo, hi)
-        })
-        .reduce(
-            || (f64::MAX, f64::MIN),
-            |(lo1, hi1), (lo2, hi2)| (lo1.min(lo2), hi1.max(hi2)),
-        );
+    // Collect finite heights; use Q1 (25th percentile) as the robust terrain
+    // minimum so sea-level artifact tiles (ocean/DEM-void cells returning 0 m)
+    // cannot anchor the entire terrain baseline at sea level.  Without this,
+    // a Denver bbox with even a small fraction of 0 m artifact cells would map
+    // real 1 600 m terrain to sky height (MIN-137).  Q1 is unaffected by
+    // contamination up to ~24 % of the grid; cells below Q1 clamp to
+    // ground_level in the final output.
+    let mut flat_finite: Vec<f64> = blurred_heights
+        .iter()
+        .flat_map(|row| row.iter().copied())
+        .filter(|h| h.is_finite())
+        .collect();
+
+    let max_height: f64 = flat_finite.iter().copied().fold(f64::MIN, f64::max);
+
+    let min_height: f64 = if flat_finite.len() >= 4 {
+        let q1_idx = flat_finite.len() / 4;
+        let (_, q1_val, _) =
+            flat_finite.select_nth_unstable_by(q1_idx, |a, b| a.partial_cmp(b).unwrap());
+        *q1_val
+    } else {
+        flat_finite.iter().copied().fold(f64::MAX, f64::min)
+    };
 
     let (min_height, _max_height, height_range) =
         if !min_height.is_finite() || !max_height.is_finite() || min_height >= max_height {
@@ -1473,6 +1478,41 @@ mod tests {
                     "MIN-129: Y-anchor out of [60, 70] at ground_level=64: {h}"
                 );
             }
+        }
+    }
+
+    /// MIN-137 regression guard: a grid of real inland terrain contaminated by
+    /// sea-level artifact tiles must still anchor near ground_level, not sky.
+    /// Simulates a Denver-like bbox where 10 % of DEM cells returned 0 m (ocean
+    /// or DEM-void encoding) while true terrain sits at 1 580–1 720 m.
+    #[test]
+    fn scale_to_minecraft_sea_level_artifacts_do_not_sky_anchor() {
+        // 10×10 grid: 10 cells at 0 m (artifact), 90 cells at 1 580–1 720 m
+        let mut rows: Vec<Vec<f64>> = Vec::new();
+        // Row 0: 10 artifact cells at 0 m
+        rows.push(vec![0.0; 10]);
+        // Rows 1–9: real Denver terrain (linear ramp 1 580–1 720 m)
+        for i in 1..10usize {
+            let row: Vec<f64> = (0..10)
+                .map(|j| 1580.0 + (i * 10 + j) as f64 * (140.0 / 89.0))
+                .collect();
+            rows.push(row);
+        }
+        let result = scale_to_minecraft(&rows, 1.0, 64, false, 319);
+        // Real terrain should map near ground_level, not to sky.
+        // Row 1 (lowest real terrain ~1 580 m) should be at or near y=64.
+        for &h in &result[1] {
+            assert!(
+                h <= 100.0,
+                "MIN-137: terrain anchored too high (sea-level artifact bled through): {h}"
+            );
+        }
+        // Highest terrain row should be above y=64 but within world bounds.
+        for &h in result.last().unwrap() {
+            assert!(
+                (64.0..=319.0).contains(&h),
+                "Terrain out of world bounds: {h}"
+            );
         }
     }
 
