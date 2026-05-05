@@ -579,11 +579,22 @@ impl<'a> WorldEditor<'a> {
         z: i32,
         extra_data: Option<HashMap<String, Value>>,
     ) {
+        let absolute_y = self.get_absolute_y(x, y, z);
+        self.add_entity_absolute(id, x, absolute_y, z, extra_data);
+    }
+
+    /// Adds an entity at the given coordinates (Y is absolute world Y).
+    pub fn add_entity_absolute(
+        &mut self,
+        id: &str,
+        x: i32,
+        y: i32,
+        z: i32,
+        extra_data: Option<HashMap<String, Value>>,
+    ) {
         if !self.xzbbox.contains(&XZPoint::new(x, z)) {
             return;
         }
-
-        let absolute_y = self.get_absolute_y(x, y, z);
 
         let mut entity = HashMap::new();
         entity.insert("id".to_string(), Value::String(id.to_string()));
@@ -591,7 +602,7 @@ impl<'a> WorldEditor<'a> {
             "Pos".to_string(),
             Value::List(vec![
                 Value::Double(x as f64 + 0.5),
-                Value::Double(absolute_y as f64),
+                Value::Double(y as f64),
                 Value::Double(z as f64 + 0.5),
             ]),
         );
@@ -614,7 +625,7 @@ impl<'a> WorldEditor<'a> {
         entity.insert("PortalCooldown".to_string(), Value::Int(0));
         entity.insert(
             "UUID".to_string(),
-            Value::IntArray(build_deterministic_uuid(id, x, absolute_y, z)),
+            Value::IntArray(build_deterministic_uuid(id, x, y, z)),
         );
 
         if let Some(extra) = extra_data {
@@ -1664,6 +1675,21 @@ mod tests {
             Value::String("TestPig".to_string()),
         );
         editor.add_entity("minecraft:pig", 50, 10, 50, Some(extra));
+    }
+
+    #[test]
+    fn add_entity_absolute_within_bbox() {
+        let bbox = test_bbox();
+        let mut editor = test_editor(&bbox);
+        // absolute Y=65 should not be shifted by any ground level offset
+        editor.add_entity_absolute("minecraft:villager", 50, 65, 50, None);
+    }
+
+    #[test]
+    fn add_entity_absolute_outside_bbox_is_noop() {
+        let bbox = test_bbox();
+        let mut editor = test_editor(&bbox);
+        editor.add_entity_absolute("minecraft:villager", 200, 65, 200, None);
     }
 
     // ── set_chest_with_items ────────────────────────────────────────
