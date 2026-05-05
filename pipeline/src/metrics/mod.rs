@@ -139,7 +139,7 @@ mod tests {
             state: "CA".into(),
             bbox: [0.0, 0.0, 1.0, 1.0],
             tier: tier.into(),
-            tags: vec![],
+            ..Default::default()
         }
     }
 
