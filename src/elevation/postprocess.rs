@@ -1509,7 +1509,10 @@ mod tests {
         }
         // Highest terrain row should be above y=64 but within world bounds.
         for &h in result.last().unwrap() {
-            assert!(h >= 64.0 && h <= 319.0, "Terrain out of world bounds: {h}");
+            assert!(
+                (64.0..=319.0).contains(&h),
+                "Terrain out of world bounds: {h}"
+            );
         }
     }
 
