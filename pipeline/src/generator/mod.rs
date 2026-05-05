@@ -52,7 +52,10 @@ impl Generator {
                 "Invoking map generator"
             );
 
-            match self.invoke_generator(&bbox_str, &output_dir).await {
+            match self
+                .invoke_generator(&bbox_str, &output_dir, location.spawn_lat, location.spawn_lng)
+                .await
+            {
                 Ok(()) => {
                     info!(name = %location.name, attempt, "Map generator completed successfully");
                     return Ok(output_dir);
@@ -110,6 +113,8 @@ impl Generator {
         &self,
         bbox: &str,
         output_dir: &std::path::Path,
+        spawn_lat: Option<f64>,
+        spawn_lng: Option<f64>,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut command = Command::new(&self.arnis_binary);
         command
@@ -142,6 +147,14 @@ impl Generator {
         command
             .arg("--ground-level")
             .arg(self.flags.ground_level.to_string());
+
+        if let (Some(lat), Some(lng)) = (spawn_lat, spawn_lng) {
+            command
+                .arg("--spawn-lat")
+                .arg(lat.to_string())
+                .arg("--spawn-lng")
+                .arg(lng.to_string());
+        }
 
         let output = command
             .stdout(Stdio::piped())

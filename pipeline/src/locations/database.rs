@@ -20,6 +20,14 @@ pub struct Location {
     /// Tags for categorization.
     #[serde(default)]
     pub tags: Vec<String>,
+
+    /// Optional spawn point latitude (must be within bbox).
+    #[serde(default)]
+    pub spawn_lat: Option<f64>,
+
+    /// Optional spawn point longitude (must be within bbox).
+    #[serde(default)]
+    pub spawn_lng: Option<f64>,
 }
 
 /// Tracks generation status for a location.

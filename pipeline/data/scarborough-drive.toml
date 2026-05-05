@@ -1,0 +1,12 @@
+# Scarborough Drive owner map — Colorado Springs, CO
+# Custom map request for 7664 Scarborough Drive (MIN-127/MIN-134/MIN-135).
+# Spawn is set to the owner's front door so the player spawns at their house.
+
+[[location]]
+name = "Scarborough Drive, Colorado Springs"
+state = "CO"
+bbox = [38.944486, -104.736772, 38.946126, -104.735133]
+tier = "small"
+tags = ["residential", "custom", "owner-map"]
+spawn_lat = 38.9453061
+spawn_lng = -104.7359525
