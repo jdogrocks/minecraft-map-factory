@@ -28,7 +28,7 @@ Thumbs.db
 *.log
 
 # Generated files
-/pipeline/output/jobs/
+/pipeline/output/
 /export.json
 /parsed_osm_data.txt
 /elevation_debug.png

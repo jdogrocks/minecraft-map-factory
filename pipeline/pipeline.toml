@@ -39,7 +39,7 @@ memory_threshold = 0.8
 #
 # [installer]
 # auto_install = false
-# server_dir = "/home/jason/minecraft-server"
+# server_dir = "/path/to/your/minecraft-server"   # required when auto_install = true
 # script = "../scripts/install-map-local.sh"
 
 # Flags forwarded to the map generator binary for every pipeline invocation.
