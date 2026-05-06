@@ -42,12 +42,12 @@ mod tests {
 
     /// Times Square is one of the 20 floating maps from MIN-40. It must
     /// fail v2 validation: ground discontinuity beneath the dense urban
-    /// geometry, surface-diversity collapse (heightmap returns y=0 for
-    /// most chunks because the ground fill never wrote), and an interior
-    /// chunk where doors were placed without furniture/floor. This is
-    /// the proof-of-correctness anchor for the regression run; if this
-    /// test ever starts passing without MIN-41 also having landed,
-    /// something in the validator regressed.
+    /// geometry, and an interior chunk where doors were placed without
+    /// furniture/floor. The surface-diversity check is NOT expected to
+    /// fire here — even the floating Times Square map has real surface
+    /// blocks at the heightmap surface (road/building surfaces were
+    /// placed; only the underground fill was missing). This is the
+    /// proof-of-correctness anchor for the regression run.
     #[test]
     fn times_square_floating_map_fails_with_named_reasons() {
         let Some(map_path) = fixture_path() else {
@@ -79,33 +79,22 @@ mod tests {
             "expected ground_discontinuity in {:?}",
             report.failure_reasons
         );
-        // Surface diversity is degenerate on a chunk-allocated-without-
-        // terrain map (heightmap collapses to y=0 → blocks at y=0 are
-        // air → 0 distinct surface types).
-        assert!(
-            report
-                .failure_reasons
-                .iter()
-                .any(|r| r.starts_with("surface_diversity_low")),
-            "expected surface_diversity_low in {:?}",
-            report.failure_reasons
-        );
     }
 
-    /// Region-size check fires the "empty chunks signature" reason on a
-    /// hypothetical region file with the empirical signature byte count.
-    /// (We use a fake on-disk file because the Times Square fixture is
-    /// 7.5 MB, not the empty signature; this hits the named-reason
-    /// path.)
+    /// A file filled with zeros (no real Anvil chunks) fails via
+    /// surface_diversity_low (0 sampled chunks → 0 distinct block types),
+    /// not via the removed size-based checks. Verifies that zero-chunk
+    /// region files are still caught after the MIN-44 region_size
+    /// check removal.
     #[test]
-    fn region_size_signature_fires_named_reason() {
+    fn zeros_region_file_fails_surface_diversity() {
         let tmp = tempfile::tempdir().unwrap();
         let region = tmp.path().join("region");
         std::fs::create_dir(&region).unwrap();
         let mca = region.join("r.0.0.mca");
-        // A 4,202,496-byte file — the exact MIN-40 empty-chunks
-        // signature. The other checks will skip (no real chunks) but
-        // the region-size check should trip.
+        // 4,202,496 bytes of zeros — formerly the "empty chunks signature".
+        // The Anvil location table is all-zero → no parseable chunks → 0
+        // distinct surface block types → surface_diversity_low fires.
         std::fs::write(&mca, vec![0u8; 4_202_496]).unwrap();
 
         let validator = Validator::new(&ValidationConfig::default());
@@ -115,33 +104,8 @@ mod tests {
             report
                 .failure_reasons
                 .iter()
-                .any(|r| r.starts_with("region_empty_chunks_signature")),
-            "expected region_empty_chunks_signature in {:?}",
-            report.failure_reasons
-        );
-    }
-
-    /// Region-size check fires the per-chunk floor reason on a region
-    /// file that's small but doesn't match the exact signature.
-    #[test]
-    fn region_size_per_chunk_floor_fires_for_undersized_file() {
-        let tmp = tempfile::tempdir().unwrap();
-        let region = tmp.path().join("region");
-        std::fs::create_dir(&region).unwrap();
-        let mca = region.join("r.0.0.mca");
-        // ~3.9 MB / 1024 chunks ~= 3,900 B/chunk, below the 4,200 floor
-        // and not the exact signature.
-        std::fs::write(&mca, vec![0u8; 4_000_000]).unwrap();
-
-        let validator = Validator::new(&ValidationConfig::default());
-        let report = validator.validate(tmp.path()).unwrap();
-        assert!(!report.is_valid);
-        assert!(
-            report
-                .failure_reasons
-                .iter()
-                .any(|r| r.starts_with("region_too_small_per_chunk")),
-            "expected region_too_small_per_chunk in {:?}",
+                .any(|r| r.starts_with("surface_diversity_low")),
+            "expected surface_diversity_low in {:?}",
             report.failure_reasons
         );
     }

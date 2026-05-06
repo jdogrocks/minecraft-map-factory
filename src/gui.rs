@@ -551,7 +551,7 @@ pub fn update_player_spawn_y_after_generation(
 
         ground.level(terrain_point) + 3 // Add 3 blocks above terrain for safety
     } else {
-        -61 // Default Y if no terrain
+        ground.level(XZPoint::new(0, 0)) + 1 // ground_level + 1 above surface
     };
 
     // Update player position and world spawn point

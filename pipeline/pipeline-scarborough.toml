@@ -1,0 +1,42 @@
+# Pipeline config for Scarborough Drive owner map regeneration (MIN-135)
+# Run with: cargo run -p minecraft-map-factory-pipeline -- --config pipeline-scarborough.toml
+# (from the pipeline/ directory)
+
+locations_file = "data/scarborough-drive.toml"
+output_dir = "./output"
+arnis_binary = "../target/release/minecraft-map-factory"
+
+[scheduler]
+max_concurrency = 1
+max_memory_mb = 28000
+max_cpu_percent = 0.8
+
+[retry]
+max_retries = 3
+initial_backoff_secs = 1
+max_backoff_secs = 300
+shrink_bbox_on_retry = true
+bbox_shrink_factor = 0.8
+
+[validation]
+min_region_files = 1
+min_map_size_bytes = 1024
+validate_structure = true
+ground_y_scan_cap = 80
+
+[metrics]
+summary_interval = 10
+
+[tuning]
+enabled = true
+min_success_rate = 0.5
+memory_threshold = 0.8
+
+[generator]
+terrain = true
+land_cover = true
+interior = true
+entities = true
+entity_theme = "default"
+roof = true
+ground_level = 64

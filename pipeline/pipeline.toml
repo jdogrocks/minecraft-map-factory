@@ -21,6 +21,9 @@ bbox_shrink_factor = 0.8
 min_region_files = 1
 min_map_size_bytes = 1024
 validate_structure = true
+# Cap ground-continuity scan at 16 blocks above default ground_level (64)
+# so building interiors above y=80 are not counted as air gaps (MIN-99).
+ground_y_scan_cap = 80
 
 [metrics]
 summary_interval = 10
@@ -41,3 +44,6 @@ interior = true
 entities = true
 entity_theme = "default"
 roof = true
+# Explicit ground_level so pipeline output is not sensitive to binary
+# default changes. Must stay in sync with validation.ground_y_scan_cap.
+ground_level = 64

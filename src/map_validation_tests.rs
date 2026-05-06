@@ -38,7 +38,7 @@ mod tests {
             bedrock: false,
             downloader: "requests".to_string(),
             scale: 1.0,
-            ground_level: -62,
+            ground_level: 64,
             terrain: false,
             interior: false,
             entities: false,
@@ -488,7 +488,7 @@ mod tests {
 
         assert!(
             found_grass,
-            "World should contain grass blocks (base layer at Y=-62)"
+            "World should contain grass blocks (base layer at Y=64)"
         );
     }
 
@@ -718,9 +718,9 @@ mod tests {
         let (world_path, _tmp) = generate_test_world();
         let all_chunks = read_all_chunks(&world_path);
 
-        // With flat ground at -62, the section containing Y=-62 is section -4
-        // (Y=-64 to Y=-49). Grass block should appear in this section.
-        let target_section_y: i8 = -4; // section containing Y=-62
+        // With flat ground at 64, the section containing Y=64 is section 4
+        // (Y=64 to Y=79). Grass block should appear in this section.
+        let target_section_y: i8 = 4; // section containing Y=64
 
         let mut found_grass_in_target_section = false;
 
@@ -764,7 +764,7 @@ mod tests {
 
         assert!(
             found_grass_in_target_section,
-            "Grass blocks should be in section Y={} (containing ground level Y=-62)",
+            "Grass blocks should be in section Y={} (containing ground level Y=64)",
             target_section_y
         );
     }

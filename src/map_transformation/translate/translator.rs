@@ -257,7 +257,7 @@ mod tests {
         };
         let mut elements = vec![make_node(1, 0, 0)];
         let mut xzbbox = XZBBox::rect_from_xz_lengths(50.0, 50.0).unwrap();
-        let mut ground = Ground::new_flat(-62);
+        let mut ground = Ground::new_flat(64);
 
         vt.operate(&mut elements, &mut xzbbox, &mut ground);
 
@@ -284,7 +284,7 @@ mod tests {
         };
         let mut elements = vec![make_node(1, 0, 0)];
         let mut xzbbox = XZBBox::rect_from_xz_lengths(50.0, 50.0).unwrap();
-        let mut ground = Ground::new_flat(-62);
+        let mut ground = Ground::new_flat(64);
 
         st.operate(&mut elements, &mut xzbbox, &mut ground);
 

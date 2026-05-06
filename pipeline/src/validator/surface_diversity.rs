@@ -72,8 +72,12 @@ pub fn check(
 fn collect_surface_blocks(chunk: &JavaChunk, into: &mut HashSet<String>) {
     for bx in 0..16 {
         for bz in 0..16 {
+            // surface_height() returns the y of the first air-like block *above*
+            // the surface (Minecraft's WORLD_SURFACE convention). The actual
+            // surface block is one below that.
             let surface_y = chunk.surface_height(bx, bz, fastanvil::HeightMode::Calculate);
-            if let Some(block) = chunk.block(bx, surface_y, bz) {
+            let block_y = surface_y - 1;
+            if let Some(block) = chunk.block(bx, block_y, bz) {
                 let name = block.name();
                 if !is_airy(name) {
                     into.insert(name.to_string());

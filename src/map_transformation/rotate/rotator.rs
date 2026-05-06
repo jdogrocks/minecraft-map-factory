@@ -408,7 +408,7 @@ mod tests {
     fn test_zero_rotation_is_noop() {
         let mut elements = Vec::new();
         let mut xzbbox = XZBBox::rect_from_xz_lengths(100.0, 100.0).unwrap();
-        let mut ground = Ground::new_flat(-62);
+        let mut ground = Ground::new_flat(64);
 
         let original_bbox = xzbbox.clone();
         rotate_world(0.0, &mut elements, &mut xzbbox, &mut ground).unwrap();
@@ -430,7 +430,7 @@ mod tests {
     fn test_bbox_expands_on_45deg_rotation() {
         let mut elements = Vec::new();
         let mut xzbbox = XZBBox::rect_from_xz_lengths(100.0, 100.0).unwrap();
-        let mut ground = Ground::new_flat(-62);
+        let mut ground = Ground::new_flat(64);
 
         let orig_area = xzbbox.bounding_rect().total_blocks();
         rotate_world(45.0, &mut elements, &mut xzbbox, &mut ground).unwrap();
@@ -481,7 +481,7 @@ mod tests {
     fn test_rotate_world_90_rotates_node() {
         let mut elements = vec![make_node(1, 50, 0)];
         let mut xzbbox = XZBBox::rect_from_xz_lengths(100.0, 100.0).unwrap();
-        let mut ground = Ground::new_flat(-62);
+        let mut ground = Ground::new_flat(64);
 
         // Negated angle: user 90° CW -> internal -90° CCW
         rotate_world(90.0, &mut elements, &mut xzbbox, &mut ground).unwrap();
@@ -498,7 +498,7 @@ mod tests {
     fn test_rotate_world_rotates_way_nodes() {
         let mut elements = vec![make_way(1, vec![(0, 0), (10, 0), (10, 10)])];
         let mut xzbbox = XZBBox::rect_from_xz_lengths(20.0, 20.0).unwrap();
-        let mut ground = Ground::new_flat(-62);
+        let mut ground = Ground::new_flat(64);
 
         let orig_coords: Vec<(i32, i32)> = if let ProcessedElement::Way(w) = &elements[0] {
             w.nodes.iter().map(|n| (n.x, n.z)).collect()
@@ -521,7 +521,7 @@ mod tests {
     fn test_rotate_world_rotates_relation_member_nodes() {
         let mut elements = vec![make_relation(1, vec![(0, 0), (5, 5)])];
         let mut xzbbox = XZBBox::rect_from_xz_lengths(20.0, 20.0).unwrap();
-        let mut ground = Ground::new_flat(-62);
+        let mut ground = Ground::new_flat(64);
 
         rotate_world(90.0, &mut elements, &mut xzbbox, &mut ground).unwrap();
 
@@ -537,7 +537,7 @@ mod tests {
     fn test_rotate_world_90_preserves_bbox_size_for_square() {
         let mut elements = Vec::new();
         let mut xzbbox = XZBBox::rect_from_xz_lengths(100.0, 100.0).unwrap();
-        let mut ground = Ground::new_flat(-62);
+        let mut ground = Ground::new_flat(64);
 
         let orig_area = xzbbox.bounding_rect().total_blocks();
         rotate_world(90.0, &mut elements, &mut xzbbox, &mut ground).unwrap();
@@ -607,7 +607,7 @@ mod tests {
         };
         let mut elements = Vec::new();
         let mut xzbbox = XZBBox::rect_from_xz_lengths(100.0, 100.0).unwrap();
-        let mut ground = Ground::new_flat(-62);
+        let mut ground = Ground::new_flat(64);
 
         let orig_area = xzbbox.bounding_rect().total_blocks();
         r.operate(&mut elements, &mut xzbbox, &mut ground);
@@ -619,7 +619,7 @@ mod tests {
     fn test_rotate_world_with_elevation_disabled() {
         let mut elements = vec![make_node(1, 10, 10)];
         let mut xzbbox = XZBBox::rect_from_xz_lengths(50.0, 50.0).unwrap();
-        let mut ground = Ground::new_flat(-62);
+        let mut ground = Ground::new_flat(64);
         // elevation_enabled is false by default in new_flat
         assert!(!ground.elevation_enabled);
 
@@ -636,7 +636,7 @@ mod tests {
             make_relation(3, vec![(5, 5), (15, 15)]),
         ];
         let mut xzbbox = XZBBox::rect_from_xz_lengths(40.0, 40.0).unwrap();
-        let mut ground = Ground::new_flat(-62);
+        let mut ground = Ground::new_flat(64);
 
         rotate_world(30.0, &mut elements, &mut xzbbox, &mut ground).unwrap();
 
@@ -650,7 +650,7 @@ mod tests {
     fn test_rotate_world_negative_angle() {
         let mut elements = vec![make_node(1, 10, 5)];
         let mut xzbbox = XZBBox::rect_from_xz_lengths(30.0, 30.0).unwrap();
-        let mut ground = Ground::new_flat(-62);
+        let mut ground = Ground::new_flat(64);
 
         // Should work with negative angles
         rotate_world(-45.0, &mut elements, &mut xzbbox, &mut ground).unwrap();
@@ -663,7 +663,7 @@ mod tests {
     fn test_rotate_world_360_approximately_identity() {
         let mut elements = vec![make_node(1, 10, 5)];
         let mut xzbbox = XZBBox::rect_from_xz_lengths(30.0, 30.0).unwrap();
-        let mut ground = Ground::new_flat(-62);
+        let mut ground = Ground::new_flat(64);
 
         rotate_world(360.0, &mut elements, &mut xzbbox, &mut ground).unwrap();
 
@@ -678,7 +678,7 @@ mod tests {
     fn test_rotate_world_empty_elements() {
         let mut elements: Vec<ProcessedElement> = Vec::new();
         let mut xzbbox = XZBBox::rect_from_xz_lengths(50.0, 50.0).unwrap();
-        let mut ground = Ground::new_flat(-62);
+        let mut ground = Ground::new_flat(64);
 
         let result = rotate_world(45.0, &mut elements, &mut xzbbox, &mut ground);
         assert!(result.is_ok());

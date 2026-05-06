@@ -52,7 +52,15 @@ impl Generator {
                 "Invoking map generator"
             );
 
-            match self.invoke_generator(&bbox_str, &output_dir).await {
+            match self
+                .invoke_generator(
+                    &bbox_str,
+                    &output_dir,
+                    location.spawn_lat,
+                    location.spawn_lng,
+                )
+                .await
+            {
                 Ok(()) => {
                     info!(name = %location.name, attempt, "Map generator completed successfully");
                     return Ok(output_dir);
@@ -110,13 +118,26 @@ impl Generator {
         &self,
         bbox: &str,
         output_dir: &std::path::Path,
+        spawn_lat: Option<f64>,
+        spawn_lng: Option<f64>,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        // Canonicalize to an absolute path so that `.current_dir(abs)` and
+        // `--output-dir abs` both resolve to the same directory.  A relative
+        // output_dir passed to both causes arnis to nest it inside itself
+        // (arnis resolves --output-dir relative to its cwd, which is already
+        // output_dir), breaking the validator with "no region/*.mca dir found".
+        let abs_output_dir = output_dir.canonicalize()?;
+
         let mut command = Command::new(&self.arnis_binary);
+        // Each job runs in its own output directory so concurrent subprocesses
+        // never share a working directory or write relative-path temporaries
+        // to the same location (identical-worlds isolation, MIN-137).
         command
+            .current_dir(&abs_output_dir)
             .arg("--bbox")
             .arg(bbox)
             .arg("--output-dir")
-            .arg(output_dir);
+            .arg(&abs_output_dir);
 
         // Pass every generator flag explicitly so the generator's own defaults
         // can't silently change pipeline output (the MIN-40 regression where
@@ -139,6 +160,17 @@ impl Generator {
             command.arg(format!("{flag}={value}"));
         }
         command.arg("--entity-theme").arg(&self.flags.entity_theme);
+        command
+            .arg("--ground-level")
+            .arg(self.flags.ground_level.to_string());
+
+        if let (Some(lat), Some(lng)) = (spawn_lat, spawn_lng) {
+            command
+                .arg("--spawn-lat")
+                .arg(lat.to_string())
+                .arg("--spawn-lng")
+                .arg(lng.to_string());
+        }
 
         let output = command
             .stdout(Stdio::piped())
@@ -178,5 +210,22 @@ impl Generator {
         self.output_base
             .join("jobs")
             .join(format!("{}_attempt{}", sanitized_name, attempt))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn canonicalize_existing_dir_is_absolute() {
+        let tmp = tempfile::tempdir().unwrap();
+        let job_dir = tmp.path().join("jobs").join("Times_Square_attempt1");
+        std::fs::create_dir_all(&job_dir).unwrap();
+
+        let canonical = job_dir.canonicalize().unwrap();
+        assert!(
+            canonical.is_absolute(),
+            "canonicalized job output dir must be absolute; got {:?}",
+            canonical
+        );
     }
 }
