@@ -497,9 +497,14 @@ impl PipelineConfig {
     ) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
         let content = std::fs::read_to_string(path)?;
         let mut config: Self = toml::from_str(&content)?;
-        // Resolve relative paths relative to the config file's directory so
-        // the pipeline can be invoked from any working directory.
-        if let Some(base) = path.parent() {
+        // Canonicalize the config path to an absolute path so that relative
+        // paths inside the config are resolved to absolute paths.  Without
+        // this, a relative arnis_binary like "../target/release/..." would be
+        // re-resolved from the job's current_dir (the per-job output dir) at
+        // spawn time instead of from the pipeline's working directory, causing
+        // "No such file or directory" on the first generator invocation.
+        let abs_path = path.canonicalize()?;
+        if let Some(base) = abs_path.parent() {
             if config.locations_file.is_relative() {
                 config.locations_file = base.join(&config.locations_file);
             }
