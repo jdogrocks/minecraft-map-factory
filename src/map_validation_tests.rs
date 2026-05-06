@@ -226,8 +226,8 @@ mod tests {
         let (world_path, _tmp) = generate_test_world();
         let all_chunks = read_all_chunks(&world_path);
 
-        let expected = data_version_for("1.26.1.2")
-            .expect("1.26.1.2 must be in DATA_VERSION_TABLE");
+        let expected =
+            data_version_for("1.26.1.2").expect("1.26.1.2 must be in DATA_VERSION_TABLE");
 
         for (region_name, chunks) in &all_chunks {
             for chunk_nbt in chunks {

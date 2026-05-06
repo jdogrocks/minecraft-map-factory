@@ -22,7 +22,6 @@ use std::io::Write;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
 
-
 /// Default ground level Y coordinate (surface grass layer).
 const GROUND_LEVEL: i32 = 64;
 

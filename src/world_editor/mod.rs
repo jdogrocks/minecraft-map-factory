@@ -155,8 +155,10 @@ impl<'a> WorldEditor<'a> {
             ground: None,
             format: WorldFormat::JavaAnvil,
             road_surface_overrides: FnvHashMap::default(),
-            data_version: crate::pack_format::data_version_for(crate::pack_format::DEFAULT_MC_VERSION)
-                .expect("default minecraft_version must be in DATA_VERSION_TABLE"),
+            data_version: crate::pack_format::data_version_for(
+                crate::pack_format::DEFAULT_MC_VERSION,
+            )
+            .expect("default minecraft_version must be in DATA_VERSION_TABLE"),
             #[cfg(feature = "bedrock")]
             bedrock_level_name: None,
             #[cfg(feature = "bedrock")]
