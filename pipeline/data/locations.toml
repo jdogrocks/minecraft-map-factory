@@ -8,6 +8,8 @@
 name = "Times Square, NYC"
 state = "NY"
 bbox = [40.7565, -73.9882, 40.7600, -73.9842]
+spawn_lat = 40.75825
+spawn_lng = -73.9862
 tier = "small"
 tags = ["landmark", "urban"]
 
@@ -15,6 +17,8 @@ tags = ["landmark", "urban"]
 name = "National Mall, Washington DC"
 state = "DC"
 bbox = [38.8870, -77.0460, 38.8920, -77.0360]
+spawn_lat = 38.8895
+spawn_lng = -77.0410
 tier = "small"
 tags = ["landmark", "government"]
 
@@ -22,6 +26,8 @@ tags = ["landmark", "government"]
 name = "Fisherman's Wharf, San Francisco"
 state = "CA"
 bbox = [37.8060, -122.4210, 37.8100, -122.4140]
+spawn_lat = 37.8080
+spawn_lng = -122.4175
 tier = "small"
 tags = ["landmark", "waterfront"]
 
@@ -29,6 +35,8 @@ tags = ["landmark", "waterfront"]
 name = "French Quarter, New Orleans"
 state = "LA"
 bbox = [29.9540, -90.0700, 29.9600, -90.0620]
+spawn_lat = 29.9570
+spawn_lng = -90.0660
 tier = "small"
 tags = ["historic", "urban"]
 
@@ -36,6 +44,8 @@ tags = ["historic", "urban"]
 name = "Alamo, San Antonio"
 state = "TX"
 bbox = [29.4240, -98.4880, 29.4280, -98.4840]
+spawn_lat = 29.4260
+spawn_lng = -98.4860
 tier = "small"
 tags = ["landmark", "historic"]
 
@@ -45,6 +55,8 @@ tags = ["landmark", "historic"]
 name = "Downtown Chicago"
 state = "IL"
 bbox = [41.8750, -87.6400, 41.8900, -87.6200]
+spawn_lat = 41.8825
+spawn_lng = -87.6300
 tier = "medium"
 tags = ["urban", "downtown"]
 
@@ -52,6 +64,8 @@ tags = ["urban", "downtown"]
 name = "Capitol Hill, Seattle"
 state = "WA"
 bbox = [47.6120, -122.3260, 47.6250, -122.3100]
+spawn_lat = 47.6185
+spawn_lng = -122.3180
 tier = "medium"
 tags = ["neighborhood", "urban"]
 
@@ -59,6 +73,8 @@ tags = ["neighborhood", "urban"]
 name = "South Beach, Miami"
 state = "FL"
 bbox = [25.7700, -80.1400, 25.7900, -80.1250]
+spawn_lat = 25.7800
+spawn_lng = -80.1325
 tier = "medium"
 tags = ["beach", "urban"]
 
@@ -66,6 +82,8 @@ tags = ["beach", "urban"]
 name = "Downtown Denver"
 state = "CO"
 bbox = [39.7400, -104.9980, 39.7550, -104.9800]
+spawn_lat = 39.7475
+spawn_lng = -104.9890
 tier = "medium"
 tags = ["urban", "downtown"]
 
@@ -73,6 +91,8 @@ tags = ["urban", "downtown"]
 name = "Fenway Park Area, Boston"
 state = "MA"
 bbox = [42.3430, -71.1020, 42.3520, -71.0900]
+spawn_lat = 42.3475
+spawn_lng = -71.0960
 tier = "medium"
 tags = ["sports", "urban"]
 
@@ -80,6 +100,8 @@ tags = ["sports", "urban"]
 name = "Downtown Portland"
 state = "OR"
 bbox = [45.5100, -122.6850, 45.5250, -122.6650]
+spawn_lat = 45.5175
+spawn_lng = -122.6750
 tier = "medium"
 tags = ["urban", "downtown"]
 
@@ -87,6 +109,8 @@ tags = ["urban", "downtown"]
 name = "Waikiki, Honolulu"
 state = "HI"
 bbox = [21.2720, -157.8300, 21.2830, -157.8150]
+spawn_lat = 21.2775
+spawn_lng = -157.8225
 tier = "medium"
 tags = ["beach", "resort"]
 
@@ -94,6 +118,8 @@ tags = ["beach", "resort"]
 name = "Las Vegas Strip"
 state = "NV"
 bbox = [36.0900, -115.1850, 36.1200, -115.1650]
+spawn_lat = 36.1050
+spawn_lng = -115.1750
 tier = "medium"
 tags = ["entertainment", "landmark"]
 
@@ -103,6 +129,8 @@ tags = ["entertainment", "landmark"]
 name = "Downtown San Francisco"
 state = "CA"
 bbox = [37.7700, -122.4200, 37.8000, -122.3900]
+spawn_lat = 37.7850
+spawn_lng = -122.4050
 tier = "large"
 tags = ["urban", "downtown"]
 
@@ -110,6 +138,8 @@ tags = ["urban", "downtown"]
 name = "Midtown Manhattan"
 state = "NY"
 bbox = [40.7480, -73.9950, 40.7650, -73.9650]
+spawn_lat = 40.7565
+spawn_lng = -73.9800
 tier = "large"
 tags = ["urban", "landmark"]
 
@@ -117,6 +147,8 @@ tags = ["urban", "landmark"]
 name = "Downtown Austin"
 state = "TX"
 bbox = [30.2600, -97.7550, 30.2800, -97.7300]
+spawn_lat = 30.2700
+spawn_lng = -97.7425
 tier = "large"
 tags = ["urban", "downtown"]
 
@@ -124,6 +156,8 @@ tags = ["urban", "downtown"]
 name = "Hollywood, Los Angeles"
 state = "CA"
 bbox = [34.0900, -118.3500, 34.1100, -118.3200]
+spawn_lat = 34.1000
+spawn_lng = -118.3350
 tier = "large"
 tags = ["entertainment", "urban"]
 
@@ -131,6 +165,8 @@ tags = ["entertainment", "urban"]
 name = "Downtown Nashville"
 state = "TN"
 bbox = [36.1500, -86.7950, 36.1750, -86.7650]
+spawn_lat = 36.1625
+spawn_lng = -86.7800
 tier = "large"
 tags = ["entertainment", "urban"]
 
@@ -140,6 +176,8 @@ tags = ["entertainment", "urban"]
 name = "Center City, Philadelphia"
 state = "PA"
 bbox = [39.9440, -75.1700, 39.9560, -75.1500]
+spawn_lat = 39.9500
+spawn_lng = -75.1600
 tier = "medium"
 tags = ["urban", "downtown"]
 
@@ -147,6 +185,8 @@ tags = ["urban", "downtown"]
 name = "Downtown Minneapolis"
 state = "MN"
 bbox = [44.9720, -93.2750, 44.9850, -93.2580]
+spawn_lat = 44.9785
+spawn_lng = -93.2665
 tier = "medium"
 tags = ["urban", "downtown"]
 
@@ -154,6 +194,8 @@ tags = ["urban", "downtown"]
 name = "Uptown Dallas"
 state = "TX"
 bbox = [32.7970, -96.8100, 32.8080, -96.7970]
+spawn_lat = 32.8025
+spawn_lng = -96.8035
 tier = "small"
 tags = ["urban", "neighborhood"]
 
@@ -161,5 +203,7 @@ tags = ["urban", "neighborhood"]
 name = "Inner Harbor, Baltimore"
 state = "MD"
 bbox = [39.2840, -76.6200, 39.2920, -76.6060]
+spawn_lat = 39.2880
+spawn_lng = -76.6130
 tier = "small"
 tags = ["waterfront", "urban"]
