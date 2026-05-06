@@ -148,8 +148,14 @@ mod tests {
         let dest = publisher.publish(&source, &loc).unwrap();
 
         let expected_world = dest.join("Times_Square__NYC");
-        assert!(expected_world.exists(), "world dir should be renamed to geo area name");
-        assert!(!dest.join("MMF World 1").exists(), "original MMF World N dir should be gone");
+        assert!(
+            expected_world.exists(),
+            "world dir should be renamed to geo area name"
+        );
+        assert!(
+            !dest.join("MMF World 1").exists(),
+            "original MMF World N dir should be gone"
+        );
         assert!(expected_world.join("region").join("r.0.0.mca").exists());
     }
 
