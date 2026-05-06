@@ -215,7 +215,7 @@ mod tests {
     #[test]
     fn locate_region_dir_finds_nested() {
         let tmp = tempfile::tempdir().unwrap();
-        let world = tmp.path().join("MMF World 1");
+        let world = tmp.path().join("Times_Square__NYC");
         fs::create_dir(&world).unwrap();
         fs::create_dir(world.join("region")).unwrap();
         let found = locate_region_dir(tmp.path()).unwrap();
