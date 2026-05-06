@@ -37,6 +37,9 @@ const DATA_VERSION_TABLE: &[(&str, i32)] = &[
     ("1.26.1.2", 5097),
 ];
 
+/// The default Minecraft version used when no `--minecraft-version` flag is provided.
+pub const DEFAULT_MC_VERSION: &str = "1.26.1.2";
+
 /// Look up the chunk `DataVersion` integer for the given Minecraft version string.
 ///
 /// Returns `None` if the version is not in the table.
@@ -45,6 +48,17 @@ pub fn data_version_for(mc_version: &str) -> Option<i32> {
         .iter()
         .find(|(v, _)| *v == mc_version)
         .map(|(_, dv)| *dv)
+}
+
+/// Returns a comma-separated string of all supported Minecraft version strings.
+///
+/// Used in error messages so the list stays in sync with `DATA_VERSION_TABLE` automatically.
+pub fn supported_versions_list() -> String {
+    DATA_VERSION_TABLE
+        .iter()
+        .map(|(v, _)| *v)
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 /// Look up the datapack `pack_format` for the given Minecraft version string.

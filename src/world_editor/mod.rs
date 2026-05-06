@@ -155,7 +155,7 @@ impl<'a> WorldEditor<'a> {
             ground: None,
             format: WorldFormat::JavaAnvil,
             road_surface_overrides: FnvHashMap::default(),
-            data_version: crate::pack_format::data_version_for("1.26.1.2")
+            data_version: crate::pack_format::data_version_for(crate::pack_format::DEFAULT_MC_VERSION)
                 .expect("default minecraft_version must be in DATA_VERSION_TABLE"),
             #[cfg(feature = "bedrock")]
             bedrock_level_name: None,
@@ -1791,7 +1791,8 @@ mod tests {
             None,
             None,
             false,
-            5097,
+            crate::pack_format::data_version_for(crate::pack_format::DEFAULT_MC_VERSION)
+                .expect("default version must be in table"),
         );
         assert_eq!(editor.format(), WorldFormat::JavaAnvil);
     }

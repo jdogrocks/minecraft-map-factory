@@ -40,8 +40,9 @@ pub fn generate_world_with_options(
 
     let data_version = pack_format::data_version_for(&args.minecraft_version).ok_or_else(|| {
         format!(
-            "Unknown --minecraft-version '{}'. Supported versions: 1.21.4, 1.21.5, 1.22, 1.22.1, 1.23, 1.24, 1.25, 1.26, 1.26.1, 1.26.1.2",
-            args.minecraft_version
+            "Unknown --minecraft-version '{}'. Supported versions: {}",
+            args.minecraft_version,
+            pack_format::supported_versions_list()
         )
     })?;
 
