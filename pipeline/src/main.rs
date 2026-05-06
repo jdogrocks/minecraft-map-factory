@@ -1,5 +1,6 @@
 mod config;
 mod generator;
+mod installer;
 mod locations;
 mod metrics;
 mod publisher;

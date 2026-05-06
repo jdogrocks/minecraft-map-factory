@@ -33,6 +33,15 @@ enabled = true
 min_success_rate = 0.5
 memory_threshold = 0.8
 
+# Optional: auto-install each successfully published map to a local Minecraft
+# server.  Disabled by default so pipelines without a local server are
+# unaffected.  Set auto_install = true to enable.
+#
+# [installer]
+# auto_install = false
+# server_dir = "/home/jason/minecraft-server"
+# script = "../scripts/install-map-local.sh"
+
 # Flags forwarded to the map generator binary for every pipeline invocation.
 # Keep this in sync with src/args.rs. Values here are forwarded as
 # `--flag=value` (or bare `--terrain`) so the generator's defaults can never

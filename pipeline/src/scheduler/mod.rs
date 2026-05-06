@@ -5,6 +5,7 @@ pub use resource::ResourceMonitor;
 
 use crate::config::{PipelineConfig, TuningConfig};
 use crate::generator::Generator;
+use crate::installer::Installer;
 use crate::locations::{LocationDatabase, LocationStatus};
 use crate::metrics::MetricsCollector;
 use crate::publisher::Publisher;
@@ -144,10 +145,11 @@ impl Scheduler {
                         let publisher = Publisher::new(&config.output_dir);
                         let publish_result = publisher.publish(&output_path, &location);
                         let mut db = db.lock().await;
-                        match publish_result {
+                        let install_dest = match publish_result {
                             Ok(dest) => {
                                 info!(name = %location.name, dest = %dest.display(), "Published");
                                 db.set_status(location_idx, LocationStatus::Completed);
+                                Some(dest)
                             }
                             Err(e) => {
                                 let msg = format!("Publish failed: {e}");
@@ -159,9 +161,25 @@ impl Scheduler {
                                         last_error: msg,
                                     },
                                 );
+                                None
+                            }
+                        };
+                        drop(db);
+
+                        // Auto-install after releasing the DB lock so a slow
+                        // Docker stop/start doesn't block other pipeline jobs.
+                        if config.installer.auto_install {
+                            if let Some(ref dest) = install_dest {
+                                let installer = Installer::new(&config.installer);
+                                if let Err(e) = installer.install(dest).await {
+                                    warn!(
+                                        name = %location.name,
+                                        error = %e,
+                                        "Auto-install failed (map was published successfully)"
+                                    );
+                                }
                             }
                         }
-                        drop(db);
 
                         let mut m = metrics.lock().await;
                         m.record_success(duration, report.total_size_bytes, &location);
