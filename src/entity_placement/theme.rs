@@ -346,11 +346,137 @@ pub fn fantasy_theme() -> ThemePack {
     }
 }
 
+/// Built-in urban_dense theme pack: city residents with no livestock.
+pub fn urban_dense_theme() -> ThemePack {
+    let mut rules = HashMap::new();
+
+    rules.insert(
+        "residential".to_string(),
+        ContextRule {
+            entities: vec![
+                EntityEntry {
+                    id: "minecraft:villager".to_string(),
+                    weight: 60,
+                },
+                EntityEntry {
+                    id: "minecraft:cat".to_string(),
+                    weight: 30,
+                },
+                EntityEntry {
+                    id: "minecraft:parrot".to_string(),
+                    weight: 10,
+                },
+            ],
+            max_per_floor: 4,
+        },
+    );
+
+    rules.insert(
+        "commercial".to_string(),
+        ContextRule {
+            entities: vec![
+                EntityEntry {
+                    id: "minecraft:villager".to_string(),
+                    weight: 70,
+                },
+                EntityEntry {
+                    id: "minecraft:iron_golem".to_string(),
+                    weight: 20,
+                },
+                EntityEntry {
+                    id: "minecraft:cat".to_string(),
+                    weight: 10,
+                },
+            ],
+            max_per_floor: 6,
+        },
+    );
+
+    rules.insert(
+        "public".to_string(),
+        ContextRule {
+            entities: vec![
+                EntityEntry {
+                    id: "minecraft:villager".to_string(),
+                    weight: 70,
+                },
+                EntityEntry {
+                    id: "minecraft:iron_golem".to_string(),
+                    weight: 20,
+                },
+                EntityEntry {
+                    id: "minecraft:cat".to_string(),
+                    weight: 10,
+                },
+            ],
+            max_per_floor: 8,
+        },
+    );
+
+    rules.insert(
+        "farm".to_string(),
+        ContextRule {
+            entities: vec![
+                EntityEntry {
+                    id: "minecraft:villager".to_string(),
+                    weight: 80,
+                },
+                EntityEntry {
+                    id: "minecraft:bee".to_string(),
+                    weight: 20,
+                },
+            ],
+            max_per_floor: 2,
+        },
+    );
+
+    rules.insert(
+        "religious".to_string(),
+        ContextRule {
+            entities: vec![
+                EntityEntry {
+                    id: "minecraft:villager".to_string(),
+                    weight: 80,
+                },
+                EntityEntry {
+                    id: "minecraft:cat".to_string(),
+                    weight: 20,
+                },
+            ],
+            max_per_floor: 3,
+        },
+    );
+
+    rules.insert(
+        "industrial".to_string(),
+        ContextRule {
+            entities: vec![
+                EntityEntry {
+                    id: "minecraft:iron_golem".to_string(),
+                    weight: 60,
+                },
+                EntityEntry {
+                    id: "minecraft:villager".to_string(),
+                    weight: 40,
+                },
+            ],
+            max_per_floor: 3,
+        },
+    );
+
+    ThemePack {
+        name: "urban_dense".to_string(),
+        description: "City residents — villagers and iron golems, no livestock".to_string(),
+        rules,
+    }
+}
+
 /// Load a theme pack by name. Returns the built-in pack or None.
 pub fn load_theme(name: &str) -> Option<ThemePack> {
     match name {
         "default" => Some(default_theme()),
         "fantasy" => Some(fantasy_theme()),
+        "urban_dense" => Some(urban_dense_theme()),
         _ => None,
     }
 }
@@ -405,6 +531,33 @@ mod tests {
     fn test_load_theme() {
         assert!(load_theme("default").is_some());
         assert!(load_theme("fantasy").is_some());
+        assert!(load_theme("urban_dense").is_some());
         assert!(load_theme("nonexistent").is_none());
+    }
+
+    #[test]
+    fn test_urban_dense_theme_has_all_contexts() {
+        let theme = urban_dense_theme();
+        assert!(theme.rules.contains_key("residential"));
+        assert!(theme.rules.contains_key("commercial"));
+        assert!(theme.rules.contains_key("public"));
+        assert!(theme.rules.contains_key("farm"));
+        assert!(theme.rules.contains_key("religious"));
+        assert!(theme.rules.contains_key("industrial"));
+    }
+
+    #[test]
+    fn test_urban_dense_theme_no_livestock() {
+        let theme = urban_dense_theme();
+        let livestock = ["minecraft:cow", "minecraft:pig", "minecraft:chicken", "minecraft:sheep", "minecraft:horse"];
+        for (_, rule) in &theme.rules {
+            for entry in &rule.entities {
+                assert!(
+                    !livestock.contains(&entry.id.as_str()),
+                    "urban_dense theme should not contain livestock: {}",
+                    entry.id
+                );
+            }
+        }
     }
 }

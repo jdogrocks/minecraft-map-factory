@@ -248,6 +248,9 @@ pub struct ValidationConfig {
 /// map directory after each successful generation+publish so the map appears
 /// on the local Minecraft server without any manual copy step.  Defaults to
 /// disabled so pipelines without a local server are unaffected.
+///
+/// `server_dir` must be set explicitly when `auto_install = true`; the
+/// installer will return an error at runtime if it is absent.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InstallerConfig {
     /// Call the install script after every successful publish.
@@ -258,9 +261,9 @@ pub struct InstallerConfig {
     #[serde(default = "default_install_script")]
     pub script: PathBuf,
 
-    /// Root directory of the local Minecraft server.
-    #[serde(default = "default_server_dir")]
-    pub server_dir: PathBuf,
+    /// Root directory of the local Minecraft server.  Required when
+    /// `auto_install = true`; must be set explicitly in pipeline.toml.
+    pub server_dir: Option<PathBuf>,
 }
 
 impl Default for InstallerConfig {
@@ -268,17 +271,13 @@ impl Default for InstallerConfig {
         Self {
             auto_install: false,
             script: default_install_script(),
-            server_dir: default_server_dir(),
+            server_dir: None,
         }
     }
 }
 
 fn default_install_script() -> PathBuf {
     PathBuf::from("../scripts/install-map-local.sh")
-}
-
-fn default_server_dir() -> PathBuf {
-    PathBuf::from("/home/jason/minecraft-server")
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -498,9 +497,14 @@ impl PipelineConfig {
     ) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
         let content = std::fs::read_to_string(path)?;
         let mut config: Self = toml::from_str(&content)?;
-        // Resolve relative paths relative to the config file's directory so
-        // the pipeline can be invoked from any working directory.
-        if let Some(base) = path.parent() {
+        // Canonicalize the config path to an absolute path so that relative
+        // paths inside the config are resolved to absolute paths.  Without
+        // this, a relative arnis_binary like "../target/release/..." would be
+        // re-resolved from the job's current_dir (the per-job output dir) at
+        // spawn time instead of from the pipeline's working directory, causing
+        // "No such file or directory" on the first generator invocation.
+        let abs_path = path.canonicalize()?;
+        if let Some(base) = abs_path.parent() {
             if config.locations_file.is_relative() {
                 config.locations_file = base.join(&config.locations_file);
             }

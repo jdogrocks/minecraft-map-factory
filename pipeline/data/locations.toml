@@ -133,3 +133,33 @@ state = "TN"
 bbox = [36.1500, -86.7950, 36.1750, -86.7650]
 tier = "large"
 tags = ["entertainment", "urban"]
+
+# === Additional Urban Cores (MIN-151 bulk run) ===
+
+[[location]]
+name = "Center City, Philadelphia"
+state = "PA"
+bbox = [39.9440, -75.1700, 39.9560, -75.1500]
+tier = "medium"
+tags = ["urban", "downtown"]
+
+[[location]]
+name = "Downtown Minneapolis"
+state = "MN"
+bbox = [44.9720, -93.2750, 44.9850, -93.2580]
+tier = "medium"
+tags = ["urban", "downtown"]
+
+[[location]]
+name = "Uptown Dallas"
+state = "TX"
+bbox = [32.7970, -96.8100, 32.8080, -96.7970]
+tier = "small"
+tags = ["urban", "neighborhood"]
+
+[[location]]
+name = "Inner Harbor, Baltimore"
+state = "MD"
+bbox = [39.2840, -76.6200, 39.2920, -76.6060]
+tier = "small"
+tags = ["waterfront", "urban"]
