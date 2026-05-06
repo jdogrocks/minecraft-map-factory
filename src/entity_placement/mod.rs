@@ -136,7 +136,9 @@ pub fn place_building_entities(
 
             let entity_seed = floor_seed.wrapping_add(i as u64);
             if let Some(entry) = theme.select_entity(context, entity_seed) {
-                editor.add_entity_absolute(&entry.id, x, floor_y + 1, z, None);
+                // Place entity 1 block above the floor level (ground-relative Y)
+                let y_offset = floor_y + 1;
+                editor.add_entity(&entry.id, x, y_offset, z, None);
                 placed += 1;
             }
         }
