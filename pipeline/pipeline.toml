@@ -1,7 +1,7 @@
 # Pipeline configuration
 # See pipeline/src/config.rs for all options and defaults.
 
-locations_file = "data/locations.toml"
+locations_file = "data/test-single-location.toml"
 output_dir = "./output"
 arnis_binary = "../target/release/minecraft-map-factory"
 
@@ -33,14 +33,10 @@ enabled = true
 min_success_rate = 0.5
 memory_threshold = 0.8
 
-# Optional: auto-install each successfully published map to a local Minecraft
-# server.  Disabled by default so pipelines without a local server are
-# unaffected.  Set auto_install = true to enable.
-#
-# [installer]
-# auto_install = false
-# server_dir = "/path/to/your/minecraft-server"   # required when auto_install = true
-# script = "../scripts/install-map-local.sh"
+[installer]
+auto_install = true
+server_dir = "/home/jason/minecraft-server"
+script = "../scripts/install-map-local.sh"
 
 # Flags forwarded to the map generator binary for every pipeline invocation.
 # Keep this in sync with src/args.rs. Values here are forwarded as

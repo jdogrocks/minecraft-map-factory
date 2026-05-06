@@ -19,7 +19,9 @@ PUBLISHED_DIR="$(realpath "$1")"
 SERVER_DIR="${2:-/home/jason/minecraft-server}"
 COMPOSE_FILE="$SERVER_DIR/docker-compose.yml"
 SERVICE_NAME="papermc"
-SERVER_PROPERTIES="$SERVER_DIR/server.properties"
+# World data lives in the Docker volume mount (./data -> /data in container).
+DATA_DIR="$SERVER_DIR/data"
+SERVER_PROPERTIES="$DATA_DIR/server.properties"
 
 if [[ ! -d "$PUBLISHED_DIR" ]]; then
     echo "Error: published map dir not found: $PUBLISHED_DIR" >&2
@@ -53,14 +55,14 @@ echo "==> Stopping $SERVICE_NAME..."
 docker compose -f "$COMPOSE_FILE" stop "$SERVICE_NAME"
 
 # Back up the existing world directory if present.
-if [[ -d "$SERVER_DIR/$WORLD_NAME" ]]; then
-    BACKUP="$SERVER_DIR/${WORLD_NAME}.bak.$(date +%Y%m%d_%H%M%S)"
+if [[ -d "$DATA_DIR/$WORLD_NAME" ]]; then
+    BACKUP="$DATA_DIR/${WORLD_NAME}.bak.$(date +%Y%m%d_%H%M%S)"
     echo "==> Backing up existing world to $(basename "$BACKUP")..."
-    mv "$SERVER_DIR/$WORLD_NAME" "$BACKUP"
+    mv "$DATA_DIR/$WORLD_NAME" "$BACKUP"
 fi
 
-echo "==> Copying $WORLD_NAME to $SERVER_DIR/..."
-cp -r "$WORLD_SUBDIR" "$SERVER_DIR/$WORLD_NAME"
+echo "==> Copying $WORLD_NAME to $DATA_DIR/..."
+cp -r "$WORLD_SUBDIR" "$DATA_DIR/$WORLD_NAME"
 
 # Update level-name in server.properties so PaperMC loads the new world.
 if [[ -f "$SERVER_PROPERTIES" ]]; then
