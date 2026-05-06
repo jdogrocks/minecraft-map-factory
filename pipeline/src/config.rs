@@ -37,6 +37,10 @@ pub struct PipelineConfig {
     /// Generator CLI flags.
     #[serde(default)]
     pub generator: GeneratorConfig,
+
+    /// Local Minecraft server installer.
+    #[serde(default)]
+    pub installer: InstallerConfig,
 }
 
 /// Flags forwarded to the map generator binary on every invocation.
@@ -236,6 +240,45 @@ pub struct ValidationConfig {
     /// check.
     #[serde(default = "default_surface_diversity_sample_chunks")]
     pub surface_diversity_sample_chunks: usize,
+}
+
+/// Configuration for the optional local-server auto-installer.
+///
+/// When `auto_install = true` the pipeline calls `script` with the published
+/// map directory after each successful generation+publish so the map appears
+/// on the local Minecraft server without any manual copy step.  Defaults to
+/// disabled so pipelines without a local server are unaffected.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InstallerConfig {
+    /// Call the install script after every successful publish.
+    #[serde(default)]
+    pub auto_install: bool,
+
+    /// Path to the install script (resolved relative to the config file).
+    #[serde(default = "default_install_script")]
+    pub script: PathBuf,
+
+    /// Root directory of the local Minecraft server.
+    #[serde(default = "default_server_dir")]
+    pub server_dir: PathBuf,
+}
+
+impl Default for InstallerConfig {
+    fn default() -> Self {
+        Self {
+            auto_install: false,
+            script: default_install_script(),
+            server_dir: default_server_dir(),
+        }
+    }
+}
+
+fn default_install_script() -> PathBuf {
+    PathBuf::from("../scripts/install-map-local.sh")
+}
+
+fn default_server_dir() -> PathBuf {
+    PathBuf::from("/home/jason/minecraft-server")
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -463,6 +506,9 @@ impl PipelineConfig {
             }
             if config.arnis_binary.is_relative() {
                 config.arnis_binary = base.join(&config.arnis_binary);
+            }
+            if config.installer.script.is_relative() {
+                config.installer.script = base.join(&config.installer.script);
             }
         }
         Ok(config)
