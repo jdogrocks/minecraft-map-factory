@@ -7,6 +7,7 @@ use crate::ground::Ground;
 use crate::ground_generation;
 use crate::map_renderer;
 use crate::osm_parser::{ProcessedElement, ProcessedMemberRole};
+use crate::pack_format;
 use crate::progress::{emit_gui_progress_update, emit_map_preview_ready, emit_show_in_folder};
 use crate::world_editor::{WorldEditor, WorldFormat};
 use colored::Colorize;
@@ -37,6 +38,13 @@ pub fn generate_world_with_options(
     let world_format = options.format;
     let generation_start = args.benchmark.then(std::time::Instant::now);
 
+    let data_version = pack_format::data_version_for(&args.minecraft_version).ok_or_else(|| {
+        format!(
+            "Unknown --minecraft-version '{}'. Supported versions: 1.21.4, 1.21.5, 1.22, 1.22.1, 1.23, 1.24, 1.25, 1.26, 1.26.1, 1.26.1.2",
+            args.minecraft_version
+        )
+    })?;
+
     // Create editor with appropriate format
     let mut editor: WorldEditor = WorldEditor::new_with_format_and_name(
         options.path,
@@ -46,6 +54,7 @@ pub fn generate_world_with_options(
         options.level_name.clone(),
         options.spawn_point,
         args.disable_height_limit,
+        data_version,
     );
     let ground = Arc::new(ground);
 

@@ -22,8 +22,6 @@ use std::io::Write;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
 
-/// Minecraft 1.21.1 data version for chunk format identification.
-const DATA_VERSION: i32 = 3955;
 
 /// Default ground level Y coordinate (surface grass layer).
 const GROUND_LEVEL: i32 = 64;
@@ -93,6 +91,7 @@ impl<'a> WorldEditor<'a> {
     pub(super) fn create_base_chunk(
         abs_chunk_x: i32,
         abs_chunk_z: i32,
+        data_version: i32,
     ) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
         let mut chunk = ChunkToModify::default();
 
@@ -148,7 +147,7 @@ impl<'a> WorldEditor<'a> {
             other: FnvHashMap::default(),
         };
 
-        let chunk_nbt = create_chunk_nbt(&chunk_data);
+        let chunk_nbt = create_chunk_nbt(&chunk_data, data_version);
 
         let mut ser_buffer = Vec::with_capacity(8192);
         fastnbt::to_writer(&mut ser_buffer, &chunk_nbt)?;
@@ -257,7 +256,7 @@ impl<'a> WorldEditor<'a> {
                     other: chunk_to_modify.other.clone(),
                 };
 
-                let chunk_nbt = create_chunk_nbt(&chunk);
+                let chunk_nbt = create_chunk_nbt(&chunk, self.data_version);
                 ser_buffer.clear();
                 fastnbt::to_writer(&mut ser_buffer, &chunk_nbt)?;
                 region.write_chunk(chunk_x as usize, chunk_z as usize, &ser_buffer)?;
@@ -281,7 +280,8 @@ impl<'a> WorldEditor<'a> {
                     .unwrap_or(false);
 
                 if !already_written {
-                    let ser_buffer = Self::create_base_chunk(abs_chunk_x, abs_chunk_z)?;
+                    let ser_buffer =
+                        Self::create_base_chunk(abs_chunk_x, abs_chunk_z, self.data_version)?;
                     region.write_chunk(chunk_x as usize, chunk_z as usize, &ser_buffer)?;
                 }
             }
@@ -325,7 +325,7 @@ fn get_entity_coords(entity: &HashMap<String, Value>) -> Option<(i32, i32, i32)>
 /// DataVersion, Status, yPos, Heightmaps, biomes, structures, etc.
 /// Section range is determined dynamically: at minimum the vanilla range
 /// (Y=-4 to Y=19), extended upward/downward to cover any sections with content.
-fn create_chunk_nbt(chunk: &Chunk) -> HashMap<String, Value> {
+fn create_chunk_nbt(chunk: &Chunk, data_version: i32) -> HashMap<String, Value> {
     // Index existing sections by Y for quick lookup
     let section_map: HashMap<i8, usize> = chunk
         .sections
@@ -387,7 +387,7 @@ fn create_chunk_nbt(chunk: &Chunk) -> HashMap<String, Value> {
 
     // Build root-level chunk NBT (modern format — no Level wrapper)
     let mut root = HashMap::from([
-        ("DataVersion".to_string(), Value::Int(DATA_VERSION)),
+        ("DataVersion".to_string(), Value::Int(data_version)),
         ("xPos".to_string(), Value::Int(chunk.x_pos)),
         ("yPos".to_string(), Value::Int(min_section_y as i32)),
         ("zPos".to_string(), Value::Int(chunk.z_pos)),

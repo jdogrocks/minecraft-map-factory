@@ -128,6 +128,9 @@ pub struct WorldEditor<'a> {
     /// Uses FNV hashing (not SipHash): `get_ground_level` sits on a hot
     /// path (called per-block during placement), so the hash cost matters.
     road_surface_overrides: FnvHashMap<(i32, i32), i32>,
+    /// Chunk DataVersion stamped into every generated chunk NBT.
+    /// Derived from the `--minecraft-version` CLI flag via `pack_format::data_version_for`.
+    pub(super) data_version: i32,
     /// Optional level name for Bedrock worlds (e.g., "MMF World: New York City")
     #[cfg(feature = "bedrock")]
     bedrock_level_name: Option<String>,
@@ -152,6 +155,8 @@ impl<'a> WorldEditor<'a> {
             ground: None,
             format: WorldFormat::JavaAnvil,
             road_surface_overrides: FnvHashMap::default(),
+            data_version: crate::pack_format::data_version_for("1.26.1.2")
+                .expect("default minecraft_version must be in DATA_VERSION_TABLE"),
             #[cfg(feature = "bedrock")]
             bedrock_level_name: None,
             #[cfg(feature = "bedrock")]
@@ -177,6 +182,7 @@ impl<'a> WorldEditor<'a> {
             (i32, i32),
         >,
         #[cfg_attr(not(feature = "bedrock"), allow(unused_variables))] bedrock_extend_height: bool,
+        data_version: i32,
     ) -> Self {
         Self {
             world_dir,
@@ -186,6 +192,7 @@ impl<'a> WorldEditor<'a> {
             ground: None,
             format,
             road_surface_overrides: FnvHashMap::default(),
+            data_version,
             #[cfg(feature = "bedrock")]
             bedrock_level_name,
             #[cfg(feature = "bedrock")]
@@ -1784,6 +1791,7 @@ mod tests {
             None,
             None,
             false,
+            5097,
         );
         assert_eq!(editor.format(), WorldFormat::JavaAnvil);
     }

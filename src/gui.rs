@@ -999,6 +999,7 @@ fn gui_start_generation(
                 benchmark: false,
                 entities: true,
                 entity_theme: "default".to_string(),
+                minecraft_version: "1.26.1.2".to_string(),
             };
 
             // If skip_osm_objects is true (terrain-only mode), skip fetching and processing OSM data

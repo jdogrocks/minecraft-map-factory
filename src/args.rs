@@ -96,6 +96,11 @@ pub struct Args {
     #[arg(long, default_value_t = false)]
     pub disable_height_limit: bool,
 
+    /// Minecraft Java Edition version to target (determines chunk DataVersion).
+    /// Must match one of the supported versions in the pack_format table.
+    #[arg(long, default_value = "1.26.1.2")]
+    pub minecraft_version: String,
+
     /// Print generation-only timing to stderr (excludes data fetching)
     #[arg(long, hide = true)]
     pub benchmark: bool,
