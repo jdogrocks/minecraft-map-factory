@@ -7,3 +7,5 @@ state = "NY"
 bbox = [40.7565, -73.9882, 40.7600, -73.9842]
 tier = "small"
 tags = ["landmark", "urban"]
+spawn_lat = 40.75825
+spawn_lng = -73.9862
