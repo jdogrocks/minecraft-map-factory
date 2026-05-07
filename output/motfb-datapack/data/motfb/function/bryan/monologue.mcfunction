@@ -1,0 +1,1 @@
+tellraw @a [{"text":"The Architect: ","color":"dark_red","bold":true},{"text":"\"Every mall has a final boss. I have ten. Every ending has an architect. You're looking at him. Now — let's see how you handle the renovation.\"","color":"red","italic":true}]
