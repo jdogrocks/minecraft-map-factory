@@ -1,3 +1,6 @@
+# --- difficulty (must be Hard so summoned hostiles persist; Peaceful despawns them) ---
+difficulty hard
+
 # --- gamerules: mall-feel ---
 gamerule keep_inventory true
 gamerule send_command_feedback false

@@ -39,6 +39,17 @@ fi
 PACK_PATH="$1"; shift
 FUNCTIONS=("$@")
 
+# --- Pre-merge audit: reject command-block payloads containing debug leftovers ---
+# Checks non-comment lines in .mcfunction files for say/test/debug commands.
+echo "==> Pre-merge audit: scanning for debug command-block payloads..."
+DEBUG_HITS=$(grep -rn --include="*.mcfunction" -E '(^|\brun\s+)(say|test|debug)\s' "$PACK_PATH" 2>/dev/null || true)
+if [[ -n "$DEBUG_HITS" ]]; then
+    echo "ERROR: debug command-block payloads detected — remove before merging:" >&2
+    echo "$DEBUG_HITS" >&2
+    exit 1
+fi
+echo "(no debug payloads found)"
+
 # --- Input validation ---
 
 if [[ ! -e "$PACK_PATH" ]]; then

@@ -73,6 +73,9 @@ clone -12 -3 -220 12 11 -200 -12 97 -220
 function motfb:lostkid/spawn_at_arcade
 function motfb:bryan/spawn_at_office
 
+# --- restore difficulty (reset may have been called after a server reload) ---
+difficulty hard
+
 # --- teleport players to spawn ---
 tp @a 0 65 -150
 
