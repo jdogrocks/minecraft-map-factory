@@ -170,3 +170,32 @@ fill -49 65 -260 -49 66 -246 minecraft:red_concrete
 fill -49 65 -246 -7 66 -246 minecraft:red_concrete
 fill -49 65 -260 -7 66 -260 minecraft:red_concrete
 fill -7 65 -260 -7 66 -246 minecraft:red_concrete
+
+# --- EAST STORE WALL BASEBOARDS (y=65-66) ---
+# Spencer's Cursed Gifts east store: orange/yellow concrete lower walls §1.6
+fill 49 65 -260 49 66 -246 minecraft:orange_concrete
+fill 49 65 -246 7 66 -246 minecraft:orange_concrete
+fill 49 65 -260 7 66 -260 minecraft:orange_concrete
+fill 7 65 -260 7 66 -246 minecraft:orange_concrete
+
+# Bath & Bodywork Sanctum east store: white concrete lower walls §1.7
+fill 49 65 -245 49 66 -231 minecraft:white_concrete
+fill 49 65 -231 7 66 -231 minecraft:white_concrete
+fill 49 65 -245 7 66 -245 minecraft:white_concrete
+fill 7 65 -245 7 66 -231 minecraft:white_concrete
+# Lavender stained glass accent (inner band §1.7)
+fill 48 65 -244 8 66 -232 minecraft:smooth_quartz
+
+# Pretzel-Pretzel Pretzel east store: smooth sandstone lower walls §1.8
+fill 49 65 -230 49 66 -216 minecraft:smooth_sandstone
+fill 49 65 -216 7 66 -216 minecraft:smooth_sandstone
+fill 49 65 -230 7 66 -230 minecraft:smooth_sandstone
+fill 7 65 -230 7 66 -216 minecraft:smooth_sandstone
+
+# Spunky's Sneakers east store: white concrete lower walls §1.9
+fill 49 65 -215 49 66 -201 minecraft:white_concrete
+fill 49 65 -201 7 66 -201 minecraft:white_concrete
+fill 49 65 -215 7 66 -215 minecraft:white_concrete
+fill 7 65 -215 7 66 -201 minecraft:white_concrete
+# Orange accent stripe at mid-wall height §1.9
+fill 48 65 -214 8 66 -202 minecraft:orange_concrete
