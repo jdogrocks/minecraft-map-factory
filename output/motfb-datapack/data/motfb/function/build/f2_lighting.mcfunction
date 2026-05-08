@@ -124,3 +124,5 @@ fill -49 96 -117 49 96 -117 minecraft:sea_lantern
 fill -49 96 -111 49 96 -111 minecraft:sea_lantern
 fill -49 96 -105 49 96 -105 minecraft:sea_lantern
 
+# --- Reset difficulty if Jason had overridden it ---
+difficulty normal

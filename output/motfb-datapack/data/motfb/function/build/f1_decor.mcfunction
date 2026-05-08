@@ -96,17 +96,17 @@ setblock 18 65 -131 minecraft:oak_slab[type=top]
 
 # Food court lighting: sea lanterns over tables at y=79 already covered by F2,
 # but add iron lanterns on chain posts in the food court center (warm amber)
-setblock -10 72 -138 minecraft:iron_bars
-setblock -10 71 -138 minecraft:iron_bars
+setblock -10 72 -138 minecraft:iron_chain[axis=y]
+setblock -10 71 -138 minecraft:iron_chain[axis=y]
 setblock -10 70 -138 minecraft:lantern[hanging=true]
-setblock 10 72 -138 minecraft:iron_bars
-setblock 10 71 -138 minecraft:iron_bars
+setblock 10 72 -138 minecraft:iron_chain[axis=y]
+setblock 10 71 -138 minecraft:iron_chain[axis=y]
 setblock 10 70 -138 minecraft:lantern[hanging=true]
-setblock -10 72 -132 minecraft:iron_bars
-setblock -10 71 -132 minecraft:iron_bars
+setblock -10 72 -132 minecraft:iron_chain[axis=y]
+setblock -10 71 -132 minecraft:iron_chain[axis=y]
 setblock -10 70 -132 minecraft:lantern[hanging=true]
-setblock 10 72 -132 minecraft:iron_bars
-setblock 10 71 -132 minecraft:iron_bars
+setblock 10 72 -132 minecraft:iron_chain[axis=y]
+setblock 10 71 -132 minecraft:iron_chain[axis=y]
 setblock 10 70 -132 minecraft:lantern[hanging=true]
 
 # Cinnabog kiosk overhang in food court (front-of-house counter visible from corridor)
@@ -156,8 +156,8 @@ setblock 9 76 -168 minecraft:polished_andesite_stairs[facing=south,half=bottom]
 setblock 9 77 -167 minecraft:polished_andesite_stairs[facing=south,half=bottom]
 setblock 9 78 -166 minecraft:polished_andesite_stairs[facing=south,half=bottom]
 # Chain detail on handrail side
-fill 7 66 -179 7 79 -166 minecraft:iron_bars
-fill 10 66 -179 10 79 -166 minecraft:iron_bars
+fill 7 66 -179 7 79 -166 minecraft:iron_chain[axis=y]
+fill 10 66 -179 10 79 -166 minecraft:iron_chain[axis=y]
 # Landing platform at top (floor 2 level y=82)
 fill 7 82 -166 10 82 -165 minecraft:polished_andesite_slab[type=top]
 
@@ -315,98 +315,3 @@ fill 7 70 -230 7 70 -216 minecraft:yellow_concrete
 fill 7 62 -215 7 69 -215 minecraft:white_concrete
 fill 7 62 -201 7 69 -201 minecraft:white_concrete
 fill 7 70 -215 7 70 -201 minecraft:orange_concrete
-
-# =============================================================================
-# FOOD COURT IMPROVEMENTS (Phase D-rev2 — reviewer feedback)
-# Make food court identifiable: signs, chairs, extended floor, vendor counter
-# =============================================================================
-
-# Extended food court floor (widen from x=-24..24 to x=-35..35)
-fill -35 64 -149 -25 64 -126 minecraft:orange_terracotta
-fill 25 64 -149 35 64 -126 minecraft:orange_terracotta
-fill -35 64 -149 -35 64 -126 minecraft:white_concrete
-fill 35 64 -149 35 64 -126 minecraft:white_concrete
-
-# Additional tables in extended zones (west and east)
-setblock -28 65 -140 minecraft:oak_slab[type=top]
-setblock -30 65 -140 minecraft:oak_slab[type=top]
-setblock -28 65 -138 minecraft:oak_slab[type=top]
-setblock -30 65 -138 minecraft:oak_slab[type=top]
-setblock -28 65 -133 minecraft:oak_slab[type=top]
-setblock -30 65 -133 minecraft:oak_slab[type=top]
-setblock -28 65 -131 minecraft:oak_slab[type=top]
-setblock -30 65 -131 minecraft:oak_slab[type=top]
-setblock 28 65 -140 minecraft:oak_slab[type=top]
-setblock 30 65 -140 minecraft:oak_slab[type=top]
-setblock 28 65 -138 minecraft:oak_slab[type=top]
-setblock 30 65 -138 minecraft:oak_slab[type=top]
-setblock 28 65 -133 minecraft:oak_slab[type=top]
-setblock 30 65 -133 minecraft:oak_slab[type=top]
-setblock 28 65 -131 minecraft:oak_slab[type=top]
-setblock 30 65 -131 minecraft:oak_slab[type=top]
-
-# Chair carpet next to every table (red carpet as seat markers)
-setblock -19 65 -141 minecraft:red_carpet
-setblock -19 65 -139 minecraft:red_carpet
-setblock -15 65 -141 minecraft:red_carpet
-setblock -15 65 -139 minecraft:red_carpet
-setblock -19 65 -134 minecraft:red_carpet
-setblock -19 65 -132 minecraft:red_carpet
-setblock -15 65 -134 minecraft:red_carpet
-setblock -15 65 -132 minecraft:red_carpet
-setblock 15 65 -141 minecraft:red_carpet
-setblock 19 65 -141 minecraft:red_carpet
-setblock 15 65 -139 minecraft:red_carpet
-setblock 19 65 -139 minecraft:red_carpet
-setblock 15 65 -134 minecraft:red_carpet
-setblock 19 65 -134 minecraft:red_carpet
-setblock 15 65 -132 minecraft:red_carpet
-setblock 19 65 -132 minecraft:red_carpet
-setblock -29 65 -141 minecraft:red_carpet
-setblock -29 65 -139 minecraft:red_carpet
-setblock -27 65 -141 minecraft:red_carpet
-setblock -27 65 -139 minecraft:red_carpet
-setblock -29 65 -134 minecraft:red_carpet
-setblock -29 65 -132 minecraft:red_carpet
-setblock -27 65 -134 minecraft:red_carpet
-setblock -27 65 -132 minecraft:red_carpet
-setblock 27 65 -141 minecraft:red_carpet
-setblock 29 65 -141 minecraft:red_carpet
-setblock 27 65 -139 minecraft:red_carpet
-setblock 29 65 -139 minecraft:red_carpet
-setblock 27 65 -134 minecraft:red_carpet
-setblock 29 65 -134 minecraft:red_carpet
-setblock 27 65 -132 minecraft:red_carpet
-setblock 29 65 -132 minecraft:red_carpet
-
-# Vendor counter line (north side of food court z=-149 — "the food stalls")
-fill -34 65 -149 -22 65 -149 minecraft:smooth_quartz
-fill -34 66 -149 -22 66 -149 minecraft:smooth_quartz_slab[type=top]
-fill 22 65 -149 34 65 -149 minecraft:smooth_quartz
-fill 22 66 -149 34 66 -149 minecraft:smooth_quartz_slab[type=top]
-# Vendor stall dividers (smooth stone)
-setblock -28 65 -149 minecraft:smooth_stone
-setblock -28 66 -149 minecraft:smooth_stone
-setblock -28 67 -149 minecraft:smooth_stone
-setblock 28 65 -149 minecraft:smooth_stone
-setblock 28 66 -149 minecraft:smooth_stone
-setblock 28 67 -149 minecraft:smooth_stone
-
-# "FOOD COURT" sign above the orange-concrete entry arch at z=-126
-# Backing block on south face of arch at y=71 (arch is orange concrete at y=65..70)
-setblock 0 71 -126 minecraft:orange_concrete
-setblock 0 71 -125 minecraft:oak_wall_sign[facing=south]
-data merge block 0 71 -125 {front_text:{messages:[{text:"FOOD COURT",color:"gold",bold:1b},{text:"Seating this level",color:"yellow",italic:1b},{text:""},{text:""}],has_glowing_text:1b,color:"orange"},is_waxed:1b}
-
-# =============================================================================
-# LOBBY MALL DIRECTORY — near south lobby entrance so players know what's here
-# Placed at z=-110 (lobby zone) on both corridor walls
-# =============================================================================
-
-# West wall directory (visible to players looking toward west wall)
-setblock -6 71 -110 minecraft:oak_wall_sign[facing=east]
-data merge block -6 71 -110 {front_text:{messages:[{text:"LIMINAL LAKES MALL",color:"gold",bold:1b},{text:"West: Hot-Topical",color:"dark_purple"},{text:"Cinnabog  GameZone",color:"yellow"},{text:"Cluck-O-Mart  SEARZ",color:"red"}],has_glowing_text:1b,color:"orange"},is_waxed:1b}
-
-# East wall directory (visible to players looking toward east wall)
-setblock 6 71 -110 minecraft:oak_wall_sign[facing=west]
-data merge block 6 71 -110 {front_text:{messages:[{text:"LIMINAL LAKES MALL",color:"gold",bold:1b},{text:"East: Spencers Gifts",color:"orange"},{text:"Bath+Body  Pretzel",color:"white"},{text:"Spunkys Shoes  SEARZ",color:"aqua"}],has_glowing_text:1b,color:"orange"},is_waxed:1b}

@@ -24,6 +24,8 @@ function motfb:build/f1_decor
 # F3 — office ceiling
 function motfb:build/f3_office
 
+# Ensure init settings are clean (difficulty was overridden during diagnosis)
+difficulty normal
 time set 13000
 weather clear 999999
 
