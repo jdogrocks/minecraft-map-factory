@@ -171,4 +171,10 @@ echo "  Functions:   ${#FUNCTIONS[@]} invoked, $ERRORS error(s)"
 [[ -n "$LOG_HITS" ]] && echo "  Log hits:    (see above)"
 echo "=========================="
 
+echo ""
+echo "*** POST-SESSION REMINDER ***"
+echo "    If you placed any command blocks in-world during this test, remove them now."
+echo "    Repeating command blocks survive server reloads and flood chat for all players."
+echo "    See docs/smoke-testing.md -> Post-session cleanup for details."
+
 [[ $ERRORS -eq 0 ]]

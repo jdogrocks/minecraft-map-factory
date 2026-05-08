@@ -84,6 +84,43 @@ at the call site:
 - **No destructive commands**: the script never issues `/op`, `/stop`,
   `/save-off`, or any command that modifies world state beyond loading a
   datapack.
+- **mcfunction source scan**: the script scans `.mcfunction` files for
+  `say`, `test`, and `debug` commands before copying to the server,
+  catching debug leftovers in source. It does **not** detect command
+  blocks placed interactively in-world — see post-session cleanup below.
+
+## Post-session cleanup (required after every smoke test)
+
+The script's auto-cleanup only removes the temp datapack. It cannot find
+or remove **command blocks placed interactively in-world** during the
+session. These persist across server restarts and fire continuously,
+flooding chat for every player who joins.
+
+After each smoke test session, before ending the session:
+
+1. **Destroy any command blocks you placed** during testing. Use
+   `/fill <x> <y> <z> <x> <y> <z> air` or break them with a pickaxe.
+   Common locations: spawn platform, debug pads, test arenas.
+
+2. **Scan for lingering repeating command blocks** if you're unsure:
+   ```bash
+   python3 scripts/find-command-blocks.py
+   ```
+   This scans the live world NBT and prints every command block with its
+   coordinates and command text. Any block with a trivial command like
+   `say test` is a debug leftover.
+
+3. **Verify the server log is quiet** after cleanup:
+   ```bash
+   docker logs --tail=30 minecraft-papermc 2>&1 | grep '\[@\]'
+   ```
+   A clean server shows no `[@]` chat lines.
+
+> **Background (MIN-167):** A `say test` command block left at `(0, 62, -165)`
+> during MIN-165 smoke testing fired ~20 times/second, flooding chat for all
+> players on join. The block survived server reloads and was not caught by
+> the mcfunction source scan. Manual NBT inspection was required to locate
+> and remove it.
 
 ## Server details (for reference)
 
