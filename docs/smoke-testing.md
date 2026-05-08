@@ -97,6 +97,52 @@ at the call site:
 | Host volume | `/home/jason/minecraft-server/data/` ↔ `/data/` |
 | `function-permission-level` | 2 |
 
+## Deploy runbook
+
+### When to deploy
+
+Deploy whenever a sub-issue that touches the datapack is marked `done` and CI is
+green. Never rely on a world zip built mid-flight — always deploy from merged HEAD.
+
+### 1. Deploy current HEAD to the live container
+
+```bash
+scripts/motfb-deploy.sh
+```
+
+This replaces `/data/Times_Square__NYC/datapacks/motfb` in the running container
+with the worktree's `output/motfb-datapack`, reloads datapacks, runs `motfb:init`,
+and confirms difficulty is Hard. Exits non-zero on any failure.
+
+### 2. Verify the live container matches HEAD
+
+```bash
+scripts/motfb-verify-deployed.sh
+```
+
+Diffs the live container's deployed datapack against `output/motfb-datapack`. Exits
+0 on a clean match, non-zero with a list of divergent files on mismatch.
+
+### 3. Rebuild the world zip (after all siblings land)
+
+Run this only after **all** sibling sub-issues have merged and CI is green:
+
+```bash
+scripts/motfb-package-world.sh <zip-name>
+# Example:
+scripts/motfb-package-world.sh motfb-phase-d-rev2
+```
+
+Pulls the live world from the container and writes
+`/home/jason/motfb-docs/<zip-name>.zip`, overwriting any existing file.
+
+### Mandatory close sequence for any datapack-touching sub-issue
+
+1. `scripts/motfb-deploy.sh` — push HEAD to container
+2. `scripts/motfb-verify-deployed.sh` — confirm match (must exit 0)
+3. Post completion comment; mark `in_review`
+4. World zip rebuild (`motfb-package-world.sh`) is deferred until all siblings land
+
 ## Troubleshooting
 
 **Script cannot reach docker**: confirm the executing user is in the `docker`
