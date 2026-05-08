@@ -96,17 +96,17 @@ setblock 18 65 -131 minecraft:oak_slab[type=top]
 
 # Food court lighting: sea lanterns over tables at y=79 already covered by F2,
 # but add iron lanterns on chain posts in the food court center (warm amber)
-setblock -10 72 -138 minecraft:iron_chain[axis=y]
-setblock -10 71 -138 minecraft:iron_chain[axis=y]
+setblock -10 72 -138 minecraft:iron_bars
+setblock -10 71 -138 minecraft:iron_bars
 setblock -10 70 -138 minecraft:lantern[hanging=true]
-setblock 10 72 -138 minecraft:iron_chain[axis=y]
-setblock 10 71 -138 minecraft:iron_chain[axis=y]
+setblock 10 72 -138 minecraft:iron_bars
+setblock 10 71 -138 minecraft:iron_bars
 setblock 10 70 -138 minecraft:lantern[hanging=true]
-setblock -10 72 -132 minecraft:iron_chain[axis=y]
-setblock -10 71 -132 minecraft:iron_chain[axis=y]
+setblock -10 72 -132 minecraft:iron_bars
+setblock -10 71 -132 minecraft:iron_bars
 setblock -10 70 -132 minecraft:lantern[hanging=true]
-setblock 10 72 -132 minecraft:iron_chain[axis=y]
-setblock 10 71 -132 minecraft:iron_chain[axis=y]
+setblock 10 72 -132 minecraft:iron_bars
+setblock 10 71 -132 minecraft:iron_bars
 setblock 10 70 -132 minecraft:lantern[hanging=true]
 
 # Cinnabog kiosk overhang in food court (front-of-house counter visible from corridor)
@@ -156,8 +156,8 @@ setblock 9 76 -168 minecraft:polished_andesite_stairs[facing=south,half=bottom]
 setblock 9 77 -167 minecraft:polished_andesite_stairs[facing=south,half=bottom]
 setblock 9 78 -166 minecraft:polished_andesite_stairs[facing=south,half=bottom]
 # Chain detail on handrail side
-fill 7 66 -179 7 79 -166 minecraft:iron_chain[axis=y]
-fill 10 66 -179 10 79 -166 minecraft:iron_chain[axis=y]
+fill 7 66 -179 7 79 -166 minecraft:iron_bars
+fill 10 66 -179 10 79 -166 minecraft:iron_bars
 # Landing platform at top (floor 2 level y=82)
 fill 7 82 -166 10 82 -165 minecraft:polished_andesite_slab[type=top]
 
