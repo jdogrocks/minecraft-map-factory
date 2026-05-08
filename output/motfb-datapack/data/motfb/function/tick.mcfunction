@@ -10,7 +10,10 @@ scoreboard players reset @a mall.shears_use
 
 # --- re-give lost contract ---
 execute as @a[tag=has_contract] run execute store result score @s mall.contract_held run clear @s minecraft:carrot_on_a_stick[custom_model_data={floats:[1001.0f]}] 0
-execute as @a[tag=has_contract] if score @s mall.contract_held matches 0 run function motfb:contract/give
+# first-time: contract/give handles proximity-tag, item give, and PA announcement
+execute as @a[tag=has_contract,tag=!gave_contract] if score @s mall.contract_held matches 0 run function motfb:contract/give
+# re-give: silent restore — no PA (this is what caused chat spam when @s had gave_contract but lost the item)
+execute as @a[tag=has_contract,tag=gave_contract] if score @s mall.contract_held matches 0 run give @s minecraft:carrot_on_a_stick[custom_model_data={floats:[1001.0f]},custom_name='{"text":"The Original Contract","color":"dark_purple","italic":false,"bold":true}',lore=['{"text":"PARTY OF THE FIRST PART:","color":"dark_gray","italic":false}','{"text":"  The Architect of All Endings","color":"gray","italic":true}','{"text":"","color":"gray"}','{"text":"Right-click on the Signing Lectern: ACCEPT","color":"gold","italic":false}','{"text":"Strike Bryan with a weapon: VOID","color":"red","italic":false}','{"text":"Use Shears while standing on the Tearing Pad: ANNUL","color":"light_purple","italic":false}','{"text":"  (3 journals required)","color":"light_purple","italic":false}']] 1
 
 # --- Bryan vulnerability gate: flip off invulnerability once any player has contract ---
 execute if entity @a[tag=has_contract] if entity @e[tag=motfb_bryan] run data merge entity @e[tag=motfb_bryan,limit=1] {Invulnerable:0b,NoAI:0b}
