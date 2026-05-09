@@ -22,21 +22,28 @@ region files), textures, or non-datapack pipeline code.
 ## How to run
 
 ```bash
-scripts/motfb-smoke.sh <path-to-built-pack> [function-to-exercise ...]
+scripts/motfb-smoke.sh [OPTIONS] <path-to-built-pack> [function-to-exercise ...]
 ```
 
-`<path-to-built-pack>` is the local directory or `.zip` of the datapack to
-test. Optionally pass one or more fully-qualified Minecraft function IDs
-(e.g. `motfb:init`) to exercise after the pack loads.
+`<path-to-built-pack>` is the local directory of the datapack to test. Optionally pass one or more fully-qualified Minecraft function IDs (e.g. `motfb:init`) to exercise after the pack loads.
+
+### Options
+
+- `--behavioral` — Run Phase 2 behavioral assertions (sign content, floor flatness, etc.)
+- `--spawn-bosses` — (with `--behavioral`) Spawn all boss entities and verify positions
+- `--help` — Show usage
 
 ### Example
 
 ```bash
-# Test a freshly-built MOTFB datapack and run its init function
+# Phase 1: pack syntax check only (load and basic parse)
 scripts/motfb-smoke.sh output/motfb-datapack motfb:init
 
-# Quick pack_format / load check only (no extra functions)
-scripts/motfb-smoke.sh output/motfb-datapack
+# Phase 1 + Phase 2: pack syntax + in-world behavioral assertions
+scripts/motfb-smoke.sh --behavioral output/motfb-datapack motfb:init
+
+# Full smoke test with boss entity position verification
+scripts/motfb-smoke.sh --behavioral --spawn-bosses output/motfb-datapack motfb:init
 ```
 
 The script handles all server-side steps:
@@ -47,6 +54,68 @@ The script handles all server-side steps:
 4. Reads `datapack list` and tails `latest.log`
 5. Runs any extra functions you specified via rcon
 6. **Cleans up**: removes the pack and reloads again
+
+## Phase 2: Behavioral Assertions
+
+When run with `--behavioral`, the smoke script adds in-world content verification after pack load. These assertions detect bugs that parse-clean checks cannot catch (see [MIN-170](/MIN/issues/MIN-170) background).
+
+### Assertion Classes
+
+| # | Name | Scope | Detects |
+|---|------|-------|---------|
+| 1 | Sign content read-back | 18 signs | Raw JSON rendering (legacy format) — MIN-159 root cause |
+| 2 | Floor flatness sweep | 5 entrance coords | Raised floor blocks forcing jumps — MIN-159 root cause |
+| 3 | Spawn block assertion | Spawnpoint y=64 | Missing or wrong platform material |
+| 4 | Lighting density check | 4 spot-checks | Missing sea_lantern light sources |
+| 5 | Boss entity coords | 9 bosses (opt) | Misplaced boss entities outside storefront bounds |
+| 6 | Sign-format sanity | 18 signs | Pre-1.20 `Text1`/`Text2` keys (legacy schema) |
+
+### Sample Output
+
+```
+==> Phase 2: Behavioral Assertions
+
+  Assertion 1: Sign content read-back (18 signs)
+    ✓ Sign at -1 71 -272: {"text":"Food Court"}...
+    ✓ Sign at -6 70 -270: {"text":"Kraw Drive-Thru"}...
+    ... (14 more) ...
+
+  Assertion 2: Floor flatness sweep (entrance y=64)
+    ✓ Entrance floor at -20 64 -101
+    ✓ Entrance floor at 20 64 -101
+    ✓ Entrance floor at -20 64 -85
+    ✓ Entrance floor at 20 64 -85
+    ✓ Entrance floor at 0 64 -93
+
+  Assertion 3: Spawn block assertion (0 64 -150)
+    ✓ Spawn block at 0 64 -150: minecraft:smooth_quartz
+
+  Assertion 4: Lighting density check (spot-checks)
+    ✓ Light source found at -20 68 -101
+    ℹ Light sources found: 1/4 spot-checks
+
+  Assertion 5: Boss entity coords (9 bosses)
+    ✓ Kraw boss in bounds
+    ... (8 more) ...
+
+==> Behavioral Assertion Summary
+  Assertion errors: 0
+```
+
+### Failure Example
+
+```
+  ✗ Sign at -1 71 -272 uses legacy Text1-4 schema (root cause of MIN-159 sign bug)
+  ✗ Floor flatness sweep at 0 64 -93: expected=smooth_quartz observed=no-match
+```
+
+### When to Run
+
+Run `--behavioral` whenever:
+- A change touches the build functions (`build/scene_details.mcfunction`, etc.)
+- A change touches sign setup (`setup_journals.mcfunction`)
+- A datapack deploy is made to the live container
+- A visual walkthrough found issues that parse-clean checks might miss
 
 ## What to check in the output
 
@@ -84,6 +153,43 @@ at the call site:
 - **No destructive commands**: the script never issues `/op`, `/stop`,
   `/save-off`, or any command that modifies world state beyond loading a
   datapack.
+- **mcfunction source scan**: the script scans `.mcfunction` files for
+  `say`, `test`, and `debug` commands before copying to the server,
+  catching debug leftovers in source. It does **not** detect command
+  blocks placed interactively in-world — see post-session cleanup below.
+
+## Post-session cleanup (required after every smoke test)
+
+The script's auto-cleanup only removes the temp datapack. It cannot find
+or remove **command blocks placed interactively in-world** during the
+session. These persist across server restarts and fire continuously,
+flooding chat for every player who joins.
+
+After each smoke test session, before ending the session:
+
+1. **Destroy any command blocks you placed** during testing. Use
+   `/fill <x> <y> <z> <x> <y> <z> air` or break them with a pickaxe.
+   Common locations: spawn platform, debug pads, test arenas.
+
+2. **Scan for lingering repeating command blocks** if you're unsure:
+   ```bash
+   python3 scripts/find-command-blocks.py
+   ```
+   This scans the live world NBT and prints every command block with its
+   coordinates and command text. Any block with a trivial command like
+   `say test` is a debug leftover.
+
+3. **Verify the server log is quiet** after cleanup:
+   ```bash
+   docker logs --tail=30 minecraft-papermc 2>&1 | grep '\[@\]'
+   ```
+   A clean server shows no `[@]` chat lines.
+
+> **Background (MIN-167):** A `say test` command block left at `(0, 62, -165)`
+> during MIN-165 smoke testing fired ~20 times/second, flooding chat for all
+> players on join. The block survived server reloads and was not caught by
+> the mcfunction source scan. Manual NBT inspection was required to locate
+> and remove it.
 
 ## Server details (for reference)
 
@@ -142,6 +248,22 @@ Pulls the live world from the container and writes
 2. `scripts/motfb-verify-deployed.sh` — confirm match (must exit 0)
 3. Post completion comment; mark `in_review`
 4. World zip rebuild (`motfb-package-world.sh`) is deferred until all siblings land
+
+## Negative Test Fixtures (DoD Verification)
+
+The script is validated with negative fixtures that inject known bugs and verify assertions catch them.
+
+```bash
+# Run negative tests against a datapack
+scripts/motfb-smoke-selftest.sh output/motfb-datapack
+```
+
+Two fixtures are included:
+
+1. **Legacy-format sign** — sets up a sign with pre-1.20 `Text1` key; assertion 6 must detect and fail
+2. **Raised floor block** — installs a block one level above the entrance floor; assertion 2 must detect and fail
+
+Both must exit non-zero with a clear failure message. See `test/fixtures/README.md` for details.
 
 ## Troubleshooting
 

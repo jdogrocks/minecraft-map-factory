@@ -1,3 +1,4 @@
+kill @e[tag=motfb_searz_boss]
 execute as @a[x=-50,y=60,z=-280,dx=100,dy=20,dz=19] run tag @s add in_searz
 execute as @a[x=-50,y=60,z=-280,dx=100,dy=20,dz=19] run tag @s add in_active_store
 fill -50 62 -261 50 79 -261 minecraft:bedrock
