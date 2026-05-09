@@ -1,3 +1,4 @@
+kill @e[tag=motfb_kraw_boss]
 execute as @a[x=-50,y=60,z=-260,dx=44,dy=20,dz=14] run tag @s add in_kraw
 execute as @a[x=-50,y=60,z=-260,dx=44,dy=20,dz=14] run tag @s add in_active_store
 # F9: Flash the DANGER lamps on the arch frame before the door seals (visual pre-warning)

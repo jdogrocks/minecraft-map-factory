@@ -41,8 +41,16 @@ execute unless score #party mall.coupons matches 0.. run scoreboard players set 
 execute unless score #party mall.journals matches 0.. run scoreboard players set #party mall.journals 0
 execute unless score #party mall.ending matches 0.. run scoreboard players set #party mall.ending 0
 execute unless score #party mall.bryan_phase matches 0.. run scoreboard players set #party mall.bryan_phase 0
+scoreboard players set #party mall.bryan_hp 99
 
-# --- set spawn inside mall entrance ---
-spawnpoint @a 0 65 -150
+# --- set spawn at exterior entrance ---
+setworldspawn 0 65 -90
+spawnpoint @a 0 65 -90
+
+# --- place journal lecterns and spawn boss entities + static NPCs ---
+function motfb:build/setup_journals
+function motfb:boss/init_all
+function motfb:lostkid/spawn_at_arcade
+function motfb:bryan/spawn_at_office
 
 tellraw @a {"text":"Liminal Lakes Mall — datapack loaded.","color":"dark_gray","italic":true}

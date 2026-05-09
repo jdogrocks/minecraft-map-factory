@@ -18,6 +18,9 @@ tag @a remove lk_following
 tag @a remove journal1_found
 tag @a remove journal2_found
 tag @a remove journal3_found
+tag @a remove pa_entrance_done
+tag @a remove pretzel_given
+tag @a remove in_active_store
 tag @a remove in_kraw
 tag @a remove in_searz
 tag @a remove in_pixellich
@@ -69,14 +72,15 @@ clone -50 -37 -280 50 -21 -261 -50 62 -280
 # --- restore office from backup ---
 clone -12 -3 -220 12 11 -200 -12 97 -220
 
-# --- re-summon static NPCs ---
+# --- re-spawn all bosses and static NPCs ---
+function motfb:boss/init_all
 function motfb:lostkid/spawn_at_arcade
 function motfb:bryan/spawn_at_office
 
 # --- restore difficulty (reset may have been called after a server reload) ---
 difficulty hard
 
-# --- teleport players to spawn ---
-tp @a 0 65 -150
+# --- teleport players to exterior entrance ---
+tp @a 0 65 -90
 
 tellraw @a {"text":"The mall is open. Welcome, welcome, welcome.","color":"gold","italic":true}

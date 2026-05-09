@@ -1,3 +1,30 @@
+# --- PA welcome: fire once per player on first entry into south lobby ---
+execute as @a[tag=!pa_entrance_done,x=-20,y=60,z=-125,dx=40,dy=20,dz=24,limit=1] run function motfb:pa/welcome
+execute as @a[tag=!pa_entrance_done,x=-20,y=60,z=-125,dx=40,dy=20,dz=24] run tag @s add pa_entrance_done
+
+# --- food court: auto-give Mall Pretzel on first visit (Pretzel-Pretzel Pretzel kiosk) ---
+execute as @a[tag=!pretzel_given,x=-20,y=60,z=-149,dx=40,dy=20,dz=23] run give @s minecraft:bread[custom_name='{"text":"Mall Pretzel","color":"yellow"}'] 1
+execute as @a[tag=!pretzel_given,x=-20,y=60,z=-149,dx=40,dy=20,dz=23] run tag @s add pretzel_given
+
+# --- Lost Kid recruit: player with Mall Pretzel approaches NPC ---
+execute as @a[tag=!lk_following] at @s if entity @e[tag=motfb_lostkid,distance=..3] run execute store result score @s mall.flag run clear @s minecraft:bread[custom_name='{"text":"Mall Pretzel","color":"yellow"}'] 0
+execute as @a[tag=!lk_following] at @s if entity @e[tag=motfb_lostkid,distance=..3] if score @s mall.flag matches 1.. run function motfb:lostkid/recruit
+
+# --- journal collection: walk near each journal lectern ---
+execute as @a[tag=!journal1_found,x=-5,y=62,z=-134,dx=10,dy=10,dz=4] run scoreboard players add #party mall.journals 1
+execute as @a[tag=!journal1_found,x=-5,y=62,z=-134,dx=10,dy=10,dz=4] run tag @s add journal1_found
+execute as @a[tag=!journal2_found,x=-5,y=62,z=-272,dx=10,dy=10,dz=4] run scoreboard players add #party mall.journals 1
+execute as @a[tag=!journal2_found,x=-5,y=62,z=-272,dx=10,dy=10,dz=4] run tag @s add journal2_found
+execute as @a[tag=!journal3_found,x=-5,y=96,z=-218,dx=10,dy=10,dz=4] run scoreboard players add #party mall.journals 1
+execute as @a[tag=!journal3_found,x=-5,y=96,z=-218,dx=10,dy=10,dz=4] run tag @s add journal3_found
+
+# --- contract give: trigger when player with 9+ coupons enters office near Bryan ---
+execute if score #party mall.coupons matches 9.. as @e[tag=motfb_bryan,limit=1] at @s if entity @a[distance=..4,tag=!has_contract] run function motfb:contract/give
+
+# --- Ending B trigger: player with contract hits Bryan in phase 0 ---
+execute if score #party mall.bryan_phase matches 0 if score #party mall.ending matches 0 if entity @e[tag=motfb_bryan] run execute store result score #party mall.bryan_hp run data get entity @e[tag=motfb_bryan,limit=1] Health
+execute if score #party mall.bryan_phase matches 0 if score #party mall.ending matches 0 if score #party mall.bryan_hp matches ..98 if entity @a[tag=has_contract] run function motfb:contract/attack
+
 # --- decay PA + lost-kid cooldowns ---
 execute as @a if score @s mall.pa_cooldown matches 1.. run scoreboard players remove @s mall.pa_cooldown 1
 execute as @a if score @s mall.lk_cooldown matches 1.. run scoreboard players remove @s mall.lk_cooldown 1
