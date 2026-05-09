@@ -171,7 +171,7 @@ impl<'a> WorldEditor<'a> {
     /// Creates a new WorldEditor with a specific format and optional level name.
     ///
     /// Used by GUI mode to support both Java and Bedrock formats.
-    #[allow(dead_code)]
+    #[allow(dead_code, clippy::too_many_arguments)]
     pub fn new_with_format_and_name(
         world_dir: PathBuf,
         xzbbox: &'a XZBBox,
