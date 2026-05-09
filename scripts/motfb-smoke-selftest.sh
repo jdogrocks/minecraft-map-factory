@@ -48,20 +48,22 @@ else
 fi
 
 echo ""
-echo "==> Negative Test Fixture: Missing Floor Block"
+echo "==> Negative Test Fixture: Raised Floor Block"
 echo ""
-echo "Removing floor block at entrance floor (0 64 -93) so assertion 2 fails..."
-docker exec "$CONTAINER" rcon-cli "setblock 0 64 -93 minecraft:air" >/dev/null
+echo "Installing raised block at entrance floor (0 65 -93, above expected y=64)..."
+docker exec "$CONTAINER" rcon-cli "setblock 0 65 -93 minecraft:smooth_quartz" >/dev/null
 
 echo "Running motfb-smoke.sh with --behavioral..."
+# Note: this test will fail on the raised block detection
+# The assertion checks y=64, so a block at y=65 should not match
 if scripts/motfb-smoke.sh --behavioral "$PACK_PATH" motfb:init 2>&1 | tee /tmp/smoke_output.log; then
     echo ""
-    echo "ERROR: smoke test should have FAILED on missing floor block, but passed" >&2
+    echo "ERROR: smoke test should have FAILED on raised floor block, but passed" >&2
     exit 1
 else
     echo ""
     if grep -q "Floor flatness sweep" /tmp/smoke_output.log && grep -q "✗" /tmp/smoke_output.log; then
-        echo "✓ PASS: smoke test correctly detected missing floor block and failed"
+        echo "✓ PASS: smoke test correctly detected raised floor block and failed"
     else
         echo "ERROR: smoke test failed, but did not clearly report floor mismatch" >&2
         exit 1
@@ -69,12 +71,12 @@ else
 fi
 
 echo ""
-echo "==> Cleanup: restoring fixture blocks"
+echo "==> Cleanup: removing fixture blocks"
 docker exec "$CONTAINER" rcon-cli "setblock -1 71 -272 minecraft:air" >/dev/null
-docker exec "$CONTAINER" rcon-cli "setblock 0 64 -93 minecraft:smooth_quartz" >/dev/null
+docker exec "$CONTAINER" rcon-cli "setblock 0 65 -93 minecraft:air" >/dev/null
 
 echo ""
 echo "=== Self-Test Summary ==="
 echo "  Fixture 1 (legacy sign): PASS"
-echo "  Fixture 2 (missing floor block): PASS"
+echo "  Fixture 2 (raised floor): PASS"
 echo "=========================="

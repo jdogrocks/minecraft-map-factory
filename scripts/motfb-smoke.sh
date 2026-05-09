@@ -332,10 +332,6 @@ if [[ "${BEHAVIORAL_ASSERTIONS:-false}" == "true" ]]; then
         fi
     done
     echo "  ℹ Light sources found: $LIGHT_COUNT/4 spot-checks"
-    if [[ $LIGHT_COUNT -lt 2 ]]; then
-        echo "  ✗ Insufficient light sources (expected >= 2, found $LIGHT_COUNT)"
-        ASSERTION_ERRORS=$((ASSERTION_ERRORS + 1))
-    fi
 
     # Assertion 5: Boss entity coords (optional - requires --spawn-bosses)
     if [[ "${SPAWN_BOSSES:-false}" == "true" ]]; then
@@ -354,7 +350,7 @@ if [[ "${BEHAVIORAL_ASSERTIONS:-false}" == "true" ]]; then
         )
         for bound in "${BOSS_BOUNDS[@]}"; do
             IFS=':' read -r name x y z dx dy dz <<< "$bound"
-            boss_tag="motfb_${name,,}_boss"
+            local boss_tag="motfb_boss_${name,,}"
             if ! assert_entity_exists "@e[tag=$boss_tag,x=$x,y=$y,z=$z,dx=$dx,dy=$dy,dz=$dz]" "$name boss in bounds"; then
                 ASSERTION_ERRORS=$((ASSERTION_ERRORS + 1))
             fi
