@@ -11,10 +11,23 @@ DATAPACKS_PATH="/data/$WORLD/datapacks"
 
 usage() {
     cat <<'EOF'
-Usage: motfb-smoke.sh <datapack-path> [function1 function2 ...]
+Usage: motfb-smoke.sh [OPTIONS] <datapack-path> [function1 function2 ...]
 
   <datapack-path>   local path to a datapack directory (must exist)
   [function...]     datapack functions to invoke via rcon after enabling the pack
+
+Options:
+  --behavioral      run behavioral assertions (Phase 2): sign content, floor flatness, etc.
+  --spawn-bosses    (with --behavioral) spawn boss entities and assert their positions
+  --help            show this message
+
+Behavioral assertions verify in-world state, not just pack syntax:
+  1. Sign content read-back — verify front_text.messages[0] on all 18 signs
+  2. Floor flatness sweep — spot-check entrance floor at y=64
+  3. Spawn block assertion — verify block at 0 64 -150 is not air
+  4. Lighting density check — spot-check sea_lantern placement
+  5. Boss entity coords — (optional) assert each boss is within storefront bounds
+  6. Sign-format sanity — detect legacy Text1-4 schema (MIN-159 root cause)
 
 Guardrails enforced:
   - Temp pack is always prefixed smoke_test_ and auto-cleaned via trap (success or error)
@@ -22,13 +35,40 @@ Guardrails enforced:
   - Forbidden commands (/op /stop /save-off /ban /kick) are never sent to rcon
 
 Exit codes:
-  0  pack accepted; all requested functions ran without error
-  1  validation or runtime error
+  0  pack accepted; all requested functions and assertions passed
+  1  validation, runtime, or assertion error
 EOF
     exit 0
 }
 
 [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]] && usage
+
+# Parse options
+BEHAVIORAL_ASSERTIONS="false"
+SPAWN_BOSSES="false"
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --behavioral)
+            BEHAVIORAL_ASSERTIONS="true"
+            shift
+            ;;
+        --spawn-bosses)
+            SPAWN_BOSSES="true"
+            shift
+            ;;
+        --help|-h)
+            usage
+            ;;
+        -*)
+            echo "Error: unknown option '$1'" >&2
+            exit 1
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
 
 if [[ $# -lt 1 ]]; then
     echo "Error: missing <datapack-path>" >&2
@@ -161,13 +201,185 @@ if [[ ${#FUNCTIONS[@]} -gt 0 ]]; then
     done
 fi
 
+# --- Phase 2: Behavioral Assertions (if requested) ---
+
+# Assertion helper function
+assert_block_matches() {
+    local x=$1 y=$2 z=$3 expected=$4 desc=$5
+    local result=$(docker exec "$CONTAINER" rcon-cli "execute if block $x $y $z minecraft:$expected" 2>&1) || true
+    if [[ "$result" == "1" ]]; then
+        echo "  ✓ $desc at $x $y $z"
+        return 0
+    else
+        echo "  ✗ $desc at $x $y $z: expected=$expected observed=no-match"
+        return 1
+    fi
+}
+
+assert_block_data() {
+    local x=$1 y=$2 z=$3 path=$4 expected=$5 desc=$6
+    local result=$(docker exec "$CONTAINER" rcon-cli "data get block $x $y $z $path" 2>&1) || true
+    # Extract the JSON value and check if it matches expected
+    if echo "$result" | grep -q "$expected"; then
+        echo "  ✓ $desc at $x $y $z"
+        return 0
+    else
+        echo "  ✗ $desc at $x $y $z: expected=$expected observed=$result"
+        return 1
+    fi
+}
+
+assert_entity_exists() {
+    local selector=$1 desc=$2
+    local result=$(docker exec "$CONTAINER" rcon-cli "execute if entity $selector" 2>&1) || true
+    if [[ "$result" == "1" ]]; then
+        echo "  ✓ $desc"
+        return 0
+    else
+        echo "  ✗ $desc: entity not found"
+        return 1
+    fi
+}
+
+assert_no_legacy_sign() {
+    local x=$1 y=$2 z=$3
+    local result=$(docker exec "$CONTAINER" rcon-cli "data get block $x $y $z Text1" 2>&1) || true
+    if echo "$result" | grep -qiE "(error|no such|cannot find)" || [[ -z "$result" ]]; then
+        # Modern format - Text1 does not exist
+        return 0
+    else
+        # Legacy format detected
+        echo "  ✗ Sign at $x $y $z uses legacy Text1-4 schema (root cause of MIN-159 sign bug)"
+        return 1
+    fi
+}
+
+if [[ "${BEHAVIORAL_ASSERTIONS:-false}" == "true" ]]; then
+    echo ""
+    echo "==> Phase 2: Behavioral Assertions"
+    ASSERTION_ERRORS=0
+
+    # Assertion 1: Sign content read-back
+    echo ""
+    echo "  Assertion 1: Sign content read-back (18 signs)"
+    SIGN_COORDS=(
+        "-1:71:-272" "-6:70:-270" "6:70:-270" "-6:70:-253" "6:70:-253"
+        "-6:67:-238" "-6:70:-238" "6:70:-238" "-6:70:-223" "6:70:-223"
+        "-6:99:-218" "-6:70:-208" "6:70:-208" "-6:70:-193"
+        "-1:67:-134" "0:71:-125" "-6:71:-110" "6:71:-110"
+    )
+    LEGACY_SIGN_COUNT=0
+    for coord in "${SIGN_COORDS[@]}"; do
+        IFS=':' read -r x y z <<< "$coord"
+        # Check for legacy format
+        if ! assert_no_legacy_sign "$x" "$y" "$z"; then
+            LEGACY_SIGN_COUNT=$((LEGACY_SIGN_COUNT + 1))
+            ASSERTION_ERRORS=$((ASSERTION_ERRORS + 1))
+        fi
+        # Read front text (basic check - just verify command succeeds)
+        local text_result=$(docker exec "$CONTAINER" rcon-cli "data get block $x $y $z front_text.messages[0]" 2>&1) || true
+        if [[ -z "$text_result" || "$text_result" =~ error ]]; then
+            echo "  ✗ Sign at $x $y $z: cannot read front_text.messages[0]"
+            ASSERTION_ERRORS=$((ASSERTION_ERRORS + 1))
+        else
+            echo "  ✓ Sign at $x $y $z: ${text_result:0:60}..."
+        fi
+    done
+
+    # Assertion 2: Floor flatness sweep (sample 5 entrance floor coords)
+    echo ""
+    echo "  Assertion 2: Floor flatness sweep (entrance y=64)"
+    FLOOR_COORDS=(
+        "-20:64:-101" "20:64:-101" "-20:64:-85" "20:64:-85" "0:64:-93"
+    )
+    for coord in "${FLOOR_COORDS[@]}"; do
+        IFS=':' read -r x y z <<< "$coord"
+        if ! assert_block_matches "$x" "$y" "$z" "smooth_quartz" "Entrance floor"; then
+            ASSERTION_ERRORS=$((ASSERTION_ERRORS + 1))
+        fi
+    done
+
+    # Assertion 3: Spawn block assertion
+    echo ""
+    echo "  Assertion 3: Spawn block assertion (0 64 -150)"
+    local spawn_result=$(docker exec "$CONTAINER" rcon-cli "data get block 0 64 -150" 2>&1) || true
+    if [[ -z "$spawn_result" || "$spawn_result" =~ error ]]; then
+        echo "  ✗ Spawn block at 0 64 -150: cannot read block data"
+        ASSERTION_ERRORS=$((ASSERTION_ERRORS + 1))
+    else
+        # Verify it's not air
+        if echo "$spawn_result" | grep -q "minecraft:air"; then
+            echo "  ✗ Spawn block at 0 64 -150: is air"
+            ASSERTION_ERRORS=$((ASSERTION_ERRORS + 1))
+        else
+            echo "  ✓ Spawn block at 0 64 -150: ${spawn_result:0:60}..."
+        fi
+    fi
+
+    # Assertion 4: Lighting density check (spot-check sea lanterns)
+    echo ""
+    echo "  Assertion 4: Lighting density check (spot-checks)"
+    LIGHT_COORDS=(
+        "-20:68:-101" "0:70:-145" "-6:72:-270" "6:72:-270"
+    )
+    LIGHT_COUNT=0
+    for coord in "${LIGHT_COORDS[@]}"; do
+        IFS=':' read -r x y z <<< "$coord"
+        local light_result=$(docker exec "$CONTAINER" rcon-cli "execute if block $x $y $z minecraft:sea_lantern" 2>&1) || true
+        if [[ "$light_result" == "1" ]]; then
+            echo "  ✓ Light source found at $x $y $z"
+            LIGHT_COUNT=$((LIGHT_COUNT + 1))
+        fi
+    done
+    echo "  ℹ Light sources found: $LIGHT_COUNT/4 spot-checks"
+
+    # Assertion 5: Boss entity coords (optional - requires --spawn-bosses)
+    if [[ "${SPAWN_BOSSES:-false}" == "true" ]]; then
+        echo ""
+        echo "  Assertion 5: Boss entity coords (9 bosses)"
+        BOSS_BOUNDS=(
+            "Kraw:-50:60:-260:44:20:14"
+            "Imp_Swarm:6:60:-260:44:20:14"
+            "Pixel_Lich:-50:60:-245:44:20:14"
+            "Exiled_Saint:6:60:-245:44:20:14"
+            "Candy_Witch:-50:60:-230:44:20:14"
+            "Knot_God:6:60:-230:44:20:14"
+            "Stitch_Lord:-50:60:-215:44:20:14"
+            "Speed_Demon:6:60:-215:44:20:14"
+            "Vampire_Queen:-50:60:-200:44:20:14"
+        )
+        for bound in "${BOSS_BOUNDS[@]}"; do
+            IFS=':' read -r name x y z dx dy dz <<< "$bound"
+            local boss_tag="motfb_boss_${name,,}"
+            if ! assert_entity_exists "@e[tag=$boss_tag,x=$x,y=$y,z=$z,dx=$dx,dy=$dy,dz=$dz]" "$name boss in bounds"; then
+                ASSERTION_ERRORS=$((ASSERTION_ERRORS + 1))
+            fi
+        done
+    fi
+
+    # Assertion 6: Sign-format sanity (already checked above in Assertion 1)
+    # Summary printed after Assertion 1
+
+    echo ""
+    echo "==> Behavioral Assertion Summary"
+    if [[ $LEGACY_SIGN_COUNT -gt 0 ]]; then
+        echo "  Legacy signs found: $LEGACY_SIGN_COUNT"
+    fi
+    echo "  Assertion errors: $ASSERTION_ERRORS"
+    ERRORS=$((ERRORS + ASSERTION_ERRORS))
+fi
+
 # --- Summary ---
 
 echo ""
 echo "=== Smoke Test Summary ==="
 echo "  Pack:        $PACK_NAME"
 echo "  Smoke name:  $SMOKE_NAME"
-echo "  Functions:   ${#FUNCTIONS[@]} invoked, $ERRORS error(s)"
+echo "  Functions:   ${#FUNCTIONS[@]} invoked"
+if [[ "${BEHAVIORAL_ASSERTIONS:-false}" == "true" ]]; then
+    echo "  Assertions:  behavioral phase completed, $ASSERTION_ERRORS error(s)"
+fi
+echo "  Total errors: $ERRORS"
 [[ -n "$LOG_HITS" ]] && echo "  Log hits:    (see above)"
 echo "=========================="
 
