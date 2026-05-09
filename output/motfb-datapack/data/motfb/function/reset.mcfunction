@@ -72,6 +72,9 @@ clone -50 -37 -280 50 -21 -261 -50 62 -280
 # --- restore office from backup ---
 clone -12 -3 -220 12 11 -200 -12 97 -220
 
+# --- repair entrance floor (flat y=64, no stride-raised blocks) ---
+function motfb:build/entrance
+
 # --- re-spawn all bosses and static NPCs ---
 function motfb:boss/init_all
 function motfb:lostkid/spawn_at_arcade
