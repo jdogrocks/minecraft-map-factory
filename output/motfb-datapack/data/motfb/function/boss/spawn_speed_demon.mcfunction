@@ -1,3 +1,4 @@
+kill @e[tag=motfb_speeddemon_boss]
 execute as @a[x=6,y=60,z=-215,dx=44,dy=20,dz=14] run tag @s add in_spunky
 execute as @a[x=6,y=60,z=-215,dx=44,dy=20,dz=14] run tag @s add in_active_store
 fill 6 62 -215 6 79 -201 minecraft:bedrock
