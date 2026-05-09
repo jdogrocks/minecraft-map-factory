@@ -395,7 +395,8 @@ setblock 28 67 -149 minecraft:smooth_stone
 # "FOOD COURT" sign above the orange-concrete entry arch at z=-126
 # Backing block on south face of arch at y=71 (arch is orange concrete at y=65..70)
 setblock 0 71 -126 minecraft:orange_concrete
-setblock 0 71 -125 minecraft:oak_wall_sign[facing=south]{front_text:{messages:['{"text":"FOOD COURT","color":"gold","bold":true}','{"text":"Seating this level","color":"yellow","italic":true}','{"text":""}','{"text":""}'],has_glowing_text:1b,color:"gold"},is_waxed:1b}
+setblock 0 71 -125 minecraft:oak_wall_sign[facing=south]
+data merge block 0 71 -125 {front_text:{messages:[{text:"FOOD COURT",color:"gold",bold:1b},{text:"Seating this level",color:"yellow",italic:1b},{text:""},{text:""}],has_glowing_text:1b,color:"orange"},is_waxed:1b}
 
 # =============================================================================
 # LOBBY MALL DIRECTORY — near south lobby entrance so players know what's here
@@ -403,7 +404,9 @@ setblock 0 71 -125 minecraft:oak_wall_sign[facing=south]{front_text:{messages:['
 # =============================================================================
 
 # West wall directory (visible to players looking toward west wall)
-setblock -6 71 -110 minecraft:oak_wall_sign[facing=east]{front_text:{messages:['{"text":"LIMINAL LAKES MALL","color":"gold","bold":true}','{"text":"West: Hot-Topical","color":"dark_purple"}','{"text":"Cinnabog  GameZone","color":"yellow"}','{"text":"Cluck-O-Mart  SEARZ","color":"red"}'],has_glowing_text:1b,color:"gold"},is_waxed:1b}
+setblock -6 71 -110 minecraft:oak_wall_sign[facing=east]
+data merge block -6 71 -110 {front_text:{messages:[{text:"LIMINAL LAKES MALL",color:"gold",bold:1b},{text:"West: Hot-Topical",color:"dark_purple"},{text:"Cinnabog  GameZone",color:"yellow"},{text:"Cluck-O-Mart  SEARZ",color:"red"}],has_glowing_text:1b,color:"orange"},is_waxed:1b}
 
 # East wall directory (visible to players looking toward east wall)
-setblock 6 71 -110 minecraft:oak_wall_sign[facing=west]{front_text:{messages:['{"text":"LIMINAL LAKES MALL","color":"gold","bold":true}','{"text":"East: Spencers Gifts","color":"orange"}','{"text":"Bath+Body  Pretzel","color":"white"}','{"text":"Spunkys Shoes  SEARZ","color":"aqua"}'],has_glowing_text:1b,color:"gold"},is_waxed:1b}
+setblock 6 71 -110 minecraft:oak_wall_sign[facing=west]
+data merge block 6 71 -110 {front_text:{messages:[{text:"LIMINAL LAKES MALL",color:"gold",bold:1b},{text:"East: Spencers Gifts",color:"orange"},{text:"Bath+Body  Pretzel",color:"white"},{text:"Spunkys Shoes  SEARZ",color:"aqua"}],has_glowing_text:1b,color:"orange"},is_waxed:1b}
