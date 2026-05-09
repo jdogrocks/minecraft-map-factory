@@ -13,6 +13,9 @@ on:
       - 'docs/**'
       - 'marketing/**'
       - 'README.md'
+      - 'CLAUDE.md'
+      - 'output/**'
+      - 'scripts/**'
   push:
     branches:
       - main
