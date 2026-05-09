@@ -1,3 +1,4 @@
+kill @e[tag=motfb_vampirequeen_boss]
 execute as @a[x=-50,y=60,z=-200,dx=44,dy=20,dz=14] run tag @s add in_hottopical
 execute as @a[x=-50,y=60,z=-200,dx=44,dy=20,dz=14] run tag @s add in_active_store
 fill -6 62 -200 -6 79 -186 minecraft:bedrock

@@ -1,3 +1,4 @@
+kill @e[tag=motfb_pixellich_boss]
 execute as @a[x=-50,y=60,z=-245,dx=44,dy=20,dz=14] run tag @s add in_pixellich
 execute as @a[x=-50,y=60,z=-245,dx=44,dy=20,dz=14] run tag @s add in_active_store
 fill -6 62 -245 -6 79 -231 minecraft:bedrock
