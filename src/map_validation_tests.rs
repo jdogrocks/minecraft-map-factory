@@ -53,6 +53,7 @@ mod tests {
             rotation: 0.0,
             disable_height_limit: false,
             benchmark: false,
+            minecraft_version: "1.26.1.2".to_string(),
         }
     }
 
@@ -220,17 +221,22 @@ mod tests {
 
     #[test]
     fn structural_chunk_data_version_is_correct() {
+        use crate::pack_format::data_version_for;
+
         let (world_path, _tmp) = generate_test_world();
         let all_chunks = read_all_chunks(&world_path);
+
+        let expected =
+            data_version_for("1.26.1.2").expect("1.26.1.2 must be in DATA_VERSION_TABLE");
 
         for (region_name, chunks) in &all_chunks {
             for chunk_nbt in chunks {
                 if let fastnbt::Value::Compound(map) = chunk_nbt {
                     if let Some(fastnbt::Value::Int(version)) = map.get("DataVersion") {
                         assert_eq!(
-                            *version, 3955,
-                            "DataVersion in {} should be 3955 (MC 1.21.1), got {}",
-                            region_name, version
+                            *version, expected,
+                            "DataVersion in {} should be {} (MC 1.26.1.2), got {}",
+                            region_name, expected, version
                         );
                     }
                 }

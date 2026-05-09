@@ -18,6 +18,49 @@ const DATAPACK_FORMAT_TABLE: &[(&str, u32)] = &[
     ("1.26.1.2", 124),
 ];
 
+/// Minecraft Java Edition chunk DataVersion table.
+///
+/// Each entry maps a Minecraft release string to its DataVersion integer.
+/// This value is stamped into every chunk's NBT so the game can determine
+/// whether a world needs format upgrading.
+/// Source: <https://minecraft.wiki/w/Data_version>
+const DATA_VERSION_TABLE: &[(&str, i32)] = &[
+    ("1.21.4", 4082),
+    ("1.21.5", 4189),
+    ("1.22", 4350),
+    ("1.22.1", 4389),
+    ("1.23", 4550),
+    ("1.24", 4720),
+    ("1.25", 4890),
+    ("1.26", 5060),
+    ("1.26.1", 5095),
+    ("1.26.1.2", 5097),
+];
+
+/// The default Minecraft version used when no `--minecraft-version` flag is provided.
+pub const DEFAULT_MC_VERSION: &str = "1.26.1.2";
+
+/// Look up the chunk `DataVersion` integer for the given Minecraft version string.
+///
+/// Returns `None` if the version is not in the table.
+pub fn data_version_for(mc_version: &str) -> Option<i32> {
+    DATA_VERSION_TABLE
+        .iter()
+        .find(|(v, _)| *v == mc_version)
+        .map(|(_, dv)| *dv)
+}
+
+/// Returns a comma-separated string of all supported Minecraft version strings.
+///
+/// Used in error messages so the list stays in sync with `DATA_VERSION_TABLE` automatically.
+pub fn supported_versions_list() -> String {
+    DATA_VERSION_TABLE
+        .iter()
+        .map(|(v, _)| *v)
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
 /// Look up the datapack `pack_format` for the given Minecraft version string.
 ///
 /// Returns `None` if the version is not in the table.
@@ -111,6 +154,41 @@ mod tests {
         assert_eq!(
             PACK_FORMAT_MAX, latest,
             "PACK_FORMAT_MAX must match the last entry in DATAPACK_FORMAT_TABLE"
+        );
+    }
+
+    #[test]
+    fn test_data_version_known_versions() {
+        assert_eq!(data_version_for("1.21.4"), Some(4082));
+        assert_eq!(data_version_for("1.26.1.2"), Some(5097));
+    }
+
+    #[test]
+    fn test_data_version_unknown_returns_none() {
+        assert_eq!(data_version_for("1.99.0"), None);
+        assert_eq!(data_version_for(""), None);
+    }
+
+    #[test]
+    fn test_data_version_table_is_ascending() {
+        let versions: Vec<i32> = DATA_VERSION_TABLE.iter().map(|(_, dv)| *dv).collect();
+        for window in versions.windows(2) {
+            assert!(
+                window[0] < window[1],
+                "DATA_VERSION_TABLE is not strictly ascending: {} >= {}",
+                window[0],
+                window[1]
+            );
+        }
+    }
+
+    #[test]
+    fn test_data_version_and_pack_format_tables_same_versions() {
+        let pack_versions: Vec<&str> = DATAPACK_FORMAT_TABLE.iter().map(|(v, _)| *v).collect();
+        let dv_versions: Vec<&str> = DATA_VERSION_TABLE.iter().map(|(v, _)| *v).collect();
+        assert_eq!(
+            pack_versions, dv_versions,
+            "DATAPACK_FORMAT_TABLE and DATA_VERSION_TABLE must cover the same version strings"
         );
     }
 

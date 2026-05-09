@@ -50,6 +50,7 @@ mod tests {
             rotation: 0.0,
             disable_height_limit: false,
             benchmark: false,
+            minecraft_version: "1.26.1.2".to_string(),
         }
     }
 
