@@ -12,6 +12,9 @@ gamerule mob_griefing false
 time set 13000
 weather clear 999999
 
+# --- build the physical mall structure (idempotent fills; safe to re-run) ---
+function motfb:build/all
+
 # --- objectives (add idempotently) ---
 scoreboard objectives add mall.coupons dummy {"text":"Boss Coupons","color":"gold"}
 scoreboard objectives add mall.journals dummy {"text":"Journals","color":"light_purple"}
@@ -42,6 +45,10 @@ execute unless score #party mall.journals matches 0.. run scoreboard players set
 execute unless score #party mall.ending matches 0.. run scoreboard players set #party mall.ending 0
 execute unless score #party mall.bryan_phase matches 0.. run scoreboard players set #party mall.bryan_phase 0
 scoreboard players set #party mall.bryan_hp 99
+
+# --- guaranteed exterior spawn platform (solid floor below spawn y=65) ---
+fill -8 64 -97 8 64 -85 minecraft:smooth_quartz
+fill -8 65 -97 8 65 -85 minecraft:air
 
 # --- set spawn at exterior entrance ---
 setworldspawn 0 65 -90
