@@ -1,3 +1,4 @@
+kill @e[tag=motfb_candywitch_boss]
 execute as @a[x=-50,y=60,z=-230,dx=44,dy=20,dz=14] run tag @s add in_cinnabog
 execute as @a[x=-50,y=60,z=-230,dx=44,dy=20,dz=14] run tag @s add in_active_store
 fill -6 62 -230 -6 79 -216 minecraft:bedrock

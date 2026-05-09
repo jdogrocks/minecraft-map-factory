@@ -1,3 +1,6 @@
+# --- difficulty (must be Hard so summoned hostiles persist; Peaceful despawns them) ---
+difficulty hard
+
 # --- gamerules: mall-feel ---
 gamerule keep_inventory true
 gamerule send_command_feedback false
@@ -8,6 +11,9 @@ gamerule mob_griefing false
 # --- daylight/weather control (commands since gamerule names differ per version) ---
 time set 13000
 weather clear 999999
+
+# --- build the physical mall structure (idempotent fills; safe to re-run) ---
+function motfb:build/all
 
 # --- objectives (add idempotently) ---
 scoreboard objectives add mall.coupons dummy {"text":"Boss Coupons","color":"gold"}
@@ -38,8 +44,20 @@ execute unless score #party mall.coupons matches 0.. run scoreboard players set 
 execute unless score #party mall.journals matches 0.. run scoreboard players set #party mall.journals 0
 execute unless score #party mall.ending matches 0.. run scoreboard players set #party mall.ending 0
 execute unless score #party mall.bryan_phase matches 0.. run scoreboard players set #party mall.bryan_phase 0
+scoreboard players set #party mall.bryan_hp 99
 
-# --- set spawn inside mall entrance ---
-spawnpoint @a 0 65 -150
+# --- guaranteed exterior spawn platform (solid floor below spawn y=65) ---
+fill -8 64 -97 8 64 -85 minecraft:smooth_quartz
+fill -8 65 -97 8 65 -85 minecraft:air
+
+# --- set spawn at exterior entrance ---
+setworldspawn 0 65 -90
+spawnpoint @a 0 65 -90
+
+# --- place journal lecterns and spawn boss entities + static NPCs ---
+function motfb:build/setup_journals
+function motfb:boss/init_all
+function motfb:lostkid/spawn_at_arcade
+function motfb:bryan/spawn_at_office
 
 tellraw @a {"text":"Liminal Lakes Mall — datapack loaded.","color":"dark_gray","italic":true}

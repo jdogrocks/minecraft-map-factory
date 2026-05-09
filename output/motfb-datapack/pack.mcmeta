@@ -1,7 +1,6 @@
 {
   "pack": {
-    "description": "Mall of the Final Bosses — custom mechanics",
-    "min_format": [101, 1],
-    "max_format": 101
+    "pack_format": 81,
+    "description": "Mall of the Final Bosses — custom mechanics"
   }
 }

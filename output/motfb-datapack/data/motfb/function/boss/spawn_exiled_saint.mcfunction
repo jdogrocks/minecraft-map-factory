@@ -1,3 +1,4 @@
+kill @e[tag=motfb_exiledsaint_boss]
 execute as @a[x=6,y=60,z=-245,dx=44,dy=20,dz=14] run tag @s add in_bathbody
 execute as @a[x=6,y=60,z=-245,dx=44,dy=20,dz=14] run tag @s add in_active_store
 fill 6 62 -245 6 79 -231 minecraft:bedrock

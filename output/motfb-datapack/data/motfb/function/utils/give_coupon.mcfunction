@@ -8,4 +8,4 @@ execute as @a[tag=in_active_store] at @s run title @s times 10 60 20
 execute as @a[tag=in_active_store] at @s run title @s subtitle {"text":"+1 Coupon","color":"yellow"}
 execute as @a[tag=in_active_store] at @s run title @s title {"text":"BOSS DEFEATED","color":"gold"}
 
-execute if score #party mall.coupons matches 10.. run function motfb:contract/unlock_office
+execute if score #party mall.coupons matches 9.. run function motfb:contract/unlock_office
