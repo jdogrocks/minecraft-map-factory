@@ -29,6 +29,7 @@ impl Publisher {
 
         std::fs::create_dir_all(dest.parent().unwrap_or(&self.output_dir))?;
         Self::copy_dir_recursive(source, &dest)?;
+        Self::rename_world_dir(&dest, &dest_name)?;
 
         info!(
             source = %source.display(),
@@ -37,6 +38,30 @@ impl Publisher {
         );
 
         Ok(dest)
+    }
+
+    /// Rename any world subdirectory (identified by containing a `region/`
+    /// subdir) inside `dest` to `name`. The generator names the world dir
+    /// "MMF World N"; this call replaces that with the sanitized geo area
+    /// name so published output is unambiguous.
+    fn rename_world_dir(
+        dest: &Path,
+        name: &str,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        for entry in std::fs::read_dir(dest)? {
+            let entry = entry?;
+            if !entry.file_type()?.is_dir() {
+                continue;
+            }
+            if entry.path().join("region").is_dir() {
+                let new_path = dest.join(name);
+                if entry.path() != new_path {
+                    std::fs::rename(entry.path(), &new_path)?;
+                }
+                return Ok(());
+            }
+        }
+        Ok(())
     }
 
     fn sanitize_name(name: &str) -> String {
@@ -99,6 +124,39 @@ mod tests {
         assert!(dest.join("test.txt").exists());
         let content = fs::read_to_string(dest.join("test.txt")).unwrap();
         assert_eq!(content, "hello");
+    }
+
+    #[test]
+    fn test_publish_renames_world_dir() {
+        let tmp = tempfile::tempdir().unwrap();
+        let source = tmp.path().join("source");
+        let world = source.join("MMF World 1");
+        let region = world.join("region");
+        fs::create_dir_all(&region).unwrap();
+        fs::write(region.join("r.0.0.mca"), b"fake").unwrap();
+
+        let loc = Location {
+            name: "Times Square, NYC".into(),
+            state: "NY".into(),
+            bbox: [0.0, 0.0, 1.0, 1.0],
+            tier: "large".into(),
+            ..Default::default()
+        };
+
+        let output = tmp.path().join("output");
+        let publisher = Publisher::new(&output);
+        let dest = publisher.publish(&source, &loc).unwrap();
+
+        let expected_world = dest.join("Times_Square__NYC");
+        assert!(
+            expected_world.exists(),
+            "world dir should be renamed to geo area name"
+        );
+        assert!(
+            !dest.join("MMF World 1").exists(),
+            "original MMF World N dir should be gone"
+        );
+        assert!(expected_world.join("region").join("r.0.0.mca").exists());
     }
 
     #[test]

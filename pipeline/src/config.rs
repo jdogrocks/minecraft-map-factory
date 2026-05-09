@@ -37,6 +37,10 @@ pub struct PipelineConfig {
     /// Generator CLI flags.
     #[serde(default)]
     pub generator: GeneratorConfig,
+
+    /// Local Minecraft server installer.
+    #[serde(default)]
+    pub installer: InstallerConfig,
 }
 
 /// Flags forwarded to the map generator binary on every invocation.
@@ -236,6 +240,44 @@ pub struct ValidationConfig {
     /// check.
     #[serde(default = "default_surface_diversity_sample_chunks")]
     pub surface_diversity_sample_chunks: usize,
+}
+
+/// Configuration for the optional local-server auto-installer.
+///
+/// When `auto_install = true` the pipeline calls `script` with the published
+/// map directory after each successful generation+publish so the map appears
+/// on the local Minecraft server without any manual copy step.  Defaults to
+/// disabled so pipelines without a local server are unaffected.
+///
+/// `server_dir` must be set explicitly when `auto_install = true`; the
+/// installer will return an error at runtime if it is absent.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InstallerConfig {
+    /// Call the install script after every successful publish.
+    #[serde(default)]
+    pub auto_install: bool,
+
+    /// Path to the install script (resolved relative to the config file).
+    #[serde(default = "default_install_script")]
+    pub script: PathBuf,
+
+    /// Root directory of the local Minecraft server.  Required when
+    /// `auto_install = true`; must be set explicitly in pipeline.toml.
+    pub server_dir: Option<PathBuf>,
+}
+
+impl Default for InstallerConfig {
+    fn default() -> Self {
+        Self {
+            auto_install: false,
+            script: default_install_script(),
+            server_dir: None,
+        }
+    }
+}
+
+fn default_install_script() -> PathBuf {
+    PathBuf::from("../scripts/install-map-local.sh")
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -455,14 +497,22 @@ impl PipelineConfig {
     ) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
         let content = std::fs::read_to_string(path)?;
         let mut config: Self = toml::from_str(&content)?;
-        // Resolve relative paths relative to the config file's directory so
-        // the pipeline can be invoked from any working directory.
-        if let Some(base) = path.parent() {
+        // Canonicalize the config path to an absolute path so that relative
+        // paths inside the config are resolved to absolute paths.  Without
+        // this, a relative arnis_binary like "../target/release/..." would be
+        // re-resolved from the job's current_dir (the per-job output dir) at
+        // spawn time instead of from the pipeline's working directory, causing
+        // "No such file or directory" on the first generator invocation.
+        let abs_path = path.canonicalize()?;
+        if let Some(base) = abs_path.parent() {
             if config.locations_file.is_relative() {
                 config.locations_file = base.join(&config.locations_file);
             }
             if config.arnis_binary.is_relative() {
                 config.arnis_binary = base.join(&config.arnis_binary);
+            }
+            if config.installer.script.is_relative() {
+                config.installer.script = base.join(&config.installer.script);
             }
         }
         Ok(config)

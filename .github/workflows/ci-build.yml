@@ -7,11 +7,15 @@ on:
       - '.github/**'
       - '.semgrep/**'
       - 'src/**'
+      - 'pipeline/**'
       - 'Cargo.toml'
       - 'Cargo.lock'
       - 'docs/**'
       - 'marketing/**'
       - 'README.md'
+      - 'CLAUDE.md'
+      - 'output/**'
+      - 'scripts/**'
   push:
     branches:
       - main
