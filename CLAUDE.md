@@ -43,3 +43,22 @@ When the issue is complete and CI passes, squash-merge:
 ```bash
 gh pr merge --squash --delete-branch
 ```
+
+## Cowork session boundaries
+
+Cowork session is read-only by default in this project. Repo integrity and live deploy state are owned by the Paperclip company agents; Cowork is a thinking partner, not a maintenance hand.
+
+**Forbidden without explicit owner override:**
+
+- Direct mutations to repo: `git commit`, `git push`, `gh pr create/merge`, edits to checked-in files
+- Direct mutations to live deploy targets: `rsync`/`cp`/`docker cp` into the `minecraft-papermc` container or world directories, `setblock`/`fill`/state-changing RCON commands
+- Direct mutations to Paperclip state: SQL `UPDATE`/`INSERT`/`DELETE` on the `paperclip` database, status changes via API outside the issue/comment surface
+
+**Allowed:**
+
+- Read-only diagnostic queries: DB SELECTs, file reads, log tails, RCON `data get` / `datapack list`, `gh pr view`
+- Filing new MIN issues via the Paperclip API and posting comments — that IS the routing channel
+
+**Escape valve:** Owner can explicitly authorize a bypass ("manually override", "do it yourself this time"). Any bypass must be documented in a comment on the related MIN issue with a `Posted by Owner via Cowork session, not by an agent` header so the audit trail is intact.
+
+The agent system is the source of truth.
