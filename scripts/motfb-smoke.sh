@@ -299,6 +299,33 @@ if [[ "${BEHAVIORAL_ASSERTIONS:-false}" == "true" ]]; then
         fi
     done
 
+    # Assertion 2b: Corridor band flatness probes (MIN-196 continuity)
+    echo ""
+    echo "  Assertion 2b: Corridor band flatness probes"
+    CORRIDOR_COORDS=(
+        "0:64:-110" "0:64:-160" "0:64:-175"
+    )
+    for coord in "${CORRIDOR_COORDS[@]}"; do
+        IFS=':' read -r x y z <<< "$coord"
+        block_data=$(docker exec "$CONTAINER" rcon-cli "data get block $x $y $z" 2>&1) || true
+
+        # Extract block type from the output: {name:"minecraft:smooth_quartz",...}
+        block_type=$(echo "$block_data" | grep -oP 'name:"minecraft:\K[^"]+' || true)
+
+        if [[ -z "$block_type" ]]; then
+            echo "  ✗ Corridor floor at $x $y $z: cannot read block data"
+            ASSERTION_ERRORS=$((ASSERTION_ERRORS + 1))
+        elif [[ "$block_type" == "air" ]]; then
+            echo "  ✗ Corridor floor at $x $y $z: observed=$block_type (FAIL)"
+            ASSERTION_ERRORS=$((ASSERTION_ERRORS + 1))
+        elif [[ "$block_type" == "smooth_quartz" || "$block_type" == "polished_andesite" ]]; then
+            echo "  ✓ Corridor floor at $x $y $z: observed=$block_type"
+        else
+            echo "  ✗ Corridor floor at $x $y $z: observed=$block_type (expected smooth_quartz or polished_andesite)"
+            ASSERTION_ERRORS=$((ASSERTION_ERRORS + 1))
+        fi
+    done
+
     # Assertion 3: Spawn block assertion
     echo ""
     echo "  Assertion 3: Spawn block assertion (0 64 -150)"
