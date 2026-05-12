@@ -44,6 +44,21 @@ When the issue is complete and CI passes, squash-merge:
 gh pr merge --squash --delete-branch
 ```
 
+## Independent QA Gate for Deploy and Visual-Change Issues
+
+For any issue whose definition-of-done includes visible behavior on the live `minecraft-papermc` container (any deploy, any visual change, any walkthrough-gated issue), the CEO **MUST** route an independent QA agent to verify in-world behavior before closing the issue. The QA agent must be one of: QA Lead, Test Engineer, or Code Quality Specialist — **NOT** the agent that wrote the code or ran the smoke script.
+
+The QA agent posts an `assigned_to: human` comment describing what they checked and what they observed. CEO does **NOT** mark the issue done until that QA comment is present **AND** the owner has confirmed the walkthrough on the parent `in_review` issue.
+
+If a builder self-report and the QA report disagree, route the conflict back to `in_progress` and ask the builder to address the QA finding.
+
+Owner-side `Posted by Owner via Cowork session` comments that explicitly reject a walkthrough **MUST** be treated as binding signals; CEO cannot close the parent issue while an unaddressed owner-rejection comment exists newer than the most recent QA-pass comment.
+
+**Applies to**: deploy issues, visual-change issues, any issue with a walkthrough requirement.
+**Does not apply to**: pure code/CI/infra work with no in-world behavior component.
+
+> **Background**: Rule added 2026-05-12 after two incidents (MIN-159 Phase D rev-1 on 2026-05-08, MIN-194 corridor regression on 2026-05-12) where CEO closed issues on builder self-report + smoke exit 0 while owner had posted a rejection comment with a documented bug.
+
 ## Cowork session boundaries
 
 Cowork session is read-only by default in this project. Repo integrity and live deploy state are owned by the Paperclip company agents; Cowork is a thinking partner, not a maintenance hand.
