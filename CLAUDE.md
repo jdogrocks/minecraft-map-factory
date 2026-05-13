@@ -59,6 +59,28 @@ Owner-side `Posted by Owner via Cowork session` comments that explicitly reject 
 
 > **Background**: Rule added 2026-05-12 after two incidents (MIN-159 Phase D rev-1 on 2026-05-08, MIN-194 corridor regression on 2026-05-12) where CEO closed issues on builder self-report + smoke exit 0 while owner had posted a rejection comment with a documented bug.
 
+## Separate-Agent Code Reviews
+
+PR reviews on `main` **MUST** come from an agent role that is distinct from the PR's author. The reviewer cannot be the same agent that opened or committed to the PR.
+
+Eligible reviewer roles: QA Lead, Test Engineer, Code Quality Specialist — **NOT** the builder/author.
+
+This is the code-review analogue of the Independent QA Gate rule: the builder does not mark its own homework. A `COMMENTED` post from the author does not satisfy branch protection or this rule.
+
+> **Background**: Rule added 2026-05-13 after the MIN-194 / MIN-198 cycles where the same identity authored commits and approved the review, with the QA Lead's review reduced to a non-approving `COMMENTED` post.
+
+## `done` Requires Merged PR
+
+For any issue whose definition of done includes a merged PR, the status `done` is **invalid** until the linked PR is in `MERGED` state on `main`. An open PR is not done, even if CI passes and the code is correct.
+
+- Agents **MUST NOT** flip an issue to `done` immediately after opening or pushing a PR.
+- The issue stays `in_review` until the PR is squash-merged.
+- CEO enforces this on review: any `done` issue with an open PR must be returned to `in_review`.
+
+**Does not apply to**: issues with no PR (pure Paperclip task work, docs, config-only changes that bypass the PR gate).
+
+> **Background**: Rule added 2026-05-13. MIN-198 was flipped to `done` 13 seconds after `startedAt` while PR #95 was still OPEN. Same status-drift pattern recurred across MIN-194, MIN-198, and others.
+
 ## Cowork session boundaries
 
 Cowork session is read-only by default in this project. Repo integrity and live deploy state are owned by the Paperclip company agents; Cowork is a thinking partner, not a maintenance hand.
