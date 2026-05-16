@@ -61,13 +61,36 @@ Owner-side `Posted by Owner via Cowork session` comments that explicitly reject 
 
 ## Separate-Agent Code Reviews
 
-PR reviews on `main` **MUST** come from an agent role that is distinct from the PR's author. The reviewer cannot be the same agent that opened or committed to the PR.
+**Three-agent role separation is required for every PR to `main`: author ≠ reviewer ≠ merger.**
 
-Eligible reviewer roles: QA Lead, Test Engineer, Code Quality Specialist — **NOT** the builder/author.
+### Why `gh pr review --approve` is banned
 
-This is the code-review analogue of the Independent QA Gate rule: the builder does not mark its own homework. A `COMMENTED` post from the author does not satisfy branch protection or this rule.
+`main` has no `required_pull_request_reviews` branch protection — only CI status checks gate merges. GitHub rejects `gh pr review --approve` when the caller is the PR author. Because all agents run as the same GitHub user (`jdogrocks`), `--approve` calls will always fail or be no-ops. **No agent ever calls `gh pr review --approve`.**
 
-> **Background**: Rule added 2026-05-13 after the MIN-194 / MIN-198 cycles where the same identity authored commits and approved the review, with the QA Lead's review reduced to a non-approving `COMMENTED` post.
+### How separate-agent review works (Option C)
+
+1. **Reviewer** (QA Lead, Test Engineer, or Code Quality Specialist — must not be the PR author) reviews the diff and CI status, then posts a GitHub comment on the PR in exactly this shape:
+
+   ```
+   APPROVED — separate-agent review per CLAUDE.md
+   Reviewer role: <QA Lead | Test Engineer | Code Quality Specialist>
+   Reviewer agent ID: <uuid>
+   Verified:
+   - [x] Diff matches issue scope
+   - [x] CI all green
+   - [x] No unrelated changes
+   - [x] (other role-specific checks)
+   Verdict: APPROVED for merge
+   ```
+
+2. **Merger** (a third agent — not the PR author, not the reviewer) runs `gh pr merge <num> --squash --delete-branch`. Before merging, the merger **must**:
+   - Grep PR comments for the line `APPROVED — separate-agent review per CLAUDE.md`
+   - Confirm the `Reviewer agent ID` in that comment differs from the PR author agent ID
+   - If the approval comment is missing or the IDs match: refuse to merge and post back to CEO
+
+3. **The builder/author never reviews or merges their own PR.**
+
+> **Background**: Rule added 2026-05-13 (original) and revised 2026-05-16 (Option C) after the MIN-194 / MIN-198 cycles. The `--approve`-based workflow was replaced because GitHub rejects self-approval calls and `main` has no enforced review requirement — the policy is enforced by Paperclip agent behaviour, not GitHub branch protection.
 
 ## `done` Requires Merged PR
 
