@@ -54,10 +54,17 @@ If a builder self-report and the QA report disagree, route the conflict back to 
 
 Owner-side `Posted by Owner via Cowork session` comments that explicitly reject a walkthrough **MUST** be treated as binding signals; CEO cannot close the parent issue while an unaddressed owner-rejection comment exists newer than the most recent QA-pass comment.
 
+**For visual / in-world changes, both gates apply in sequence before `in_review`:**
+
+1. **Separate-agent code review** (per `## Separate-Agent Code Reviews`): a non-author agent posts the `APPROVED — separate-agent review per CLAUDE.md` comment on the PR, and a third agent merges it.
+2. **Independent QA in-world walkthrough** (this rule): an independent QA agent posts a structured `APPROVED — independent QA per MIN-197` comment confirming the in-world behavior is correct.
+
+Code review alone is **not** sufficient for visual/in-world changes. Both gates must clear before the issue can enter `in_review`.
+
 **Applies to**: deploy issues, visual-change issues, any issue with a walkthrough requirement.
 **Does not apply to**: pure code/CI/infra work with no in-world behavior component.
 
-> **Background**: Rule added 2026-05-12 after two incidents (MIN-159 Phase D rev-1 on 2026-05-08, MIN-194 corridor regression on 2026-05-12) where CEO closed issues on builder self-report + smoke exit 0 while owner had posted a rejection comment with a documented bug.
+> **Background**: Rule added 2026-05-12 after two incidents (MIN-159 Phase D rev-1 on 2026-05-08, MIN-194 corridor regression on 2026-05-12) where CEO closed issues on builder self-report + smoke exit 0 while owner had posted a rejection comment with a documented bug. Dual-gate requirement clarified 2026-05-16 after MIN-207 was self-promoted to `in_review` with code review only (same root cause as the original MIN-194 → MIN-196 cycle).
 
 ## Separate-Agent Code Reviews
 
@@ -99,6 +106,8 @@ For any issue whose definition of done includes a merged PR, the status `done` i
 - Agents **MUST NOT** flip an issue to `done` immediately after opening or pushing a PR.
 - The issue stays `in_review` until the PR is squash-merged.
 - CEO enforces this on review: any `done` issue with an open PR must be returned to `in_review`.
+
+**Narrow exception — closed-as-duplicate PRs**: `done` is also valid when the issue's linked PR was closed as a duplicate AND (a) the closing comment names an explicit successor PR, and (b) that named successor PR is in `MERGED` state on `main` and contains the same changes. Both conditions must be met; neither alone is sufficient.
 
 **Does not apply to**: issues with no PR (pure Paperclip task work, docs, config-only changes that bypass the PR gate).
 
