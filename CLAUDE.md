@@ -54,20 +54,50 @@ If a builder self-report and the QA report disagree, route the conflict back to 
 
 Owner-side `Posted by Owner via Cowork session` comments that explicitly reject a walkthrough **MUST** be treated as binding signals; CEO cannot close the parent issue while an unaddressed owner-rejection comment exists newer than the most recent QA-pass comment.
 
+**For visual / in-world changes, both gates apply in sequence before `in_review`:**
+
+1. **Separate-agent code review** (per `## Separate-Agent Code Reviews`): a non-author agent posts the `APPROVED — separate-agent review per CLAUDE.md` comment on the PR, and a third agent merges it.
+2. **Independent QA in-world walkthrough** (this rule): an independent QA agent posts a structured `APPROVED — independent QA per MIN-197` comment confirming the in-world behavior is correct.
+
+Code review alone is **not** sufficient for visual/in-world changes. Both gates must clear before the issue can enter `in_review`.
+
 **Applies to**: deploy issues, visual-change issues, any issue with a walkthrough requirement.
 **Does not apply to**: pure code/CI/infra work with no in-world behavior component.
 
-> **Background**: Rule added 2026-05-12 after two incidents (MIN-159 Phase D rev-1 on 2026-05-08, MIN-194 corridor regression on 2026-05-12) where CEO closed issues on builder self-report + smoke exit 0 while owner had posted a rejection comment with a documented bug.
+> **Background**: Rule added 2026-05-12 after two incidents (MIN-159 Phase D rev-1 on 2026-05-08, MIN-194 corridor regression on 2026-05-12) where CEO closed issues on builder self-report + smoke exit 0 while owner had posted a rejection comment with a documented bug. Dual-gate requirement clarified 2026-05-16 after MIN-207 was self-promoted to `in_review` with code review only (same root cause as the original MIN-194 → MIN-196 cycle).
 
 ## Separate-Agent Code Reviews
 
-PR reviews on `main` **MUST** come from an agent role that is distinct from the PR's author. The reviewer cannot be the same agent that opened or committed to the PR.
+**Three-agent role separation is required for every PR to `main`: author ≠ reviewer ≠ merger.**
 
-Eligible reviewer roles: QA Lead, Test Engineer, Code Quality Specialist — **NOT** the builder/author.
+### Why `gh pr review --approve` is banned
 
-This is the code-review analogue of the Independent QA Gate rule: the builder does not mark its own homework. A `COMMENTED` post from the author does not satisfy branch protection or this rule.
+`main` has no `required_pull_request_reviews` branch protection — only CI status checks gate merges. GitHub rejects `gh pr review --approve` when the caller is the PR author. Because all agents run as the same GitHub user (`jdogrocks`), `--approve` calls will always fail or be no-ops. **No agent ever calls `gh pr review --approve`.**
 
-> **Background**: Rule added 2026-05-13 after the MIN-194 / MIN-198 cycles where the same identity authored commits and approved the review, with the QA Lead's review reduced to a non-approving `COMMENTED` post.
+### How separate-agent review works (Option C)
+
+1. **Reviewer** (QA Lead, Test Engineer, or Code Quality Specialist — must not be the PR author) reviews the diff and CI status, then posts a GitHub comment on the PR in exactly this shape:
+
+   ```
+   APPROVED — separate-agent review per CLAUDE.md
+   Reviewer role: <QA Lead | Test Engineer | Code Quality Specialist>
+   Reviewer agent ID: <uuid>
+   Verified:
+   - [x] Diff matches issue scope
+   - [x] CI all green
+   - [x] No unrelated changes
+   - [x] (other role-specific checks)
+   Verdict: APPROVED for merge
+   ```
+
+2. **Merger** (a third agent — not the PR author, not the reviewer) runs `gh pr merge <num> --squash --delete-branch`. Before merging, the merger **must**:
+   - Grep PR comments for the line `APPROVED — separate-agent review per CLAUDE.md`
+   - Confirm the `Reviewer agent ID` in that comment differs from the PR author agent ID
+   - If the approval comment is missing or the IDs match: refuse to merge and post back to CEO
+
+3. **The builder/author never reviews or merges their own PR.**
+
+> **Background**: Rule added 2026-05-13 (original) and revised 2026-05-16 (Option C) after the MIN-194 / MIN-198 cycles. The `--approve`-based workflow was replaced because GitHub rejects self-approval calls and `main` has no enforced review requirement — the policy is enforced by Paperclip agent behaviour, not GitHub branch protection.
 
 ## `done` Requires Merged PR
 
@@ -76,6 +106,8 @@ For any issue whose definition of done includes a merged PR, the status `done` i
 - Agents **MUST NOT** flip an issue to `done` immediately after opening or pushing a PR.
 - The issue stays `in_review` until the PR is squash-merged.
 - CEO enforces this on review: any `done` issue with an open PR must be returned to `in_review`.
+
+**Narrow exception — closed-as-duplicate PRs**: `done` is also valid when the issue's linked PR was closed as a duplicate AND (a) the closing comment names an explicit successor PR, and (b) that named successor PR is in `MERGED` state on `main` and contains the same changes. Both conditions must be met; neither alone is sufficient.
 
 **Does not apply to**: issues with no PR (pure Paperclip task work, docs, config-only changes that bypass the PR gate).
 
