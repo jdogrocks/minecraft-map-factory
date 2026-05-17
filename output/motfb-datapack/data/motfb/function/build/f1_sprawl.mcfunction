@@ -300,7 +300,10 @@ fill -86 79 -107 -51 79 -107 minecraft:sea_lantern
 fill -86 79 -103 -51 79 -103 minecraft:sea_lantern
 
 # New outer west wall: white concrete, z=-100..-280, y=59..82 (roof parapet height)
+# forceload ensures z≈-195..-280 chunks are loaded; narrow single-column fills silently skip unloaded chunks
+forceload add -96 -288 96 -96
 fill -86 59 -280 -86 82 -100 minecraft:white_concrete
+forceload remove -96 -288 96 -96
 
 # =============================================================================
 # STEP C — EAST OUTER SHELL EXPANSION (x=51..86, z=-100..-280)
@@ -364,7 +367,9 @@ fill 51 79 -111 86 79 -111 minecraft:sea_lantern
 fill 51 79 -107 86 79 -107 minecraft:sea_lantern
 fill 51 79 -103 86 79 -103 minecraft:sea_lantern
 
+forceload add -96 -288 96 -96
 fill 86 59 -280 86 82 -100 minecraft:white_concrete
+forceload remove -96 -288 96 -96
 
 # =============================================================================
 # STEP D — NORTH SPINE EXTENSION (x=-86..86, z=-280..-420)
