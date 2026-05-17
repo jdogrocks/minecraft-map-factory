@@ -244,8 +244,9 @@ assert_entity_exists() {
 assert_no_legacy_sign() {
     local x=$1 y=$2 z=$3
     local result=$(docker exec "$CONTAINER" rcon-cli "data get block $x $y $z Text1" 2>&1) || true
-    if echo "$result" | grep -qiE "(error|no such|cannot find|no elements matching)" || [[ -z "$result" ]]; then
-        # Modern format - Text1 does not exist
+    # "not a block entity" means the block is not a sign at all — pass (no legacy data)
+    if echo "$result" | grep -qiE "(error|no such|cannot find|no elements matching|not a block entity)" || [[ -z "$result" ]]; then
+        # Modern format or not a block entity - Text1 does not exist
         return 0
     else
         # Legacy format detected
@@ -307,21 +308,20 @@ if [[ "${BEHAVIORAL_ASSERTIONS:-false}" == "true" ]]; then
     )
     for coord in "${CORRIDOR_COORDS[@]}"; do
         IFS=':' read -r x y z <<< "$coord"
-        block_data=$(docker exec "$CONTAINER" rcon-cli "data get block $x $y $z" 2>&1) || true
+        # Use execute-if-block for solid non-entity blocks; data get block returns
+        # "not a block entity" for these and has no parseable name field.
+        sq_result=$(docker exec "$CONTAINER" rcon-cli "execute if block $x $y $z minecraft:smooth_quartz" 2>&1) || true
+        pa_result=$(docker exec "$CONTAINER" rcon-cli "execute if block $x $y $z minecraft:polished_andesite" 2>&1) || true
 
-        # Extract block type from the output: {name:"minecraft:smooth_quartz",...}
-        block_type=$(echo "$block_data" | grep -oP 'name:"minecraft:\K[^"]+' || true)
-
-        if [[ -z "$block_type" ]]; then
-            echo "  ✗ Corridor floor at $x $y $z: cannot read block data"
+        if echo "$sq_result" | grep -qi "Test passed"; then
+            echo "  ✓ Corridor floor at $x $y $z: smooth_quartz"
+        elif echo "$pa_result" | grep -qi "Test passed"; then
+            echo "  ✓ Corridor floor at $x $y $z: polished_andesite"
+        elif echo "$sq_result" | grep -qi "Test failed" || echo "$pa_result" | grep -qi "Test failed"; then
+            echo "  ✗ Corridor floor at $x $y $z: not smooth_quartz or polished_andesite (FAIL)"
             ASSERTION_ERRORS=$((ASSERTION_ERRORS + 1))
-        elif [[ "$block_type" == "air" ]]; then
-            echo "  ✗ Corridor floor at $x $y $z: observed=$block_type (FAIL)"
-            ASSERTION_ERRORS=$((ASSERTION_ERRORS + 1))
-        elif [[ "$block_type" == "smooth_quartz" || "$block_type" == "polished_andesite" ]]; then
-            echo "  ✓ Corridor floor at $x $y $z: observed=$block_type"
         else
-            echo "  ✗ Corridor floor at $x $y $z: observed=$block_type (expected smooth_quartz or polished_andesite)"
+            echo "  ✗ Corridor floor at $x $y $z: cannot read block data"
             ASSERTION_ERRORS=$((ASSERTION_ERRORS + 1))
         fi
     done
