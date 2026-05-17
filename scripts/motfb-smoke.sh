@@ -299,6 +299,33 @@ if [[ "${BEHAVIORAL_ASSERTIONS:-false}" == "true" ]]; then
         fi
     done
 
+    # Assertion 2b: Corridor band flatness probes (MIN-196 continuity)
+    echo ""
+    echo "  Assertion 2b: Corridor band flatness probes"
+    CORRIDOR_COORDS=(
+        "0:64:-110" "0:64:-160" "0:64:-175"
+    )
+    for coord in "${CORRIDOR_COORDS[@]}"; do
+        IFS=':' read -r x y z <<< "$coord"
+        block_data=$(docker exec "$CONTAINER" rcon-cli "data get block $x $y $z" 2>&1) || true
+
+        # Extract block type from the output: {name:"minecraft:smooth_quartz",...}
+        block_type=$(echo "$block_data" | grep -oP 'name:"minecraft:\K[^"]+' || true)
+
+        if [[ -z "$block_type" ]]; then
+            echo "  ✗ Corridor floor at $x $y $z: cannot read block data"
+            ASSERTION_ERRORS=$((ASSERTION_ERRORS + 1))
+        elif [[ "$block_type" == "air" ]]; then
+            echo "  ✗ Corridor floor at $x $y $z: observed=$block_type (FAIL)"
+            ASSERTION_ERRORS=$((ASSERTION_ERRORS + 1))
+        elif [[ "$block_type" == "smooth_quartz" || "$block_type" == "polished_andesite" ]]; then
+            echo "  ✓ Corridor floor at $x $y $z: observed=$block_type"
+        else
+            echo "  ✗ Corridor floor at $x $y $z: observed=$block_type (expected smooth_quartz or polished_andesite)"
+            ASSERTION_ERRORS=$((ASSERTION_ERRORS + 1))
+        fi
+    done
+
     # Assertion 3: Spawn block assertion
     echo ""
     echo "  Assertion 3: Spawn block assertion (0 64 -150)"
@@ -359,6 +386,37 @@ if [[ "${BEHAVIORAL_ASSERTIONS:-false}" == "true" ]]; then
 
     # Assertion 6: Sign-format sanity (already checked above in Assertion 1)
     # Summary printed after Assertion 1
+
+    # Assertion 7: Floor-proximity light-level probe (MIN-208)
+    # Behavioral check: verifies light-emitting blocks exist at y=67-69, not just y=79.
+    # Ceiling troffers at y=79 deliver 0 effective light at y=64 floor (15 blocks away).
+    # These probes confirm the floor-proximity layer landed correctly post-build.
+    echo ""
+    echo "  Assertion 7: Floor-proximity light-level probe (MIN-208)"
+    # Format: "x:y:z:expected_block_type" — sea_lantern or soul_lantern
+    FLOOR_PROBE_COORDS=(
+        "-6:67:-240:sea_lantern"
+        "6:67:-240:sea_lantern"
+        "0:69:-250:sea_lantern"
+        "0:69:-155:sea_lantern"
+        "0:69:-130:sea_lantern"
+        "-6:67:-193:soul_lantern"
+        "0:69:-270:sea_lantern"
+        "0:69:-115:sea_lantern"
+    )
+    FLOOR_LIGHT_MISSES=0
+    for probe in "${FLOOR_PROBE_COORDS[@]}"; do
+        IFS=':' read -r px py pz pblock <<< "$probe"
+        probe_result=$(docker exec "$CONTAINER" rcon-cli "execute if block $px $py $pz minecraft:$pblock" 2>&1) || true
+        if [[ "$probe_result" == "1" ]] || echo "$probe_result" | grep -q "Test passed"; then
+            echo "  ✓ Floor-proximate $pblock at $px $py $pz"
+        else
+            echo "  ✗ Floor-proximate $pblock MISSING at $px $py $pz (floor at y=64 will be dark)"
+            FLOOR_LIGHT_MISSES=$((FLOOR_LIGHT_MISSES + 1))
+            ASSERTION_ERRORS=$((ASSERTION_ERRORS + 1))
+        fi
+    done
+    echo "  ℹ Floor-proximity misses: $FLOOR_LIGHT_MISSES/${#FLOOR_PROBE_COORDS[@]}"
 
     echo ""
     echo "==> Behavioral Assertion Summary"

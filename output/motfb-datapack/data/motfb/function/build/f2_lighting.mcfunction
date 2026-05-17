@@ -124,3 +124,27 @@ fill -49 96 -117 49 96 -117 minecraft:sea_lantern
 fill -49 96 -111 49 96 -111 minecraft:sea_lantern
 fill -49 96 -105 49 96 -105 minecraft:sea_lantern
 
+# =============================================================================
+# MIN-208 — Lighting Overhaul: floor-proximity layer
+# Root problem: ceiling troffers at y=79 are 15 blocks above the y=64 floor.
+# Sea lanterns emit level 15; at y=64 they deliver 0 effective light (15 - 15 = 0).
+# Fix: light strips at y=67 (3 blocks above floor → level 12) and y=69 (center
+# pendant, 5 blocks above floor → level 10) bring the corridor to level 10-12.
+# =============================================================================
+
+# --- West corridor wall strip (x=-6, y=67) --- skips Hot-Topical zone z=-186..-200
+fill -6 67 -279 -6 67 -201 minecraft:sea_lantern replace minecraft:air
+fill -6 67 -185 -6 67 -101 minecraft:sea_lantern replace minecraft:air
+
+# --- East corridor wall strip (x=6, y=67) --- skips Hot-Topical zone z=-186..-200
+fill 6 67 -279 6 67 -201 minecraft:sea_lantern replace minecraft:air
+fill 6 67 -185 6 67 -101 minecraft:sea_lantern replace minecraft:air
+
+# --- Center corridor pendant strip (x=0, y=69) --- skips Hot-Topical zone
+fill 0 69 -279 0 69 -201 minecraft:sea_lantern replace minecraft:air
+fill 0 69 -185 0 69 -101 minecraft:sea_lantern replace minecraft:air
+
+# --- Hot-Topical zone (z=-186..-200): soul lanterns at y=67 preserve dark aesthetic ---
+# Soul lanterns deliver level 10 at y=64 (3 blocks below), maintaining blue-black feel
+fill -6 67 -200 6 67 -186 minecraft:soul_lantern replace minecraft:air
+

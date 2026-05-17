@@ -93,6 +93,9 @@ fill -40 64 -275 -35 64 -270 minecraft:cracked_stone_bricks
 fill 30 64 -275 38 64 -268 minecraft:cracked_stone_bricks
 fill -20 64 -265 -10 64 -261 minecraft:cracked_stone_bricks
 
+# Corridor base floor §1.0 (was missing — caused entrance-corridor gaps)
+fill -6 64 -185 6 64 -102 minecraft:smooth_quartz
+
 # --- Corridor floor (x=-6..6): keep smooth quartz per §1.0 but add polished andesite grout lines ---
 # Grout lines every 4 blocks in z
 fill -6 64 -279 6 64 -279 minecraft:polished_andesite
