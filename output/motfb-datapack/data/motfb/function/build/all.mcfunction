@@ -23,7 +23,10 @@ function motfb:build/scene_lights
 # Phase 4: exterior entrance approach and spawn platform floor
 function motfb:build/entrance
 
-# Phase 5: channel-letter storefront signage facades (MIN-209)
+# Phase 5: sprawl expansion — wider promenade, extended outer shell, lateral wings
+function motfb:build/f1_sprawl
+
+# Phase 6: channel-letter storefront signage facades (MIN-209)
 function motfb:build/signage_rev1
 
 tellraw @a {"text":"[MOTFB] Mall ready. Spawn is at the south entrance (z=-90).","color":"green","bold":true}
