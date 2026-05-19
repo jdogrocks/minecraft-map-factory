@@ -113,6 +113,30 @@ For any issue whose definition of done includes a merged PR, the status `done` i
 
 > **Background**: Rule added 2026-05-13. MIN-198 was flipped to `done` 13 seconds after `startedAt` while PR #95 was still OPEN. Same status-drift pattern recurred across MIN-194, MIN-198, and others.
 
+## Premise-Verify Gate on First Heartbeat
+
+When an issue is routed and an agent picks it up, the agent's **first heartbeat action** MUST be to post a "Premise verified" comment listing the central factual claims in the issue body and confirming each is currently true. Examples of claims to verify:
+
+- File paths named in the issue exist at the stated locations
+- Branch heads or commit references match current state
+- Identity claims (e.g., PAT scopes, GitHub user resolution via `gh api user`) resolve correctly
+- Container or deploy state matches what the issue assumes
+
+If any claim is false, the agent posts the correction as a comment, sets the issue to `blocked`, and tags CEO for re-routing or scope correction. The agent does **not** proceed with implementation until the premises are confirmed.
+
+> **Background**: Added 2026-05-18 after [MIN-201](/MIN/issues/MIN-201)'s "PAT is a separate identity" premise error sent 3 days of agent work down a dead-end. The PAT resolved to the same GitHub user (`jdogrocks`), making the separate-reviewer approach structurally impossible. A first-heartbeat premise check would have caught this before any implementation.
+
+## Many-Issue-to-One-PR Convention
+
+When CEO splits one logical change into multiple issues for accountability (e.g., tracking sub-deliverables separately), the build phase **MUST** produce **one PR** that links all related issues in its description — not one branch per issue.
+
+- All issues belonging to the same logical change share one PR.
+- Each issue identifier is listed in the PR body as `Resolves [MIN-xxx](https://cirruslycloudy.com/MIN/issues/MIN-xxx)`.
+- The PR is squash-merged once all issues' individual conditions (code review, QA) are satisfied.
+- Opening a second PR for the same logical change is a signal to stop and merge the first one instead.
+
+> **Background**: Added 2026-05-18 after [MIN-198](/MIN/issues/MIN-198) / [MIN-199](/MIN/issues/MIN-199) split produced PR #95 and PR #96 (duplicate), costing three days of resolution work. The `done` requires merged PR rule covers cleanup of the pattern; this upstream convention prevents it.
+
 ## Cowork session boundaries
 
 Cowork session is read-only by default in this project. Repo integrity and live deploy state are owned by the Paperclip company agents; Cowork is a thinking partner, not a maintenance hand.
