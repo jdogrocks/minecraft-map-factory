@@ -137,51 +137,63 @@ When CEO splits one logical change into multiple issues for accountability (e.g.
 
 > **Background**: Added 2026-05-18 after [MIN-198](/MIN/issues/MIN-198) / [MIN-199](/MIN/issues/MIN-199) split produced PR #95 and PR #96 (duplicate), costing three days of resolution work. The `done` requires merged PR rule covers cleanup of the pattern; this upstream convention prevents it.
 
-## Visual-Change Workflow Rules (MIN-242)
+## Model Tier Policy for Visual-Judgment Roles
 
-> **Background**: Added 2026-05-19 after post-walkthrough audit of MIN-207/MIN-208/MIN-209 revealed three process failures: (1) additive-instead-of-replace build semantics left old walls as interior dividers, (2) Gate 2 visual QA routed to Test Engineer (Haiku) which approved via headless code inspection only, (3) no model-tier or routing constraints existed to prevent recurrence.
+Roles that perform visual / spatial / aesthetic judgment on this project MUST be on `claude-opus-4-6` (or its successor). Sonnet and Haiku are not sufficient for visual judgment work and have produced false-positive approvals in the past.
 
-### Rule A: Model tier for visual-judgment roles
-
-Roles performing visual, spatial, or aesthetic judgment on this project MUST be on **claude-opus-4-6** (or its successor). Current scope:
+**Currently in scope (pinned to opus as of 2026-05-19):**
 
 - Minecraft Scene Designer
 - Texture Artist
-- QA Lead (whenever assigned a visual-change Gate 2 issue)
+- QA Lead — for visual-change Gate 2 issues specifically
 
-Non-visual roles continue on Sonnet (leads + most engineering) or Haiku (specific specialty ICs). When a non-visual role is asked to do visual judgment, re-route to an eligible visual role — do not re-pin and re-route simultaneously.
+Non-visual roles continue on Sonnet (leads + most engineering) or Haiku (specialty ICs). When a non-visual role is asked to do visual judgment, either temporarily re-pin to opus OR re-route to a visual-judgment role — not both. CEO is exempt; routing decisions don't require visual judgment if the visual-QA routing rule (below) is followed.
 
-CEO is exempt; routing decisions do not require visual judgment if Rule B below is followed.
+**Background**: Added 2026-05-19 after [MIN-207](/MIN/issues/MIN-207) sprawl shipped through the dual-gate system but was rejected on owner walkthrough — the cramped/unenclosed result was not caught by Sonnet-tier visual review.
 
-### Rule B: Visual-change QA routing exclusion
+## Visual-Change QA Routing Exclusion
 
-Visual-change in-world QA gates (per `## Independent QA Gate for Deploy and Visual-Change Issues`) **MUST NOT** be routed to Test Engineer regardless of model. Test Engineer's strength is parse-clean smoke testing and headless code inspection — neither constitutes visual judgment.
+Visual-change in-world QA gates (per `## Independent QA Gate for Deploy and Visual-Change Issues`) MUST NOT be routed to Test Engineer, regardless of Test Engineer's model. Test Engineer's strength is parse-clean smoke testing and headless code inspection — neither constitutes visual judgment.
 
-Eligible visual-change Gate 2 reviewers: **QA Lead**, **Texture Artist**, or any new visual-design specialist hire. The author of the change is also ineligible per MIN-197.
+**Eligible Gate 2 reviewers for visual changes:**
 
-If a previously-routed Gate 2 issue's QA approval came from an ineligible role (e.g., Test Engineer), CEO must re-route to an eligible reviewer before promoting the parent to `in_review`.
+- QA Lead
+- Texture Artist
+- Any new visual-design specialist hires
 
-### Rule C: Build semantics — replace, not add
+The author of the change is also ineligible to QA their own change per the dual-gate rule.
 
-Default semantics for any in-world visual change: **replace the affected envelope**, not add geometry alongside. If the change is conceptually "expansion of the mall footprint," the old envelope at the old dimensions is OBSOLETE and must be torn down as part of the same change.
+If a previously-routed Gate 2 issue's QA approval came from an ineligible role, CEO MUST re-route to an eligible reviewer before promoting the parent to `in_review`. Existing `done` or `in_review` issues approved by an ineligible visual-QA reviewer are subject to retroactive re-routing if owner walkthrough rejects the result.
 
-Additive passes are allowed ONLY when all three conditions are met:
+**Background**: Added 2026-05-19 after [MIN-232](/MIN/issues/MIN-232) (Gate 2 for sprawl) was reassigned from QA Lead to Test Engineer (Haiku), which approved via *"Headless agent verification via code inspection"* and noted *"Final human verification in Minecraft client recommended"* — a tier-mismatch approval that rubber-stamped a visual gate the agent could not perform.
 
-1. The issue body explicitly states "additive" in the title or scope section.
-2. The body includes a rationale for preserving the old envelope (e.g. "preserve SEARZ z=-261..-279 mechanics" type carve-outs).
-3. The rationale survives owner review at issue-filing time.
+## Build Semantics — Replace, Not Add
 
-Default to replace. The agent must argue for additive, not the other way around. A build function that states "Additive pass — runs AFTER all existing build functions" without explicit issue-body authorization is a Rule C violation.
+Default semantics for any in-world visual change: **replace the affected envelope**, not add geometry alongside. If a change is conceptually "expansion of the mall footprint," the old envelope at the old dimensions is OBSOLETE and must be torn down as part of the same change. The new envelope is the only envelope.
 
-### Rule D: Visual-change QA requires in-world block queries, not headless inspection
+**Additive passes are allowed ONLY when:**
 
-Approval of a visual-change Gate 2 issue MUST include all three of the following in the structured `APPROVED — independent QA per MIN-197` comment:
+- The issue body explicitly contains the word "additive" in the title or scope statement.
+- The body includes a rationale for preserving the old envelope (e.g. "preserve SEARZ z=-261..-279 mechanics" carve-outs).
+- The rationale survives owner review at issue-filing time (i.e., owner does not reject the additive scope).
 
-1. **Player-viewpoint descriptions** at named coordinates and facing directions — what the player actually sees when standing at e.g. `(0, 66, -150) facing north`. Minimum three viewpoints relevant to the change.
-2. **RCON `data get block` assertions** at the structural coordinates the change should have placed or removed. Quote actual block IDs returned.
+Default to replace. Make the agent argue for additive, not the other way around.
+
+**For the builder agent**: if an issue description describes "expansion" or "redesign" or "scale up" without the explicit "additive" + rationale, the build MUST tear down the existing envelope before constructing the new one. Demolition fills (`fill ... minecraft:air`) over the old structural blocks belong at the start of `all.mcfunction` before any rebuild step.
+
+**Background**: Added 2026-05-19 after [MIN-207](/MIN/issues/MIN-207) `f1_sprawl.mcfunction` shipped as *"Additive pass — runs AFTER all existing build functions. Expands outward without destroying mechanics-critical existing interiors"*. The original 98×178 mall outer walls were left in place inside the new shell, functioning as interior dividers and producing a cramped/unenclosed walkthrough experience.
+
+## Visual-Change QA Requires In-World Block Queries
+
+Approval of a visual-change Gate 2 issue MUST include **all three** of the following in the structured `APPROVED — independent QA per MIN-197` comment:
+
+1. **Player-viewpoint descriptions** at named coordinates and facing directions — what the player actually sees standing at e.g. `(0, 66, -150) facing north`. Minimum three viewpoints relevant to the change.
+2. **RCON `data get block` assertions** at the structural coordinates the change should have placed or removed. Quote the actual block IDs returned (e.g. `minecraft:white_concrete`, `minecraft:air`).
 3. **A "what's notable / what's missing" prose paragraph** distinguishing what the change accomplished vs what remains for owner acceptance.
 
-The phrase *"Headless agent verification via code inspection"* is explicitly disallowed as a sole basis for visual-change Gate 2 approval. Code-only inspection fails the rule and CEO must re-route.
+The phrase *"Headless agent verification via code inspection"* is explicitly disallowed as a sole basis for visual-change Gate 2 approval. Code-only inspection fails this rule and CEO MUST re-route to a reviewer who will produce the three artifacts.
+
+**Background**: Added 2026-05-19 after [MIN-232](/MIN/issues/MIN-232) Gate 2 approval cited *"Headless agent verification via code inspection, function execution, and deployment confirmation"* and approved the gate without any in-world block query, even noting *"Final human verification in Minecraft client recommended to confirm visual sprawl geometry before closing MIN-207"* — approval was given for a check the reviewer had not performed.
 
 ## Cowork session boundaries
 
